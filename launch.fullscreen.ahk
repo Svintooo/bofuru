@@ -1,19 +1,19 @@
 #Requires AutoHotkey v2.0
+#WinActivateForce
 ;#NoTrayIcon
-;; Flash Launcher
-;;
-;; Runs the *.swf file in the same folder as the script,
-;; and runs it in fullscreen.
-;;
-;; Usage1:
-;;   Place a *.swf and this script in the same folder.
-;; Usage2:
-;;   Place a *.swf and another ahk-script in the same folder.
-;;   The other script includes this script like this:
-;;   ```
-;;   flashplayer := "path\to\flashplayer.exe"
-;;   #include "path\to\this_script.ahk"
-;;   ```
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Borderless Fullscreen Launcher                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                               ;;
+;; Runs `launch_string` in simulated fullscreen. ;;
+;;                                               ;;
+;; Usage Example:                                ;;
+;;   ```                                         ;;
+;;   launch_string := "some\app.exe"             ;;
+;;   #include "path\to\launch.fullscreen.ahk"    ;;
+;;   ```                                         ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;TODOS
 ;; - For each game, custom pictures for use as bars (left/right or up/down of game window)
@@ -24,23 +24,15 @@
 ;; Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Set Flash player
-if not IsSet(flashplayer)
-  flashplayer := "./flashplayer_32_sa.exe"
+;; This Script Dir
+script_dir := RegexReplace(A_LineFile, "[\\/][^\\/]*$", "")
 
-;TODO: Generate in code instead of using a file.
-pixel := RegExReplace(flashplayer, "[\\/][^\\/]*$", "") . "\pixel.ico"  ; Transparent Pixel
+;TODO: Generate pixel in code instead of loading from file
+pixel := script_dir . "\resourses\pixel.ico"  ; Transparent Pixel
 
-;; Set Flash file
-; Take the first *.swf file in current working directory
-Loop Files "*.swf", "F"
+if not IsSet(launch_string)
 {
-  game := A_LoopFilePath
-  break
-}
-if not IsSet(game)
-{
-  MsgBox("*.swf file not found.", , 0x30)
+  MsgBox("Variable launch_string not defined.", , 0x30)
   ExitApp(1)
 }
 
@@ -199,24 +191,25 @@ ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
 ;; Execution START
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Run (borderless fullscreen with black bars)
+;; Run
 ; Start app
-Run(Format("{} {}", flashplayer, game), , , &app_pid)
-app_hwnd := WinWait(Format("ahk_pid {}", app_pid), , 5)  ; Get app window id (hwnd)
-if not app_hwnd
+Run(launch_string, , , &app_pid)
+if not app_hwnd := WinWait("ahk_pid " app_pid, , 5)  ; Get app window id (hwnd)
 {
   if ProcessExist(app_pid)
     ProcessClose(app_pid)
   ExitApp(0)
 }
+;WinWaitClose(app_hwnd)
+;ExitApp(0)
 
 ; Create black bars
 barBL := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Bottom Left
 barTR := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Top Right
 barBL.BackColor := "Black"
 barTR.BackColor := "Black"
-barBL.Show("W0 H0")
-barTR.Show("W0 H0")
+barBL.Show("W0 H0")  ; Initially hidden by setting width/height to 0
+barTR.Show("W0 H0")  ; Initially hidden by setting width/height to 0
 barBL.OnEvent("Size", EventBarBLSize)
 barTR.OnEvent("Size", EventBarTRSize)
 EventBarBLSize(*)
@@ -244,7 +237,7 @@ RepositionXButton(xBtn)
 }
 
 ; Make mouse clicks on the bars return focus to the app
-WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures both be clickable,
+WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
                               ; and have other elements placed on top of them.
 barBL_clickArea := barBL.Add("Picture", WS_CLIPSIBLINGS, pixel)
 barTR_clickArea := barTR.Add("Picture", WS_CLIPSIBLINGS, pixel)
@@ -254,29 +247,26 @@ barBL_clickArea.OnEvent("DoubleClick", event_clickArea_click)
 barTR_clickArea.OnEvent("DoubleClick", event_clickArea_click)
 event_clickArea_click(*)
 {
-  WinActivate(app_hwnd)
+  WinActivate(app_hwnd)  ; Hand focus back to the app
 }
 clickArea_reposition(clickArea)
 {
-  ; Stretch the pixel to fit the whole window area
+  ; Stretch the pixel to fit the whole bar
   clickArea.Gui.GetClientPos(,,&w,&h)
   clickArea.move(0,0,w,h)
 }
 
 ; Make app borderless
-WinGetClientPos(, , &app_client_width, &app_client_height, app_hwnd)
+WinGetClientPos(, , &app_width, &app_height, app_hwnd)  ; Get width/height before removing border
 DllCall("SetMenu", "uint", app_hwnd, "uint", 0)  ; Remove menu bar
-win_styles := 0
-win_styles |= 0x00C00000  ; WS_CAPTION    (title bar)
-win_styles |= 0x00800000  ; WS_BORDER     (visible border)
-win_styles |= 0x00040000  ; WS_THICKFRAME (dragable border)
-WinSetStyle(Format("-{1}", win_styles), app_hwnd)  ; Remove styles
-WinMove(, , app_client_width, app_client_height, app_hwnd)  ; Restore app client area size
+win_styles := 0x00C00000  ; WS_CAPTION    (title bar)
+            | 0x00800000  ; WS_BORDER     (visible border)
+            | 0x00040000  ; WS_THICKFRAME (dragable border)
+WinSetStyle("-" win_styles, app_hwnd)  ; Remove styles
+WinMove(, , app_width, app_height, app_hwnd)  ; Restore width/height
 
-; Set position and size of app and bars
+; Activate fullscreen
 ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
-
-; Show
 barBL.Opt("+AlwaysOnTop")
 barTR.Opt("+AlwaysOnTop")
 WinSetAlwaysOnTop(True, app_hwnd)
@@ -286,21 +276,9 @@ WinMoveTop(app_hwnd)
 WinActivate(app_hwnd)  ; Focus the app window
 
 
-;; Event Handlers
-; Get rid of eventual security warning windows
-SetTimer EventFlashSecurity
-EventFlashSecurity()
-{
-  warn_id := WinActive("Adobe Flash Player Security")
-  if warn_id != 0
-  {
-    WinClose(warn_id)
-    if WinExist(app_hwnd)
-      WinMoveTop(app_hwnd)
-  }
-}
+;; Misc Event Handlers
 
-; Exit Script if Window is closed
+; Exit when App has quit
 SetTimer EventWindowClose
 EventWindowClose()
 {
@@ -308,6 +286,19 @@ EventWindowClose()
   if not WinExist(app_hwnd)
   {
     ExitApp(0)  ; Script Exit
+  }
+}
+
+; Kill eventual Flashplayer Security popups
+; Useful when running flash, and flash tries to connect to the Internet and fails
+SetTimer EventFlashSecurity
+EventFlashSecurity()
+{
+  if warn_id := WinActive("Adobe Flash Player Security")
+  {
+    WinClose(warn_id)
+    if WinExist(app_hwnd)
+      WinMoveTop(app_hwnd)
   }
 }
 
@@ -328,6 +319,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
   {
     if (lParam = app_hwnd)
     {
+      ; App has moved to another monitor
       ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
     }
   }
@@ -337,7 +329,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
   {
     if (lParam = app_hwnd)
     {
-      ; App got focused, make app and bars AlwaysOnTop again
+      ; App got focused, make app and bars AlwaysOnTop
       if WinExist(barBL.Hwnd) {
         barBL.Opt("+AlwaysOnTop")
         WinMoveTop(barBL.Hwnd)
@@ -354,13 +346,15 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
     else if (lParam = 0)
     {
       ; DO NOTHING
+      ; Focus was given to either:
+      ;   - one of the black bars
+      ;   - the windows taskbar
+      ;   - something unknown
     }
     else
     {
-      ;MsgBox(Format("lParam: {1}`n`napp.hwnd: {2}`nbarBL.hwnd: {3}`nbarTR.hwnd: {4}",lParam,app_hwnd,barBL.Hwnd,barTR.Hwnd), , 0x1000)
-
-      ; If user changed focus to something other than the app, remove AlwaysOnTop
-      ;   Otherwise the focused window may be hidden behind the app and bars
+      ; Something other than the app got focus
+      ;  Remove AlwaysOnTop so the focused window can be seen
       if WinExist(barBL.Hwnd)
         barBL.Opt("-AlwaysOnTop")
       if WinExist(barTR.Hwnd)
@@ -368,7 +362,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
       if WinExist(app_hwnd)
         WinSetAlwaysOnTop(false, app_hwnd)
       if WinExist(lParam)
-        WinMoveTop(lParam)  ; Make sure the newly focused app is visible
+        WinMoveTop(lParam)  ; Make sure the newly focused window is visible
     }
   }
 }
