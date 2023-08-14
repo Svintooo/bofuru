@@ -78,19 +78,16 @@ __ObjDefineProp(Class.Prototype, "DefineFunc", {
 })
 
 ;; __FuncHandler
-; Used by functions that receives a func reference.
-__FuncHandler(this, func, args := [])
+; Used by functions that receives a function reference.
+__FuncHandler(this, func)
 {
   if not func is String {
     FuncObj := func
   } else if "." = SubStr(func,1,1) {
-    FuncObj := this.%SubStr(func,2)%             ; ".func" -> this.func
+    FuncObj := this.%SubStr(func,2)%  ; ".func" -> this.func
   } else {
     FuncObj := %func%
   }
-
-  if args
-    FuncObj := FuncObj.Bind(, args*)
 
   return FuncObj
 }
@@ -385,8 +382,8 @@ __Array_All(ArrayObj, func, args*)
 {
   loop ArrayObj.Length
   {
-    FuncObj := __FuncHandler(ArrayObj[A_Index], func, args)
-    if not FuncObj(ArrayObj[A_Index])
+    FuncObj := __FuncHandler(ArrayObj[A_Index], func)
+    if not FuncObj(ArrayObj[A_Index], args*)
       return false
   }
   return true
@@ -405,8 +402,8 @@ __Array_Any(ArrayObj, func, args*)
 {
   loop ArrayObj.Length
   {
-    FuncObj := __FuncHandler(ArrayObj[A_Index], func, args)
-    if FuncObj(ArrayObj[A_Index])
+    FuncObj := __FuncHandler(ArrayObj[A_Index], func)
+    if FuncObj(ArrayObj[A_Index], args*)
       return true
   }
   return false
@@ -426,8 +423,8 @@ __Array_Collect(ArrayObj, func, args*)
   NewArrayObj := Array()
   loop ArrayObj.Length
   {
-    FuncObj := __FuncHandler(ArrayObj[A_Index], func, args)
-    NewArrayObj.Push FuncObj(ArrayObj[A_Index])
+    FuncObj := __FuncHandler(ArrayObj[A_Index], func)
+    NewArrayObj.Push FuncObj(ArrayObj[A_Index], args*)
   }
   return NewArrayObj
 }
@@ -439,8 +436,8 @@ __Map_Collect(MapObj, func, args*)
   NewMapObj := Map()
   for key, value in MapObj
   {
-    FuncObj := __FuncHandler(value, func, args)
-    NewMapObj[key] := FuncObj(value)
+    FuncObj := __FuncHandler(value, func)
+    NewMapObj[key] := FuncObj(value, args*)
   }
   return NewMapObj
 }
@@ -455,10 +452,10 @@ __Array_Inject(ArrayObj, func, args*)
   EnumeratorObj := ArrayObj.__Enum()
 
   EnumeratorObj.Call(&NewArrayObj)
-  FuncObj := __FuncHandler(NewArrayObj, func, args)
+  FuncObj := __FuncHandler(NewArrayObj, func)
 
   while EnumeratorObj.Call(&NewArrayObj2)
-    NewArrayObj := FuncObj(NewArrayObj, NewArrayObj2)
+    NewArrayObj := FuncObj(NewArrayObj, NewArrayObj2, args*)
 
   return NewArrayObj
 }
@@ -471,8 +468,8 @@ __Array_Select(ArrayObj, func, args*)
 
   for value in ArrayObj
   {
-    FuncObj := __FuncHandler(value, func, args)
-    if FuncObj(value)
+    FuncObj := __FuncHandler(value, func)
+    if FuncObj(value, args*)
       NewArrayObj.Push(value)
   }
 
@@ -487,8 +484,8 @@ __Array_Reject(ArrayObj, func, args*)
 
   for value in ArrayObj
   {
-    FuncObj := __FuncHandler(value, func, args)
-    if not FuncObj(value)
+    FuncObj := __FuncHandler(value, func)
+    if not FuncObj(value, args*)
       NewArrayObj.Push(value)
   }
 
