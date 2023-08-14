@@ -84,8 +84,7 @@ __FuncHandler(this, func, args := [])
   if not func is String {
     FuncObj := func
   } else if "." = SubStr(func,1,1) {
-    ;FuncObj := this.%SubStr(func,2)%.Bind(this)  ; ".func" => this.func.Bind(this)
-    FuncObj := this.%SubStr(func,2)%             ; ".func" => this.func
+    FuncObj := this.%SubStr(func,2)%             ; ".func" -> this.func
   } else {
     FuncObj := %func%
   }
@@ -106,7 +105,7 @@ __FuncHandler(this, func, args := [])
 Inspect(SomeObj)
 {
   TypeString := Type(SomeObj)
-  InspectFunc := TypeString "_Inspect"
+  InspectFunc := "__" TypeString "_Inspect"
 
   if IsSet(InspectFunc)
     StringObj := %InspectFunc%(SomeObj)
@@ -116,32 +115,32 @@ Inspect(SomeObj)
   return StringObj
 }
 
-Object.DefineFunc("Inspect", Object_Inspect)
-Object_Inspect(obj)
+Object.DefineFunc("Inspect", __Object_Inspect)
+__Object_Inspect(obj)
 {
   return Type(obj) "()"
 }
 
-Integer.DefineFunc("Inspect", Integer_Inspect)
-Integer_Inspect(IntegerObj)
+Integer.DefineFunc("Inspect", __Integer_Inspect)
+__Integer_Inspect(IntegerObj)
 {
   return String(IntegerObj)
 }
 
-Float.DefineFunc("Inspect", Float_Inspect)
-Float_Inspect(FloatObj)
+Float.DefineFunc("Inspect", __Float_Inspect)
+__Float_Inspect(FloatObj)
 {
   return String(FloatObj)
 }
 
-String.DefineFunc("Inspect", String_Inspect)
-String_Inspect(StringObj)
+String.DefineFunc("Inspect", __String_Inspect)
+__String_Inspect(StringObj)
 {
   return '"' StrReplace(StringObj,'"','``"') '"'
 }
 
-Array.DefineFunc("Inspect", Array_Inspect)
-;Array_Inspect(ArrayObj)  ; Recursive solution
+Array.DefineFunc("Inspect", __Array_Inspect)
+;__Array_Inspect(ArrayObj)  ; Recursive solution
 ;{
 ;  StringObj := "["
 ;
@@ -158,7 +157,7 @@ Array.DefineFunc("Inspect", Array_Inspect)
 ;
 ;  return StringObj
 ;}
-Array_Inspect(RootArrayObj)  ; Iterative solution
+__Array_Inspect(RootArrayObj)  ; Iterative solution
 {
   StringObj := ""
   queue := [{index: 0, visited: 0, array: RootArrayObj}]
@@ -195,8 +194,8 @@ Array_Inspect(RootArrayObj)  ; Iterative solution
   return StringObj
 }
 
-Map.DefineFunc("Inspect", Map_Inspect)
-Map_Inspect(MapObj)
+Map.DefineFunc("Inspect", __Map_Inspect)
+__Map_Inspect(MapObj)
 {
   StringObj := "Map("
 
@@ -228,18 +227,18 @@ IsEmpty(SomeObj)
 
   return StringObj
 }
-String.DefineFunc("IsEmpty", String_IsEmpty)
-String_IsEmpty(StringObj)
+String.DefineFunc("IsEmpty", __String_IsEmpty)
+__String_IsEmpty(StringObj)
 {
   return StrLen(StringObj) = 0
 }
-Array.DefineFunc("IsEmpty", Array_IsEmpty)
-Array_IsEmpty(ArrayObj)
+Array.DefineFunc("IsEmpty", __Array_IsEmpty)
+__Array_IsEmpty(ArrayObj)
 {
   return ArrayObj.Length = 0
 }
-Map.DefineFunc("IsEmpty", Map_IsEmpty)
-Map_IsEmpty(MapObj)
+Map.DefineFunc("IsEmpty", __Map_IsEmpty)
+__Map_IsEmpty(MapObj)
 {
   return MapObj.Count = 0
 }
@@ -251,44 +250,44 @@ Map_IsEmpty(MapObj)
 IsBlank(SomeObj)
 {
   TypeString := Type(SomeObj)
-  InspectFunc := TypeString "_IsEmpty"
+  InspectFunc := "__" TypeString "_IsEmpty"
 
   if IsSet(InspectFunc)
     StringObj := %InspectFunc%(SomeObj)
   else
-    Object_IsBlank(SomeObj)
+    __Object_IsBlank(SomeObj)
 
   return StringObj
 }
-Object.DefineFunc("IsBlank", Object_IsBlank)
-Object_IsBlank(Obj)
+Object.DefineFunc("IsBlank", __Object_IsBlank)
+__Object_IsBlank(Obj)
 {
   return false
 }
-Integer.DefineFunc("IsBlank", Integer_IsBlank)
-Integer_IsBlank(IntegerObj)
+Integer.DefineFunc("IsBlank", __Integer_IsBlank)
+__Integer_IsBlank(IntegerObj)
 {
   return false
 }
-Float.DefineFunc("IsBlank", Float_IsBlank)
-Float_IsBlank(FloatObj)
+Float.DefineFunc("IsBlank", __Float_IsBlank)
+__Float_IsBlank(FloatObj)
 {
   return false
 }
-String.DefineFunc("IsBlank", String_IsBlank)
-String_IsBlank(StringObj)
+String.DefineFunc("IsBlank", __String_IsBlank)
+__String_IsBlank(StringObj)
 {
-  return String_IsEmpty(StringObj)
+  return __String_IsEmpty(StringObj)
 }
-Array.DefineFunc("IsBlank", Array_IsBlank)
-Array_IsBlank(ArrayObj)
+Array.DefineFunc("IsBlank", __Array_IsBlank)
+__Array_IsBlank(ArrayObj)
 {
-  return Array_IsEmpty(ArrayObj)
+  return __Array_IsEmpty(ArrayObj)
 }
-Map.DefineFunc("IsBlank", Map_IsBlank)
-Map_IsBlank(MapObj)
+Map.DefineFunc("IsBlank", __Map_IsBlank)
+__Map_IsBlank(MapObj)
 {
-  return Map_IsEmpty(MapObj)
+  return __Map_IsEmpty(MapObj)
 }
 
 ;; IsPresent
@@ -303,52 +302,52 @@ IsPresent(SomeObj)
   if IsSet(InspectFunc)
     StringObj := %InspectFunc%(SomeObj)
   else
-    Object_IsPresent(SomeObj)
+    __Object_IsPresent(SomeObj)
 
   return StringObj
 }
-Object.DefineFunc("IsPresent", Object_IsPresent)
-Object_IsPresent(Obj)
+Object.DefineFunc("IsPresent", __Object_IsPresent)
+__Object_IsPresent(Obj)
 {
   return true
 }
-Integer.DefineFunc("IsPresent", Integer_IsPresent)
-Integer_IsPresent(IntegerObj)
+Integer.DefineFunc("IsPresent", __Integer_IsPresent)
+__Integer_IsPresent(IntegerObj)
 {
   return true
 }
-Float.DefineFunc("IsPresent", Float_IsPresent)
-Float_IsPresent(FloatObj)
+Float.DefineFunc("IsPresent", __Float_IsPresent)
+__Float_IsPresent(FloatObj)
 {
   return true
 }
-String.DefineFunc("IsPresent", String_IsPresent)
-String_IsPresent(StringObj)
+String.DefineFunc("IsPresent", __String_IsPresent)
+__String_IsPresent(StringObj)
 {
-  return not String_IsEmpty(StringObj)
+  return not __String_IsEmpty(StringObj)
 }
-Array.DefineFunc("IsPresent", Array_IsPresent)
-Array_IsPresent(ArrayObj)
+Array.DefineFunc("IsPresent", __Array_IsPresent)
+__Array_IsPresent(ArrayObj)
 {
-  return not Array_IsEmpty(ArrayObj)
+  return not __Array_IsEmpty(ArrayObj)
 }
-Map.DefineFunc("IsPresent", Map_IsPresent)
-Map_IsPresent(MapObj)
+Map.DefineFunc("IsPresent", __Map_IsPresent)
+__Map_IsPresent(MapObj)
 {
-  return not Map_IsEmpty(MapObj)
+  return not __Map_IsEmpty(MapObj)
 }
 
 ;; Contains
-Array.DefineFunc("Contains", Array_Contains)
-Array_Contains(ArrayObj, needle)
+Array.DefineFunc("Contains", __Array_Contains)
+__Array_Contains(ArrayObj, needle)
 {
   for value in ArrayObj
     if value = needle
       return true
   return false
 }
-Map.DefineFunc("Contains", Array_Contains)
-Map_Contains(MapObj, needle)
+Map.DefineFunc("Contains", __Map_Contains)
+__Map_Contains(MapObj, needle)
 {
   for , value in MapObj
     if value = needle
@@ -357,8 +356,8 @@ Map_Contains(MapObj, needle)
 }
 
 ;; Array of all keys in a Map
-Map.DefineFunc("Keys", Map_Keys)
-Map_Keys(MapObj)
+Map.DefineFunc("Keys", __Map_Keys)
+__Map_Keys(MapObj)
 {
   ArrayObj := Array()
 
@@ -369,8 +368,8 @@ Map_Keys(MapObj)
 }
 
 ;; Array of all values in a Map
-Map.DefineFunc("Values", Map_Values)
-Map_Values(MapObj)
+Map.DefineFunc("Values", __Map_Values)
+__Map_Values(MapObj)
 {
   ArrayObj := Array()
   
@@ -381,8 +380,8 @@ Map_Values(MapObj)
 }
 
 ;; True if for all elements e: func(e, args*) => true
-Array.DefineFunc("All", Array_All)
-Array_All(ArrayObj, func, args*)
+Array.DefineFunc("All", __Array_All)
+__Array_All(ArrayObj, func, args*)
 {
   loop ArrayObj.Length
   {
@@ -394,15 +393,15 @@ Array_All(ArrayObj, func, args*)
 }
 
 ;; True if for all values v: func(v, args*) => true
-Map.DefineFunc("All", Map_All)
-Map_All(MapObj, func, args*)
+Map.DefineFunc("All", __Map_All)
+__Map_All(MapObj, func, args*)
 {
-  return Array_All(Map_Values(MapObj), func, args)
+  return __Array_All(__Map_Values(MapObj), func, args)
 }
 
 ;; True if for any element e: func(e, args*) => true
-Array.DefineFunc("Any", Array_Any)
-Array_Any(ArrayObj, func, args*)
+Array.DefineFunc("Any", __Array_Any)
+__Array_Any(ArrayObj, func, args*)
 {
   loop ArrayObj.Length
   {
@@ -414,15 +413,15 @@ Array_Any(ArrayObj, func, args*)
 }
 
 ;; True if for any value v: func(v, args*) => true
-Map.DefineFunc("Any", Map_Any)
-Map_Any(MapObj, func, args*)
+Map.DefineFunc("Any", __Map_Any)
+__Map_Any(MapObj, func, args*)
 {
-  return Array_Any(Map_Values(MapObj), func, args)
+  return __Array_Any(__Map_Values(MapObj), func, args)
 }
 
 ;; New array where each element e: func(e, args*)
-Array.DefineFunc("Collect", Array_Collect)
-Array_Collect(ArrayObj, func, args*)
+Array.DefineFunc("Collect", __Array_Collect)
+__Array_Collect(ArrayObj, func, args*)
 {
   NewArrayObj := Array()
   loop ArrayObj.Length
@@ -434,8 +433,8 @@ Array_Collect(ArrayObj, func, args*)
 }
 
 ;; New array where each element e: func(e, args*)
-Map.DefineFunc("Collect", Map_Collect)
-Map_Collect(MapObj, func, args*)
+Map.DefineFunc("Collect", __Map_Collect)
+__Map_Collect(MapObj, func, args*)
 {
   NewMapObj := Map()
   for key, value in MapObj
@@ -447,8 +446,8 @@ Map_Collect(MapObj, func, args*)
 }
 
 ;;
-Array.DefineFunc("Inject", Array_Inject)
-Array_Inject(ArrayObj, func, args*)
+Array.DefineFunc("Inject", __Array_Inject)
+__Array_Inject(ArrayObj, func, args*)
 {
   if ArrayObj.Length < 2
     return ArrayObj
@@ -465,8 +464,8 @@ Array_Inject(ArrayObj, func, args*)
 }
 
 ;; New array that only contains elements e where: func(e, args*) = true
-Array.DefineFunc("Select", Array_Select)
-Array_Select(ArrayObj, func, args*)
+Array.DefineFunc("Select", __Array_Select)
+__Array_Select(ArrayObj, func, args*)
 {
   NewArrayObj := Array()
 
@@ -481,8 +480,8 @@ Array_Select(ArrayObj, func, args*)
 }
 
 ;; New array that only contains elements e where: func(e, args*) = false
-Array.DefineFunc("Reject", Array_Reject)
-Array_Reject(ArrayObj, func, args*)
+Array.DefineFunc("Reject", __Array_Reject)
+__Array_Reject(ArrayObj, func, args*)
 {
   NewArrayObj := Array()
 
@@ -499,9 +498,9 @@ Array_Reject(ArrayObj, func, args*)
 ;; New array that only contains elements e where: IsSet(e) = true
 ; Basically removes all unset elements in an array.
 ; Example:
-;   [1,2,3,,5,6,,8,,,,12,] => [1,2,3,5,6,8,12]
-Array.DefineFunc("Compact", Array_Compact)
-Array_Compact(ArrayObj)
+;   [1,2,3,,5,6,,8,,,,12,] -> [1,2,3,5,6,8,12]
+Array.DefineFunc("Compact", __Array_Compact)
+__Array_Compact(ArrayObj)
 {
   NewArrayObj := Array()
 
@@ -515,8 +514,10 @@ Array_Compact(ArrayObj)
 }
 
 ;; Convert each element to String, and join them together to one single String.
-Array.DefineFunc("Join", Array_Join)
-Array_Join(ArrayObj, delimiter := "")
+; Example:
+;   [1,2,3.3,"444"].Join("|") -> "1|2|3.3|444"
+Array.DefineFunc("Join", __Array_Join)
+__Array_Join(ArrayObj, delimiter := "")
 {
   StringObj := ""
 
@@ -530,9 +531,10 @@ Array_Join(ArrayObj, delimiter := "")
 }
 
 ;; Flatten any array to a 1-dimentional array
-; Example: [ "a", ["b", ["c"]] ] => [ "a", "b", "c" ]
-Array.DefineFunc("Flatten", Array_Flatten)
-Array_Flatten(RootArrayObj, max_depth := unset)
+; Example:
+;   [ "a", ["b", ["c"]] ] -> [ "a", "b", "c" ]
+Array.DefineFunc("Flatten", __Array_Flatten)
+__Array_Flatten(RootArrayObj, max_depth := unset)
 {
   if RootArrayObj.Length = 0
     return []
@@ -571,9 +573,9 @@ Array_Flatten(RootArrayObj, max_depth := unset)
 }
 
 ;; Product of two arrays
-; Example: [1].Product([2,3]) => [[1,2],[1,3]]
-Array.DefineFunc("Product", Array_Product)
-Array_Product(ArrayObj, ArrayObj2)
+; Example: [1].Product([2,3]) -> [[1,2],[1,3]]
+Array.DefineFunc("Product", __Array_Product)
+__Array_Product(ArrayObj, ArrayObj2)
 {
   NewArrayObj := Array()
 
@@ -586,14 +588,13 @@ Array_Product(ArrayObj, ArrayObj2)
 
 
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper Functions (setup)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Split a command line string into its separate parts
 ; Example:
-;   'cd "C:\Program Files"' => ["cd", "C:\Program Files"]
+;   'cd "C:\Program Files"' -> ["cd", "C:\Program Files"]
 SplitCmdString(CmdString)
 {
   ArrayObj  := Array()
@@ -797,8 +798,8 @@ ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
 
 ;; Global Variables
 ; Note: `A_LineFile` is used since it gives same result for: current script, #Include file, compiled file
-script_name := RegexReplace(A_LineFile, "^.*[\\/]|[\.][^\.]*$", "")  ; "some\path\bofuru.ahk" => "bofuru"
-script_dir  := RegexReplace(A_LineFile, "[\\/][^\\/]+$", "")  ; "some\path\bofuru.ahk" => "some\path"
+script_name := RegexReplace(A_LineFile, "^.*[\\/]|[\.][^\.]*$", "")  ; "some\path\bofuru.ahk" -> "bofuru"
+script_dir  := RegexReplace(A_LineFile, "[\\/][^\\/]+$", "")  ; "some\path\bofuru.ahk" -> "some\path"
 config_file  := script_dir "\" script_name ".ini"
 
 ;; Transparent Pixel
