@@ -14,31 +14,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;TODOS
-;; - config file: read bofuru.conf.txt
-;; - autorun file: read bofuru.auto.txt
-;; - blacklist of windows not to modify:
-;;     https://learn.microsoft.com/en-gb/windows/win32/winmsg/about-window-classes?redirectedfrom=MSDN
-;;     * "ahk class Button"      The class for a button.
-;;     * "ahk class ComboBox"    The class for a combo box.
-;;     * "ahk class Edit"        The class for an edit control.
-;;     * "ahk class ListBox"     The class for a list box.
-;;     * "ahk class MDIClient"   The class for an MDI client window.
-;;     * "ahk class ScrollBar"   The class for a scroll bar.
-;;     * "ahk class Static"      The class for a static control.
-;;     * "ahk class ComboLBox"   The class for the list box contained in a combo box.
-;;     * "ahk class DDEMLEvent"  The class for Dynamic Data Exchange Management Library (DDEML) events.
-;;     * "ahk class Message"     The class for a message-only window.
-;;     * "ahk class #32768"      The class for a menu.
-;;     * "ahk class #32769"      The class for the desktop window.
-;;     * "ahk class #32770"      The class for a dialog box.
-;;     * "ahk class #32771"      The class for the task switch window.
-;;     * "ahk class #32772"      The class for icon titles.
+;; - Fix UTF-8 parse problem in *.ini files.
+;; - Detect/ignore games in "true fullscreen".
+;; - create transparent_pixel.ico in code
+;;     stop relying on a separate *.ico file.
 ;; - vpatch briefly show game borders, hides game window, show fullscreen dialog
 ;;     make sure script do not modify hidden game window, wait until it properly starts
 ;; - trayicon:
 ;;     * custom icon
 ;;     * custom menu: Show text: "title text of target game window"
 ;;                    option: fullscreen on/off
+;;                    option: move to another monitor
 ;;                    option: quit
 ;; - compiled exe:
 ;;     * custom icon (same as trayicon)
@@ -47,7 +33,7 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Language Extensions
+;; Helper Functions (for other helper functions)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Make `DefineProp` usable with other prototypes, not just Object.Prototype.
@@ -93,6 +79,7 @@ __FuncHandler(this, func)
 }
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper Functions (stdLib)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -115,7 +102,19 @@ Inspect(SomeObj)
 Object.DefineFunc("Inspect", __Object_Inspect)
 __Object_Inspect(obj)
 {
-  return Type(obj) "()"
+  StringObj := "{"
+
+  EnumObj := obj.OwnProps()
+
+  EnumObj.Call(&name, &value)
+  StringObj .= Inspect(name) ": " Inspect(value)
+
+  for name, value in EnumObj
+    StringObj .= ", " name ": " value
+
+  StringObj .= "}"
+
+  return StringObj
 }
 
 Integer.DefineFunc("Inspect", __Integer_Inspect)
@@ -589,6 +588,84 @@ __Array_Product(ArrayObj, ArrayObj2)
 ;; Helper Functions (setup)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Check if a file is encoded in UTF-8
+; _file              FileObj or String
+; accept_ascii_only  Boolean
+FileIsUTF8(_file, accept_ascii_only := true)
+{
+  if not _file is File
+    _file := FileOpen(_file, "r")
+
+  ; Check BOM
+  if _file.Encoding = "UTF-8"
+    return true
+  if _file.Encoding = "UTF-16"
+    return false
+
+  ; Helper Function: Read 1 byte from file
+  _file.ReadBuffer := Buffer(1)
+  _file.ReadByte := ReadByte
+  ReadByte(_file, &byte)
+  {
+    if not _file.RawRead(_file.ReadBuffer, 1)
+      return false
+    byte := NumGet(_file.ReadBuffer, "UChar")
+    return true
+  }
+
+  ascii_only := true
+
+  ; Loop implements the following UTF-8 regular expression:
+  ;source: https://www.w3.org/International/questions/qa-forms-utf-8
+  /*
+  /\A(
+     [\x00-\x7F]                        # ASCII
+   | [\xC2-\xDF][\x80-\xBF]             # non-overlong 2-byte
+   |  \xE0[\xA0-\xBF][\x80-\xBF]        # excluding overlongs
+   | [\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}  # straight 3-byte
+   |  \xED[\x80-\x9F][\x80-\xBF]        # excluding surrogates
+   |  \xF0[\x90-\xBF][\x80-\xBF]{2}     # planes 1-3
+   | [\xF1-\xF3][\x80-\xBF]{3}          # planes 4-15
+   |  \xF4[\x80-\x8F][\x80-\xBF]{2}     # plane 16
+  )*\z/x;
+  */
+  while not _file.AtEOF
+  {
+    if not _file.ReadByte(&b1)
+      return false
+    if(0x00<=b1&&b1<=0x7F)  ; ASCII
+      continue
+
+    ascii_only := false
+
+    if not _file.ReadByte(&b2)
+      return false
+    if(0xC2<=b1&&b1<=0xDF)&&(0x80<=b2&&b2<=0xBF)  ; non-overlong 2-byte
+      continue
+
+    if not _file.ReadByte(&b3)
+      return false
+    if(b1=0xE0)&&(0xA0<=b2&&b2<=0xBF)&&(0x80<=b3&&b3<=0xBF)                               ; excluding overlongs
+    ||(0xE1<=b1&&b1<=0xEC||b1=0xEE||b1=0xEF)&&(0x80<=b2&&b2<=0xBF)&&(0x80<=b3&&b3<=0xBF)  ; straight 3-byte
+    ||(b1=0xED)&&(0x80<=b2&&b2<=0x9F)&&(0x80<=b3&&b3<=0xBF)                               ; excluding surrogates
+      continue
+
+    if not _file.ReadByte(&b4)
+      return false
+    if(b1=0xF0)&&(0x90<=b2&&b2<=0xBF)&&(0x80<=b3&&b3<=0xBF)&&(0x80<=b4&&b4<=0xBF)             ; planes 1-3
+    ||(0xF1<=b1&&b1<=0xF3)&&(0x80<=b2&&b2<=0xBF)&&(0x80<=b3&&b3<=0xBF)&&(0x80<=b4&&b4<=0xBF)  ; planes 4-15
+    ||(b1=0xF4)&&(0x80<=b2&&b2<=0x8F)&&(0x80<=b3&&b3<=0xBF)&&(0x80<=b4&&b4<=0xBF)             ; plane 16
+      continue
+
+    return false
+  }
+
+  if ascii_only && not accept_ascii_only
+    return false
+
+  return true
+}
+
 ;; Split a command line string into its separate parts
 ; Example:
 ;   'cd "C:\Program Files"' -> ["cd", "C:\Program Files"]
@@ -659,12 +736,12 @@ GetActiveMonitorSize()
   monitor := 0
 
   ; Coordinates - Method 1
-  ;CoordMode("Mouse", "Screen")
-  ;MouseGetPos(&x, &y)  ; Get x y coordinates of mouse pointer
+  CoordMode("Mouse", "Screen")
+  MouseGetPos(&x, &y)  ; Get x y coordinates of mouse pointer
 
   ; Coordinates - Method 2
-  active_hwnd := WinExist("A")  ; Get the window that is currently in focus
-  WinGetPos(&x, &y, , , active_hwnd)  ; Get x y coordinates of window upper left corner
+  ;active_hwnd := WinExist("A")  ; Get the window that is currently in focus
+  ;WinGetPos(&x, &y, , , active_hwnd)  ; Get x y coordinates of window upper left corner
 
   ; Find the monitor that contains the x y coordinates
   Loop MonitorGetCount()
@@ -705,9 +782,9 @@ CalculateCorrectWindowsSizePos(app_hwnd)
 
   if (screen_size.width / screen_size.height) > (app_width / app_height)
   {
-    win_width := (screen_size.height / app_height) * app_width
+    win_width := Round((screen_size.height / app_height) * app_width)
     win_height := screen_size.height
-    win_x := screen_size.x + ((screen_size.width - win_width) / 2)
+    win_x := Round(screen_size.x + ((screen_size.width - win_width) / 2))
     win_y := screen_size.y
 
     barBL_x := screen_size.x
@@ -723,9 +800,9 @@ CalculateCorrectWindowsSizePos(app_hwnd)
   else
   {
     win_width := screen_size.width
-    win_height := (screen_size.width / app_width) * app_height
+    win_height := Round((screen_size.width / app_width) * app_height)
     win_x := screen_size.x
-    win_y := screen_size.y + ((screen_size.height - win_height) / 2)
+    win_y := Round(screen_size.y + ((screen_size.height - win_height) / 2))
 
     barTR_x := screen_size.x
     barTR_y := screen_size.y
@@ -775,6 +852,11 @@ CalculateXButtonSize(bar_width, bar_height)
 
 ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
 {
+  ; Even without borders, the app window can be moved by shift-left click on the app icon in the taskbar.
+  ; When moving the app window between monitors, somethimes the black bars gets slightly misaligned.
+  ; This is used to try to prevent this misalignment from happening. Not sure though if it works.
+  Sleep(250)
+
   win_sizes := CalculateCorrectWindowsSizePos(app_hwnd)
 
   app_size := win_sizes.app_size
@@ -782,22 +864,45 @@ ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
   barTR_size := win_sizes.bar_tr_size
 
   WinMove(app_size.x, app_size.y, app_size.width, app_size.height, app_hwnd)
-  barBL.Move(barBL_size.x, barBL_size.y, barBL_size.width, barBL_size.height)
-  barTR.Move(barTR_size.x, barTR_size.y, barTR_size.width, barTR_size.height)
+
+  ; Bars sometimes gets missing (transparent) pixel rows at the top.
+  ; This funky code prevents that for some reason. ¯\_(ツ)_/¯
+  barBL.Move(barBL_size.x, barBL_size.y+2, barBL_size.width, barBL_size.height)
+  barTR.Move(barTR_size.x, barTR_size.y+2, barTR_size.width, barTR_size.height)
+  barBL.Move(barBL_size.x, barBL_size.y,   barBL_size.width, barBL_size.height)
+  barTR.Move(barTR_size.x, barTR_size.y,   barTR_size.width, barTR_size.height)
+
   RepositionXButton(xBtn)
+
+  return app_size
+}
+
+RepositionXButton(xBtn)
+{
+  xBtn.Gui.GetPos(, , &bar_width, &bar_height)
+  xBtn_size := CalculateXButtonSize(bar_width, bar_height)
+  xBtn.Move(xBtn_size.x, xBtn_size.y, xBtn_size.width, xBtn_size.height)
+}
+
+clickArea_reposition(clickArea)
+{
+  ; Stretch the pixel to fit the whole bar
+  clickArea.Gui.GetClientPos(,,&w,&h)
+  clickArea.move(0,0,w,h)
 }
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Configuration
+;; Initialization
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Global Variables
 ; Note: `A_LineFile` is used since it gives same result for: current script, #Include file, compiled file
 script_name := RegexReplace(A_LineFile, "^.*[\\/]|[\.][^\.]*$", "")  ; "some\path\bofuru.ahk" -> "bofuru"
 script_dir  := RegexReplace(A_LineFile, "[\\/][^\\/]+$", "")  ; "some\path\bofuru.ahk" -> "some\path"
-config_file  := script_dir "\" script_name ".ini"
+config_name := script_name ".ini"
+config_path := script_dir "\" config_name
 
 ;; Transparent Pixel
 ; This is needed to create clickable areas in GUI windows.
@@ -807,17 +912,75 @@ pixel := script_dir . "\resourses\transparent_pixel.ico"
 ;@Ahk2Exe-IgnoreEnd
 ;@Ahk2Exe-AddResource resourses\transparent_pixel.ico, pixel
 
+;; Ignored Window Classes
+ignored_classes := [
+  ; https://learn.microsoft.com/en-gb/windows/win32/winmsg/about-window-classes?redirectedfrom=MSDN
+  "Button",      ; button
+  "ComboBox",    ; combo box
+  "Edit",        ; edit control
+  "ListBox",     ; list box
+  "MDIClient",   ; MDI client window
+  "ScrollBar",   ; scroll bar
+  "Static",      ; static control
+  "ComboLBox",   ; list box contained in a combo box
+  "DDEMLEvent",
+  "Message", ; message-only window
+  "#32768",  ; menu (ex: when you click top left icon in a window title)
+  "#32769",  ; desktop window
+  "#32770",  ; dialog box
+  "#32771",  ; task switch window
+  "#32772",  ; icon titles
+
+  ; Misc
+  "Progman",  ; Desktop - No wallpaper
+  "WorkerW",  ; Desktop - With wallpaper
+  "PseudoConsoleWindow",  ; Win11 cmd.exe
+]
+SetTitleMatchMode "RegEx"
+ahk_class_ignore :=
+  Format("ahk_class ^(?!{})",
+        ignored_classes.Collect(str => str "$")
+                       .Join("|")
+        )
+;ahk_class_ignore_ := "ahk_class ^(?!Button$|ComboBox$|Edit$|ListBox$|MDIClient$|ScrollBar$|Static$|ComboLBox$|DDEMLEvent$|Message$|#32768$|#32769$|#32770$|#32771$|#32772$)"
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Config File
-launch_string       := IniRead(config_file, "config", "launch", "")
-workdir             := IniRead(config_file, "config", "workdir", "")
-x_button_visibility := IniRead(config_file, "config", "x_button", "")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Config File
+if FileIsUTF8(config_path, accept_ascii_only := false)
+{
+  ; IniRead() do not support UTF-8 files
+  answer := MsgBox("File " config_name " uses UTF-8 encoding which unfortunately is not supported.`n`nAutomatically convert " config_name " to UTF-16?", , "YesNo")
+  if answer != "Yes"
+    ExitApp(0)
+
+  config_str := FileRead(config_path, "UTF-8")
+  FileDelete(config_path)
+  FileAppend(config_str, config_path, "UTF-16")
+  config_str := unset
+}
+launch_string       := IniRead(config_path, "config", "launch", "")
+workdir             := IniRead(config_path, "config", "workdir", "")
+x_button_visibility := IniRead(config_path, "config", "x_button", "")
 autorun_find        := Array()
 autorun_ignore      := Array()
-loop Parse IniRead(config_file, "autorun"), "`r`n", A_Space A_Tab
+loop Parse IniRead(config_path, "autorun"), "`r`n", A_Space A_Tab
+{
   if A_LoopField ~= "^!"
     autorun_ignore.Push( SubStr(A_LoopField,2) )
   else
     autorun_find.Push( A_LoopField )
+}
+if x_button_visibility.IsEmpty() {
+  x_button_visibility := "hide"
+} else if not x_button_visibility ~= "show|hide|slide" {
+  MsgBox "Invalid setting for ``x_button``:`n`n" x_button_visibility, config_path, "Icon!"
+  ExitApp()
+}
 
 
 
@@ -827,8 +990,10 @@ loop Parse IniRead(config_file, "autorun"), "`r`n", A_Space A_Tab
 
 if workdir
 {
-  if not FileExist(workdir) ~= "D"
-    MsgBox("workdir not found:`n`n" workdir, "")
+  if not FileExist(workdir) ~= "D" {
+    MsgBox("Workdir not found:`n`n" workdir, "", "Icon!")
+    ExitApp(1)
+  }
   SetWorkingDir workdir
 }
 
@@ -864,14 +1029,16 @@ if not launch_string
 ;; Run
 ; Start app
 Run(launch_string, , , &app_pid)
-if not app_hwnd := WinWait("ahk_pid " app_pid, , 5)  ; Get app window id (hwnd)
-{
-  if ProcessExist(app_pid)
-    ProcessClose(app_pid)
-  ExitApp(0)
+SetTimer EventAppQuit
+EventAppQuit() {
+  if not ProcessExist(app_pid) {
+    ;MsgBox "Exiting. PID gone: " app_pid
+    ExitApp(0)  ; Script Exit
+  }
 }
-;WinWaitClose(app_hwnd)
-;ExitApp(0)
+
+; Get Window Handle (hwnd)
+app_hwnd := WinWait("ahk_pid" app_pid " " ahk_class_ignore)
 
 ; Create black bars
 barBL := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Bottom Left
@@ -899,12 +1066,6 @@ EventXButtonClick(*)
 {
   WinClose(app_hwnd)
 }
-RepositionXButton(xBtn)
-{
-  xBtn.Gui.GetPos(, , &bar_width, &bar_height)
-  xBtn_size := CalculateXButtonSize(bar_width, bar_height)
-  xBtn.Move(xBtn_size.x, xBtn_size.y, xBtn_size.width, xBtn_size.height)
-}
 
 ; Make mouse clicks on the bars return focus to the app
 WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
@@ -919,12 +1080,6 @@ event_clickArea_click(*)
 {
   WinActivate(app_hwnd)  ; Hand focus back to the app
 }
-clickArea_reposition(clickArea)
-{
-  ; Stretch the pixel to fit the whole bar
-  clickArea.Gui.GetClientPos(,,&w,&h)
-  clickArea.move(0,0,w,h)
-}
 
 ; Make app borderless
 WinGetClientPos(, , &app_width, &app_height, app_hwnd)  ; Get width/height before removing border
@@ -936,10 +1091,10 @@ WinSetStyle("-" win_styles, app_hwnd)  ; Remove styles
 WinMove(, , app_width, app_height, app_hwnd)  ; Restore width/height
 
 ; Activate fullscreen
-ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
+app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
 barBL.Opt("+AlwaysOnTop")
 barTR.Opt("+AlwaysOnTop")
-WinSetAlwaysOnTop(True, app_hwnd)
+WinSetAlwaysOnTop(true, app_hwnd)
 WinMoveTop(barBL.Hwnd)
 WinMoveTop(barTR.Hwnd)
 WinMoveTop(app_hwnd)
@@ -947,6 +1102,19 @@ WinActivate(app_hwnd)  ; Focus the app window
 
 
 ;; Misc Event Handlers
+
+; Prevent moving the app window
+SetTimer(PreventWindowMove)
+PreventWindowMove()
+{
+  global app_size
+  if WinExist(app_hwnd) {
+    WinGetClientPos(&app_x, &app_y, , , app_hwnd)
+    if app_x != app_size.x || app_y != app_size.y {
+      app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
+    }
+  }
+}
 
 ; Exit when App has quit
 SetTimer EventWindowClose
@@ -987,11 +1155,11 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
   ; Some window moved to another monitor
   if (wParam = HSHELL_MONITORCHANGED)
   {
-    if (lParam = app_hwnd)
-    {
-      ; App has moved to another monitor
-      ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
-    }
+    ;if (lParam = app_hwnd)
+    ;{
+    ;  ; App has moved to another monitor
+    ;  ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
+    ;}
   }
 
   ; Some window got focus
