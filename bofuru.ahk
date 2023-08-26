@@ -107,11 +107,13 @@ __Object_Inspect(obj)
 
   EnumObj := obj.OwnProps()
 
-  EnumObj.Call(&name, &value)
-  StringObj .= Inspect(name) ": " Inspect(value)
+  if EnumObj.Call(&name, &value)
+  {
+    StringObj .= Inspect(name) ": " Inspect(value)
 
-  for name, value in EnumObj
-    StringObj .= ", " name ": " value
+    for name, value in EnumObj
+      StringObj .= ", " Inspect(name) ": " Inspect(value)
+  }
 
   StringObj .= "}"
 
@@ -567,6 +569,42 @@ __Array_Compact(ArrayObj)
   return NewArrayObj
 }
 
+;; Trim a string
+; Example:
+;   "  asdf ".Trim() -> "asdf"
+String.DefineFunc("Trim", __String_Trim)
+__String_Trim(StringObj, OmitChars?)
+{
+  return Trim(StringObj, OmitChars?)
+}
+
+;; Left trim a string
+; Example:
+;   "  asdf ".Trim() -> "asdf "
+String.DefineFunc("LTrim", __String_LTrim)
+__String_LTrim(StringObj, OmitChars?)
+{
+  return LTrim(StringObj, OmitChars?)
+}
+
+;; Right trim a string
+; Example:
+;   "  asdf ".Trim() -> "  asdf"
+String.DefineFunc("RTrim", __String_RTrim)
+__String_RTrim(StringObj, OmitChars?)
+{
+  return RTrim(StringObj, OmitChars?)
+}
+
+;; Split a string into an array
+; Example:
+;   "1|2|3.3|444".Split("|") -> [1,2,3.3,"444"]
+String.DefineFunc("Split", __String_Split)
+__String_Split(StringObj, Delimiters?, OmitChars?, MaxParts?)
+{
+  return StrSplit(StringObj, Delimiters?, OmitChars?, MaxParts?)
+}
+
 ;; Convert each element to String, and join them together to one single String.
 ; Example:
 ;   [1,2,3.3,"444"].Join("|") -> "1|2|3.3|444"
@@ -589,8 +627,9 @@ __Array_Join(ArrayObj, delimiter := "")
 }
 
 ;; Flatten any array to a 1-dimentional array
-; Example:
-;   [ "a", ["b", ["c"]] ] -> [ "a", "b", "c" ]
+; Examples:
+;   [ "a", ["b", ["c"]] ].Flatten()  -> [ "a", "b",  "c"  ]
+;   [ "a", ["b", ["c"]] ].Flatten(1) -> [ "a", "b", ["c"] ]
 Array.DefineFunc("Flatten", __Array_Flatten)
 __Array_Flatten(RootArrayObj, max_depth := unset)
 {
@@ -773,63 +812,58 @@ FindFiles(file_pattern, full_path := false)
 
 ParseAutorunPattern(autorun_pattern)
 {
-  launch_pattern := unset
-  winexe         := ""
-  winclass       := ""
-  wingrab        := ""
-  btnX           := ""
-  btnO           := ""
-  btn_           := ""
+  result := unset
+  extra := {}
 
   if not InStr(autorun_pattern, SEP) {
     launch_pattern := autorun_pattern
   } else {
-    split := StrSplit(autorun_pattern, SEP, , 2)
+    split := autorun_pattern.Split(SEP, , 2)
     launch_pattern := split[1]
-    window_patterns := StrSplit(split[2], SEP)
-    window_patterns.Each(GenerateWindowString, &winexe, &winclass, &wingrab, &btnX, &btnO, &btn_)
+    window_patterns := split[2].Split(SEP)
+    window_patterns.Each(GenerateWindowString, &extra)
   }
 
-  if winexe = "ERROR"
-    launch_strings := []
+  if extra.HasOwnProp("winexe") && extra.winexe = false
+    result := []
   else
-    launch_strings := GenerateLaunchStrings(launch_pattern)
-                      .Collect(str=>(str ":" winexe ":" winclass ":" wingrab ":" btnX ":" btnO ":" btn_))
+    result := GenerateLaunchStrings(launch_pattern)
+              .Collect(launch_string=>[launch_string,extra])
 
-  return launch_strings
+  return result
 }
 
-GenerateWindowString(window_pattern, &winexe, &winclass, &wingrab, &btnX, &btnO, &btn_)
+GenerateWindowString(window_pattern, &extra)
 {
   if window_pattern ~= "^\s*winexe\s*="
   {
-    file_pattern := Trim(StrSplit(window_pattern, "=", , 2)[2])
-    files := FindFiles(file_pattern,true)
-    file_regexes := files.Collect(str=>RegExReplace(str,"^.*[\\]","\\"))
-                         .Collect(str=>StrReplace(str,".","\."))
+    file_pattern := window_pattern.Split("=", , 2)[2].Trim()
+    files := FindFiles(file_pattern, full_path := true)
+    file_regexes := files.Collect(str=>RegExReplace(str, "^.*[\\]", "\\"))
+                         .Collect(str=>StrReplace(str, ".", "\."))
                          .Join("|")
-    winexe := file_regexes.IsEmpty() ? "ERROR" : ("ahk_exe" "(" file_regexes ")$")
+    extra.winexe := file_regexes.IsEmpty() ? false : ("ahk_exe" "(" file_regexes ")$")
   }
   else if window_pattern ~= "^\s*winclass\s*="
   {
-    class_regex := Trim(StrSplit(window_pattern, "=", , 2)[2])
-    winclass := "ahk_class" "^" class_regex "$"
+    class_regex := window_pattern.Split("=", , 2)[2].Trim()
+    extra.winclass := "ahk_class" "^" class_regex "$"
   }
   else if window_pattern ~= "^\s*wingrab\s*="
   {
-    wingrab := Trim(StrSplit(window_pattern, "=", , 2)[2])
+    extra.wingrab := window_pattern.Split("=", , 2)[2].Trim()
   }
   else if window_pattern ~= "^\s*btnX\s*="
   {
-    btnX := Trim(StrSplit(window_pattern, "=", , 2)[2])
+    extra.buttonX := window_pattern.Split("=", , 2)[2].Trim()
   }
   else if window_pattern ~= "^\s*btnO\s*="
   {
-    btnO := Trim(StrSplit(window_pattern, "=", , 2)[2])
+    extra.buttonO := window_pattern.Split("=", , 2)[2].Trim()
   }
   else if window_pattern ~= "^\s*btn_\s*="
   {
-    btn_ := Trim(StrSplit(window_pattern, "=", , 2)[2])
+    extra.button_ := window_pattern.Split("=", , 2)[2].Trim()
   }
 }
 
@@ -1123,6 +1157,12 @@ if FileIsUTF8(CONFIG_PATH, accept_ascii_only := false)
   config_str := unset
 }
 
+if not IniRead(CONFIG_PATH).Split("`n").Contains("config")
+{
+  MsgBox(CONFIG_PATH "`nSection is missing: [config]", , "Icon!")
+  ExitApp(1)
+}
+
 launch_string  := IniRead(CONFIG_PATH, "config", "launch", "")
 workdir        := IniRead(CONFIG_PATH, "config", "workdir", "")
 buttonX        := IniRead(CONFIG_PATH, "config", "btnX", "disable")
@@ -1136,24 +1176,27 @@ autorun_ignore := Array()
 window_string  := ""
 delay_millisec := 0
 
-loop Parse IniRead(CONFIG_PATH, "autorun"), "`r`n", A_Space A_Tab
+if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("autorun")
 {
-  if InStr(A_LoopField, SEP)
-  && not StrSplit(A_LoopField, SEP).Slice(2).All(RegExMatch, "^\s*btn[XO_]\s*=\s*(disable|enable|hide)\s*$|^\s*(winexe|winclass)\s*=|^\s*wingrab\s*=\s*(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))\s*$")
+  loop Parse IniRead(CONFIG_PATH, "autorun"), "`r`n", A_Space A_Tab
   {
-    MsgBox "Invalid autorun entry:`n`n" A_LoopField, CONFIG_PATH, "Icon!"
-    ExitApp(1)
-  }
+    if InStr(A_LoopField, SEP)
+    && not A_LoopField.Split(SEP).Slice(2).All(RegExMatch, "^\s*btn[XO_]\s*=\s*(disable|enable|hidden)\s*$|^\s*(winexe|winclass)\s*=|^\s*wingrab\s*=\s*(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))\s*$")
+    {
+      MsgBox "Invalid autorun entry:`n`n" A_LoopField, CONFIG_PATH, "Icon!"
+      ExitApp(1)
+    }
 
-  if A_LoopField ~= "^!"
-    autorun_ignore.Push( SubStr(A_LoopField,2) )
-  else
-    autorun_find.Push( A_LoopField )
+    if A_LoopField ~= "^!"
+      autorun_ignore.Push( SubStr(A_LoopField,2) )
+    else
+      autorun_find.Push( A_LoopField )
+  }
 }
 
 for button in [buttonX, buttonO, button_]
 {
-  if not button ~= "^(disable|enable|hide)$"
+  if not button ~= "^(disable|enable|hidden)$"
   {
     MsgBox "Invalid button setting:`n`n" button, CONFIG_PATH, "Icon!"
     ExitApp(1)
@@ -1179,24 +1222,21 @@ if launch_string.IsEmpty()
 {
   autorun_ignore :=
     autorun_ignore.Collect(ParseAutorunPattern)
-                  .Flatten()
-                  .Collect(str=>StrSplit(str,":",,2)[1])
+                  .Flatten(1)
+                  .Collect(arr=>arr[1])
 
   autorun_find :=
     autorun_find.Collect(ParseAutorunPattern)
-                .Flatten()
-                .Reject(str=>autorun_ignore.Contains(StrSplit(str,":",,2)[1]))
+                .Flatten(1)
+                .Reject(arr=>autorun_ignore.Contains(arr[1]))
 
   if autorun_find.Has(1) {
-    split := StrSplit(autorun_find[1], ":")
-    launch_string := split[1]
-    winexe   := split[2]
-    winclass := split[3]
-    wingrab  := split[4]
-    btnX     := split[5]
-    btnO     := split[6]
-    btn_     := split[7]
-    split := unset
+    launch_string := autorun_find[1][1]
+    extra := autorun_find[1][2]
+    
+    ; Names are set in function GenerateWindowString()
+    for name, value in extra.OwnProps()
+      %name% := value
   }
 }
 
@@ -1206,10 +1246,7 @@ if launch_string.IsEmpty()
   ExitApp(1)
 }
 
-window_string := Trim([winexe, winclass].Join(" "))
-
-if wingrab.IsEmpty()
-  wingrab := "instant"  ;TODO: Store default fvalues in only one place
+window_string := Trim(winexe " " winclass)
 
 if RegExMatch(wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
 {
@@ -1218,17 +1255,12 @@ if RegExMatch(wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
   delay_millisec := Number(match[1]) * 1000
 }
 
-if not btnX
-  btnX := "disable"
-if not btnO
-  btnO := "disable"
-if not btn_
-  btn_ := "disable"
+;DEBUG
+;MsgBox [launch_string,window_string,wingrab,delay_millisec,buttonX,buttonO,button_].Inspect()
+;ExitApp(0)
 
 
 
-MsgBox [launch_string,window_string,wingrab,delay_millisec,btnX,btnO,btn_].Inspect()
-ExitApp(0)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Run
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
