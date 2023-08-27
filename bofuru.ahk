@@ -1,6 +1,5 @@
 #Requires AutoHotkey v2.0
 #WinActivateForce
-;#NoTrayIcon
 SetTitleMatchMode "RegEx"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -380,6 +379,30 @@ __Map_Values(MapObj)
   return ArrayObj
 }
 
+;; Array of all keys in a Map
+Object.DefineFunc("PropNames", __Object_PropNames)
+__Object_PropNames(SomeObj)
+{
+  ArrayObj := Array()
+
+  for name in SomeObj.OwnProps()
+    ArrayObj.Push(name)
+
+  return ArrayObj
+}
+
+;; Array of all values in a Map
+Object.DefineFunc("PropValues", __Object_PropValues)
+__Object_PropValues(SomeObj)
+{
+  ArrayObj := Array()
+  
+  for , value in SomeObj.OwnProps()
+    ArrayObj.Push(value)
+
+  return ArrayObj
+}
+
 ;; True if for all elements e: func(e, args*) => true
 Array.DefineFunc("All", __Array_All)
 __Array_All(ArrayObj, func, args*)
@@ -438,7 +461,7 @@ __Map_Each(MapObj, func, args*)
 {
   for key, value in MapObj
   {
-    key_val := [key, value]
+    key_val := {key:key, value:value}
     FuncObj := __FuncHandler(key_val, func)
     FuncObj(key_val, args*)
   }
@@ -490,6 +513,30 @@ __Array_Inject(ArrayObj, init?, func?, args*)
 
   while EnumeratorObj.Call(&value)
     result := FuncObj(result, value, args*)
+
+  return result
+}
+
+;;
+Map.DefineFunc("Inject", __Map_Inject)
+__Map_Inject(MapObj, init?, func?, args*)
+{
+  if not IsSet(func)
+    Throw "`"Error: Too few parameters passed to function.`""
+
+  EnumeratorObj := MapObj.__Enum()
+
+  if IsSet(init) {
+    result := init
+  } else {
+    EnumeratorObj.Call(&key, &value)
+    result := {key:key, value:value}
+  }
+
+  FuncObj := __FuncHandler(result, func)
+
+  while EnumeratorObj.Call(&key, &value)
+    result := FuncObj(result, {key:key, value:value}, args*)
 
   return result
 }
@@ -567,6 +614,22 @@ __Array_Compact(ArrayObj)
   }
 
   return NewArrayObj
+}
+
+;;
+;
+String.DefineFunc("Replace", __String_Replace)
+__String_Replace(StringObj, Needle, ReplaceText?, CaseSense?, &OutputVarCount?, Limit?)
+{
+  return StrReplace(StringObj, Needle, ReplaceText?, CaseSense?, &OutputVarCount?, Limit?)
+}
+
+;;
+;
+String.DefineFunc("RegExReplace", __String_RegExReplace)
+__String_RegExReplace(StringObj, NeedleRegEx ,Replacement?, &OutputVarCount?, Limit?, StartingPos?)
+{
+  return RegExReplace(StringObj, NeedleRegEx ,Replacement?, &OutputVarCount?, Limit?, StartingPos?)
 }
 
 ;; Trim a string
@@ -703,7 +766,7 @@ FileIsUTF8(_file, accept_ascii_only := true)
   if _file.Encoding = "UTF-16"
     return false
 
-  ; Helper Function: Read 1 byte from file
+  ; ReadByte: Function that reads from file one byte at a time
   _file.ReadBuffer := Buffer(1)
   _file.ReadByte := ReadByte
   ReadByte(_file, &byte)
@@ -770,6 +833,7 @@ FileIsUTF8(_file, accept_ascii_only := true)
 ;; Split a command line string into its separate parts
 ; Example:
 ;   'cd "C:\Program Files"' -> ["cd", "C:\Program Files"]
+;   'file.exe /flag1 -flag2 "value one" --flag3 "value two"' -> ["some\file.exe" "/flag1" "-flag2" "value one" "--flag3" "value two"]
 SplitCmdString(CmdString)
 {
   ArrayObj  := Array()
@@ -821,10 +885,10 @@ ParseAutorunPattern(autorun_pattern)
     split := autorun_pattern.Split(SEP, , 2)
     launch_pattern := split[1]
     window_patterns := split[2].Split(SEP)
-    window_patterns.Each(GenerateWindowString, &extra)
+    window_patterns.Each(ptrn => GenerateWindowString(ptrn, &extra))
   }
 
-  if extra.HasOwnProp("winexe") && extra.winexe = false
+  if extra.PropValues().Any(value => value = false)
     result := []
   else
     result := GenerateLaunchStrings(launch_pattern)
@@ -842,26 +906,29 @@ GenerateWindowString(window_pattern, &extra)
     file_regexes := files.Collect(str=>RegExReplace(str, "^.*[\\]", "\\"))
                          .Collect(str=>StrReplace(str, ".", "\."))
                          .Join("|")
-    extra.winexe := file_regexes.IsEmpty() ? false : ("ahk_exe" "(" file_regexes ")$")
+    if file_regexes.IsEmpty()
+      extra.winexe := false
+    else
+      extra.winexe := "(" file_regexes ")$"
   }
   else if window_pattern ~= "^\s*winclass\s*="
   {
     class_regex := window_pattern.Split("=", , 2)[2].Trim()
-    extra.winclass := "ahk_class" "^" class_regex "$"
+    extra.winclass := "^" class_regex "$"
   }
   else if window_pattern ~= "^\s*wingrab\s*="
   {
     extra.wingrab := window_pattern.Split("=", , 2)[2].Trim()
   }
-  else if window_pattern ~= "^\s*btnX\s*="
+  else if window_pattern ~= "^\s*buttonX\s*="
   {
     extra.buttonX := window_pattern.Split("=", , 2)[2].Trim()
   }
-  else if window_pattern ~= "^\s*btnO\s*="
+  else if window_pattern ~= "^\s*buttonO\s*="
   {
     extra.buttonO := window_pattern.Split("=", , 2)[2].Trim()
   }
-  else if window_pattern ~= "^\s*btn_\s*="
+  else if window_pattern ~= "^\s*button_\s*="
   {
     extra.button_ := window_pattern.Split("=", , 2)[2].Trim()
   }
@@ -884,7 +951,7 @@ GenerateLaunchStrings(launch_pattern)
 
     while enum.Call(&file_pattern)
     {
-      if contains_a_but_not_inbetween_b(file_pattern, a:="*", b:='"') {
+      if contains_a_but_not_inbetween_b(file_pattern, a:="*?", b:='"') {
         ; wildcard found, treat it as a file
         files := FindFiles(file_pattern)
         launch_strings.Push(files)
@@ -913,7 +980,8 @@ contains_a_but_not_inbetween_b(haystack, a, b)
   
   loop parse haystack
   {
-    if !inbetween_b && A_LoopField = a
+    ;if !inbetween_b && A_LoopField = a
+    if !inbetween_b && A_LoopField ~= "[" a "]"
       return true
     else if A_LoopField = b
       inbetween_b := !inbetween_b
@@ -1047,7 +1115,7 @@ CalculateXButtonSize(bar_width, bar_height)
   }
 }
 
-ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
+ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn?)
 {
   ; Even without borders, the app window can be moved by shift-left click on the app icon in the taskbar.
   ; When moving the app window between monitors, somethimes the black bars gets slightly misaligned.
@@ -1069,7 +1137,8 @@ ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
   barBL.Move(barBL_size.x, barBL_size.y,   barBL_size.width, barBL_size.height)
   barTR.Move(barTR_size.x, barTR_size.y,   barTR_size.width, barTR_size.height)
 
-  RepositionXButton(xBtn)
+  if IsSet(xBtn)
+    RepositionXButton(xBtn)
 
   return app_size
 }
@@ -1094,13 +1163,14 @@ clickArea_reposition(clickArea)
 ;; Initialization
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Global Variables
+;; Misc
 ; Note: `A_LineFile` is used since it gives same result for: current script, #Include file, compiled file
 SCRIPT_NAME := RegexReplace(A_LineFile, "^.*[\\/]|[\.][^\.]*$", "")  ; "some\path\bofuru.ahk" -> "bofuru"
 SCRIPT_DIR  := RegexReplace(A_LineFile, "[\\/][^\\/]+$", "")  ; "some\path\bofuru.ahk" -> "some\path"
 CONFIG_NAME := SCRIPT_NAME ".ini"
 CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
 SEP := "|"  ; Separator: Used in the config [autorun] section
+CONFIG_AUTORUN_LINE_REGEX := "^\s*button[XO_]\s*=\s*(disable|enable|hidden)\s*$|^\s*(winexe|winclass)\s*=|^\s*wingrab\s*=\s*(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))\s*$"
 
 ;; Transparent Pixel
 ; This is needed to create clickable areas in GUI windows.
@@ -1111,6 +1181,7 @@ pixel := SCRIPT_DIR . "\resourses\transparent_pixel.ico"
 ;@Ahk2Exe-AddResource resourses\transparent_pixel.ico, pixel
 
 ;; Ignored Window Classes
+; Reason why script uses: SetTitleMatchMode "RegEx"
 IGNORED_CLASSES := [
   ; https://learn.microsoft.com/en-gb/windows/win32/winmsg/about-window-classes?redirectedfrom=MSDN
   "Button",     ; button
@@ -1134,64 +1205,108 @@ IGNORED_CLASSES := [
   "WorkerW",  ; Desktop - With wallpaper
   "PseudoConsoleWindow",  ; Win11 cmd.exe
 ]
-ahk_class_ignore := Format("ahk_class ^(?!{})", IGNORED_CLASSES.Collect(str => str "$").Join("|"))
-;ahk_class_ignore := "ahk_class ^(?!Button$|ComboBox$|Edit$|ListBox$|MDIClient$|ScrollBar$|Static$|ComboLBox$|DDEMLEvent$|Message$|#32768$|#32769$|#32770$|#32771$|#32772$)"
+AHK_CLASS_IGNORE := Format("ahk_class ^(?!{})", IGNORED_CLASSES.Collect(str => str "$").Join("|"))
 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Config File
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Config File
-if FileIsUTF8(CONFIG_PATH, accept_ascii_only := false)
-{
-  ; IniRead() do not support UTF-8 files
-  answer := MsgBox("File " CONFIG_NAME " uses UTF-8 encoding which unfortunately is not supported.`n`nAutomatically convert " CONFIG_NAME " to UTF-16?", , "YesNo")
-  if answer != "Yes"
-    ExitApp(0)
-
-  config_str := FileRead(CONFIG_PATH, "UTF-8")
-  FileDelete(CONFIG_PATH)
-  FileAppend(config_str, CONFIG_PATH, "UTF-16")
-  config_str := unset
-}
-
-if not IniRead(CONFIG_PATH).Split("`n").Contains("config")
-{
-  MsgBox(CONFIG_PATH "`nSection is missing: [config]", , "Icon!")
-  ExitApp(1)
-}
-
-launch_string  := IniRead(CONFIG_PATH, "config", "launch", "")
-workdir        := IniRead(CONFIG_PATH, "config", "workdir", "")
-buttonX        := IniRead(CONFIG_PATH, "config", "btnX", "disable")
-buttonO        := IniRead(CONFIG_PATH, "config", "btnO", "disable")
-button_        := IniRead(CONFIG_PATH, "config", "btn_", "disable")
-winexe         := IniRead(CONFIG_PATH, "config", "winexe", "")
-winclass       := IniRead(CONFIG_PATH, "config", "winclass", "")
-wingrab        := IniRead(CONFIG_PATH, "config", "wingrab", "instant")
+;; Config Variables
+launch_string  := ""
+workdir        := ""
+buttonX        := "disable"
+buttonO        := "disable"
+button_        := "disable"
+winexe         := ""
+winclass       := ""
+wingrab        := "instant"
 autorun_find   := Array()
 autorun_ignore := Array()
 window_string  := ""
 delay_millisec := 0
 
-if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("autorun")
-{
-  loop Parse IniRead(CONFIG_PATH, "autorun"), "`r`n", A_Space A_Tab
-  {
-    if InStr(A_LoopField, SEP)
-    && not A_LoopField.Split(SEP).Slice(2).All(RegExMatch, "^\s*btn[XO_]\s*=\s*(disable|enable|hidden)\s*$|^\s*(winexe|winclass)\s*=|^\s*wingrab\s*=\s*(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))\s*$")
-    {
-      MsgBox "Invalid autorun entry:`n`n" A_LoopField, CONFIG_PATH, "Icon!"
-      ExitApp(1)
-    }
 
-    if A_LoopField ~= "^!"
-      autorun_ignore.Push( SubStr(A_LoopField,2) )
-    else
-      autorun_find.Push( A_LoopField )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Config
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Config File
+if FileExist(CONFIG_PATH) ~= "[^D]"  ; If config file exists
+{
+  if FileIsUTF8(CONFIG_PATH, accept_ascii_only := false)
+  {
+    ; IniRead() do unfortunately not support UTF-8 files
+    answer := MsgBox("File " CONFIG_NAME " uses UTF-8 encoding which unfortunately is not supported.`n`nAutomatically convert " CONFIG_NAME " to UTF-16?", , "YesNo")
+    if answer != "Yes"
+      ExitApp(0)
+
+    config_str := FileRead(CONFIG_PATH, "UTF-8")
+    FileDelete(CONFIG_PATH)
+    FileAppend(config_str, CONFIG_PATH, "UTF-16")
+    config_str := unset
   }
+
+  if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("config")
+  {
+    launch_string  := IniRead(CONFIG_PATH, "config", "launch", launch_string)
+    workdir        := IniRead(CONFIG_PATH, "config", "workdir", workdir)
+    buttonX        := IniRead(CONFIG_PATH, "config", "buttonX", buttonX)
+    buttonO        := IniRead(CONFIG_PATH, "config", "buttonO", buttonO)
+    button_        := IniRead(CONFIG_PATH, "config", "button_", button_)
+    winexe         := IniRead(CONFIG_PATH, "config", "winexe", winexe).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+    winclass       := IniRead(CONFIG_PATH, "config", "winclass", winclass).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+    wingrab        := IniRead(CONFIG_PATH, "config", "wingrab", wingrab)
+  }
+
+  if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("autorun")
+  {
+    loop Parse IniRead(CONFIG_PATH, "autorun"), "`r`n", A_Space A_Tab
+    {
+      if InStr(A_LoopField, SEP)
+      && not A_LoopField.Split(SEP).Slice(2).All(RegExMatch, CONFIG_AUTORUN_LINE_REGEX)
+      {
+        MsgBox "Invalid autorun entry:`n`n" A_LoopField, CONFIG_PATH, "Icon!"
+        ExitApp(1)
+      }
+
+      if A_LoopField ~= "^!"
+        autorun_ignore.Push( SubStr(A_LoopField,2) )
+      else
+        autorun_find.Push( A_LoopField )
+    }
+  }
+}
+
+;; Arguments
+if not A_Args.IsEmpty()
+{
+  args := A_Args.Collect(arg => (arg ~= "\s" ? '"' arg.Replace('"','`"') '"' : arg))
+  launch_args := Array()
+
+  i := 0
+  while (i += 1, i <= args.Length)
+  {
+    if args[i] = "--workdir" {
+      workdir := A_Args[(i += 1, i)]
+    } else if args[i] = "--buttonX" {
+      buttonX := A_Args[(i += 1, i)]
+    } else if args[i] = "--buttonO" {
+      buttonO := A_Args[(i += 1, i)]
+    } else if args[i] = "--button_" {
+      button_ := A_Args[(i += 1, i)]
+    } else if args[i] = "--winexe" {
+      winexe := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+    } else if args[i] = "--winclass" {
+      winclass := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+    } else if args[i] = "--wingrab" {
+      wingrab := A_Args[(i += 1, i)]
+    } else if args[i] = "--" {
+      args.Slice(i+1).Each(arg => launch_args.Push(arg))
+      break
+    } else {
+      launch_args.Push(args[i])
+    }
+  }
+
+  if not launch_args.IsEmpty()
+    launch_string := launch_args.Join(" ")
 }
 
 for button in [buttonX, buttonO, button_]
@@ -1201,6 +1316,12 @@ for button in [buttonX, buttonO, button_]
     MsgBox "Invalid button setting:`n`n" button, CONFIG_PATH, "Icon!"
     ExitApp(1)
   }
+}
+
+if not wingrab ~= "^(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))$"
+{
+  MsgBox "Invalid wingrab setting:`n`n" wingrab, CONFIG_PATH, "Icon!"
+  ExitApp(1)
 }
 
 
@@ -1246,6 +1367,11 @@ if launch_string.IsEmpty()
   ExitApp(1)
 }
 
+
+if winexe
+  winexe := "ahk_exe" winexe
+if winclass
+  winclass := "ahk_class" winclass
 window_string := Trim(winexe " " winclass)
 
 if RegExMatch(wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
@@ -1262,7 +1388,7 @@ if RegExMatch(wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Run
+;; Fullscreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Run
@@ -1273,7 +1399,7 @@ Run(launch_string, , , &app_pid)
 if window_string
 {
   while ProcessExist(app_pid)
-    app_hwnd := WinWait(window_string " " ahk_class_ignore, , timeout_sec := 1)
+    app_hwnd := WinWait(window_string " " AHK_CLASS_IGNORE, , timeout_sec := 1)
   if not app_hwnd
     ExitApp(0)
 
@@ -1292,7 +1418,7 @@ else
     if not ProcessExist(app_pid)
       ExitApp(0)
   }
-  app_hwnd := WinWait("ahk_pid" app_pid " " ahk_class_ignore)
+  app_hwnd := WinWait("ahk_pid" app_pid " " AHK_CLASS_IGNORE)
 }
 
 ; Create black bars
@@ -1311,15 +1437,19 @@ EventBarBLSize(*)
 EventBarTRSize(*)
 {
   clickArea_reposition(barTR_clickArea) ;pixel
-  RepositionXButton(xBtn)
+  if IsSet(xBtn)
+    RepositionXButton(xBtn)
 }
 
 ; Create exit button
-xBtn := barTR.Add("Button", "Default", "X")
-xBtn.OnEvent("Click", EventXButtonClick)
-EventXButtonClick(*)
+if not buttonX = "disable"
 {
-  WinClose(app_hwnd)
+  xBtn := barTR.Add("Button", "Default", "X")
+  xBtn.OnEvent("Click", EventXButtonClick)
+  EventXButtonClick(*)
+  {
+    WinClose(app_hwnd)
+  }
 }
 
 ; Make mouse clicks on the bars return focus to the app
@@ -1346,7 +1476,7 @@ WinSetStyle("-" win_styles, app_hwnd)  ; Remove styles
 WinMove(, , app_width, app_height, app_hwnd)  ; Restore width/height
 
 ; Activate fullscreen
-app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
+app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn?)
 barBL.Opt("+AlwaysOnTop")
 barTR.Opt("+AlwaysOnTop")
 WinSetAlwaysOnTop(true, app_hwnd)
@@ -1366,7 +1496,7 @@ PreventWindowMove()
   if WinExist(app_hwnd) {
     WinGetClientPos(&app_x, &app_y, , , app_hwnd)
     if app_x != app_size.x || app_y != app_size.y {
-      app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
+      app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn?)
     }
   }
 }
