@@ -574,6 +574,7 @@ __Array_Reject(ArrayObj, func, args*)
 }
 
 ;; Take a sub array from an array.
+; Is meant to mimic `arr[n..m]` from other languages.
 ; Example:
 ;   [1,2,3,4,5].Slice(2,4)  -> [2,3,4]
 ;   [1,2,3,4,5].Slice(2,-2) -> [2,3,4]
@@ -866,6 +867,21 @@ SplitCmdString(CmdString)
   return ArrayObj
 }
 
+contains_x_but_not_inbetween_y(haystack, x, y)
+{
+  inbetween_y := false
+  
+  loop parse haystack
+  {
+    if !inbetween_y && A_LoopField ~= "[" x "]"
+      return true
+    else if A_LoopField = y
+      inbetween_y := !inbetween_y
+  }
+
+  return false
+}
+
 FindFiles(file_pattern, full_path := false)
 {
   files := Array()
@@ -885,7 +901,7 @@ ParseAutorunPattern(autorun_pattern)
     split := autorun_pattern.Split(SEP, , 2)
     launch_pattern := split[1]
     window_patterns := split[2].Split(SEP)
-    window_patterns.Each(ptrn => GenerateWindowString(ptrn, &extra))
+    window_patterns.Each(ptrn => ParseExtraSettings(ptrn, &extra))
   }
 
   if extra.PropValues().Any(value => value = false)
@@ -897,7 +913,13 @@ ParseAutorunPattern(autorun_pattern)
   return result
 }
 
-GenerateWindowString(window_pattern, &extra)
+;; Parse extra settings on the autorun lines in the config file
+; In config [autorun] section, each line can define
+; extra settings after a '|' (pipe) character.
+; Example:
+;   [autorun]
+;   some\file.exe|name=value|name=value
+ParseExtraSettings(window_pattern, &extra)
 {
   if window_pattern ~= "^\s*winexe\s*="
   {
@@ -934,6 +956,10 @@ GenerateWindowString(window_pattern, &extra)
   }
 }
 
+;; Match launch pattern against files on disk
+; Examples:
+;   "folder\game_*.exe" -> ["folder\game_A.exe", "folder\game_B.exe"]
+;   "cheat.exe --godmode *.exe" -> ["cheat.exe --godmode some_game.exe", "cheat.exe --godmode another_game.exe"]
 GenerateLaunchStrings(launch_pattern)
 {
   if launch_pattern.IsEmpty()
@@ -949,15 +975,15 @@ GenerateLaunchStrings(launch_pattern)
     ; First str in launch_pattern is the file to be run
     launch_strings.Push(files)
 
-    while enum.Call(&file_pattern)
+    while enum.Call(&str)
     {
-      if contains_a_but_not_inbetween_b(file_pattern, a:="*?", b:='"') {
-        ; wildcard found, treat it as a file
-        files := FindFiles(file_pattern)
+      if contains_x_but_not_inbetween_y(str, x:="*?", y:='"') {
+        ; wildcard found, treat str as a file pattern
+        files := FindFiles(str)
         launch_strings.Push(files)
       } else {
-        ; no wildcard, treat it as normal parameter
-        launch_strings.Push([file_pattern])
+        ; no wildcard, treat str as normal parameter
+        launch_strings.Push([str])
       }
     }
 
@@ -972,22 +998,6 @@ GenerateLaunchStrings(launch_pattern)
   }
 
   return launch_strings
-}
-
-contains_a_but_not_inbetween_b(haystack, a, b)
-{
-  inbetween_b := false
-  
-  loop parse haystack
-  {
-    ;if !inbetween_b && A_LoopField = a
-    if !inbetween_b && A_LoopField ~= "[" a "]"
-      return true
-    else if A_LoopField = b
-      inbetween_b := !inbetween_b
-  }
-
-  return false
 }
 
 
@@ -1115,39 +1125,39 @@ CalculateXButtonSize(bar_width, bar_height)
   }
 }
 
-ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn?)
+ResizeAndPositionWindows(fscr)
 {
   ; Even without borders, the app window can be moved by shift-left click on the app icon in the taskbar.
   ; When moving the app window between monitors, somethimes the black bars gets slightly misaligned.
   ; This is used to try to prevent this misalignment from happening. Not sure though if it works.
   Sleep(250)
 
-  win_sizes := CalculateCorrectWindowsSizePos(app_hwnd)
+  win_sizes := CalculateCorrectWindowsSizePos(fscr.app_hwnd)
 
   app_size := win_sizes.app_size
   barBL_size := win_sizes.bar_bl_size
   barTR_size := win_sizes.bar_tr_size
 
-  WinMove(app_size.x, app_size.y, app_size.width, app_size.height, app_hwnd)
+  WinMove(app_size.x, app_size.y, app_size.width, app_size.height, fscr.app_hwnd)
 
   ; Bars sometimes gets missing (transparent) pixel rows at the top.
   ; This funky code prevents that for some reason. ¯\_(ツ)_/¯
-  barBL.Move(barBL_size.x, barBL_size.y+2, barBL_size.width, barBL_size.height)
-  barTR.Move(barTR_size.x, barTR_size.y+2, barTR_size.width, barTR_size.height)
-  barBL.Move(barBL_size.x, barBL_size.y,   barBL_size.width, barBL_size.height)
-  barTR.Move(barTR_size.x, barTR_size.y,   barTR_size.width, barTR_size.height)
+  fscr.barBL.Move(barBL_size.x, barBL_size.y+2, barBL_size.width, barBL_size.height)
+  fscr.barTR.Move(barTR_size.x, barTR_size.y+2, barTR_size.width, barTR_size.height)
+  fscr.barBL.Move(barBL_size.x, barBL_size.y,   barBL_size.width, barBL_size.height)
+  fscr.barTR.Move(barTR_size.x, barTR_size.y,   barTR_size.width, barTR_size.height)
 
-  if IsSet(xBtn)
-    RepositionXButton(xBtn)
+  if fscr.HasOwnProp("buttonX")
+    RepositionXButton(fscr.buttonX)
 
   return app_size
 }
 
-RepositionXButton(xBtn)
+RepositionXButton(buttonX)
 {
-  xBtn.Gui.GetPos(, , &bar_width, &bar_height)
-  xBtn_size := CalculateXButtonSize(bar_width, bar_height)
-  xBtn.Move(xBtn_size.x, xBtn_size.y, xBtn_size.width, xBtn_size.height)
+  buttonX.Gui.GetPos(, , &bar_width, &bar_height)
+  buttonX_size := CalculateXButtonSize(bar_width, bar_height)
+  buttonX.Move(buttonX_size.x, buttonX_size.y, buttonX_size.width, buttonX_size.height)
 }
 
 clickArea_reposition(clickArea)
@@ -1208,18 +1218,27 @@ IGNORED_CLASSES := [
 AHK_CLASS_IGNORE := Format("ahk_class ^(?!{})", IGNORED_CLASSES.Collect(str => str "$").Join("|"))
 
 ;; Config Variables
-launch_string  := ""
-workdir        := ""
-buttonX        := "disable"
-buttonO        := "disable"
-button_        := "disable"
-winexe         := ""
-winclass       := ""
-wingrab        := "instant"
-autorun_find   := Array()
-autorun_ignore := Array()
-window_string  := ""
-delay_millisec := 0
+cnfg := {}
+cnfg.launch_string  := ""
+cnfg.workdir        := ""
+cnfg.buttonX        := "disable"
+cnfg.buttonO        := "disable"
+cnfg.button_        := "disable"
+cnfg.winexe         := ""
+cnfg.winclass       := ""
+cnfg.wingrab        := "instant"
+cnfg.autorun_find   := Array()
+cnfg.autorun_ignore := Array()
+cnfg.window_string  := ""
+cnfg.delay_millisec := 0
+
+;; Fullscreen Variables
+fscr := {}
+fscr.app_pid := unset
+fscr.app_hwnd := unset
+fscr.barBL := unset
+fscr.barTR := unset
+fscr.buttonX := unset
 
 
 
@@ -1245,14 +1264,14 @@ if FileExist(CONFIG_PATH) ~= "[^D]"  ; If config file exists
 
   if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("config")
   {
-    launch_string  := IniRead(CONFIG_PATH, "config", "launch", launch_string)
-    workdir        := IniRead(CONFIG_PATH, "config", "workdir", workdir)
-    buttonX        := IniRead(CONFIG_PATH, "config", "buttonX", buttonX)
-    buttonO        := IniRead(CONFIG_PATH, "config", "buttonO", buttonO)
-    button_        := IniRead(CONFIG_PATH, "config", "button_", button_)
-    winexe         := IniRead(CONFIG_PATH, "config", "winexe", winexe).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
-    winclass       := IniRead(CONFIG_PATH, "config", "winclass", winclass).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
-    wingrab        := IniRead(CONFIG_PATH, "config", "wingrab", wingrab)
+    cnfg.launch_string  := IniRead(CONFIG_PATH, "config", "launch", cnfg.launch_string)
+    cnfg.workdir        := IniRead(CONFIG_PATH, "config", "workdir", cnfg.workdir)
+    cnfg.buttonX        := IniRead(CONFIG_PATH, "config", "buttonX", cnfg.buttonX)
+    cnfg.buttonO        := IniRead(CONFIG_PATH, "config", "buttonO", cnfg.buttonO)
+    cnfg.button_        := IniRead(CONFIG_PATH, "config", "button_", cnfg.button_)
+    cnfg.winexe         := IniRead(CONFIG_PATH, "config", "winexe", cnfg.winexe).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+    cnfg.winclass       := IniRead(CONFIG_PATH, "config", "winclass", cnfg.winclass).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+    cnfg.wingrab        := IniRead(CONFIG_PATH, "config", "wingrab", cnfg.wingrab)
   }
 
   if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("autorun")
@@ -1267,9 +1286,9 @@ if FileExist(CONFIG_PATH) ~= "[^D]"  ; If config file exists
       }
 
       if A_LoopField ~= "^!"
-        autorun_ignore.Push( SubStr(A_LoopField,2) )
+        cnfg.autorun_ignore.Push( SubStr(A_LoopField,2) )
       else
-        autorun_find.Push( A_LoopField )
+        cnfg.autorun_find.Push( A_LoopField )
     }
   }
 }
@@ -1284,19 +1303,19 @@ if not A_Args.IsEmpty()
   while (i += 1, i <= args.Length)
   {
     if args[i] = "--workdir" {
-      workdir := A_Args[(i += 1, i)]
+      cnfg.workdir := A_Args[(i += 1, i)]
     } else if args[i] = "--buttonX" {
-      buttonX := A_Args[(i += 1, i)]
+      cnfg.buttonX := A_Args[(i += 1, i)]
     } else if args[i] = "--buttonO" {
-      buttonO := A_Args[(i += 1, i)]
+      cnfg.buttonO := A_Args[(i += 1, i)]
     } else if args[i] = "--button_" {
-      button_ := A_Args[(i += 1, i)]
+      cnfg.button_ := A_Args[(i += 1, i)]
     } else if args[i] = "--winexe" {
-      winexe := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+      cnfg.winexe := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
     } else if args[i] = "--winclass" {
-      winclass := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
+      cnfg.winclass := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
     } else if args[i] = "--wingrab" {
-      wingrab := A_Args[(i += 1, i)]
+      cnfg.wingrab := A_Args[(i += 1, i)]
     } else if args[i] = "--" {
       args.Slice(i+1).Each(arg => launch_args.Push(arg))
       break
@@ -1306,10 +1325,12 @@ if not A_Args.IsEmpty()
   }
 
   if not launch_args.IsEmpty()
-    launch_string := launch_args.Join(" ")
+    cnfg.launch_string := launch_args.Join(" ")
+
+  args := launch_args := unset
 }
 
-for button in [buttonX, buttonO, button_]
+for button in [cnfg.buttonX, cnfg.buttonO, cnfg.button_]
 {
   if not button ~= "^(disable|enable|hidden)$"
   {
@@ -1318,9 +1339,9 @@ for button in [buttonX, buttonO, button_]
   }
 }
 
-if not wingrab ~= "^(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))$"
+if not cnfg.wingrab ~= "^(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))$"
 {
-  MsgBox "Invalid wingrab setting:`n`n" wingrab, CONFIG_PATH, "Icon!"
+  MsgBox "Invalid wingrab setting:`n`n" cnfg.wingrab, CONFIG_PATH, "Icon!"
   ExitApp(1)
 }
 
@@ -1330,59 +1351,61 @@ if not wingrab ~= "^(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))$"
 ;; Setup
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-if workdir
+if cnfg.workdir
 {
-  if not FileExist(workdir) ~= "D" {
-    MsgBox("Workdir not found:`n`n" workdir, CONFIG_PATH, "Icon!")
+  if not FileExist(cnfg.workdir) ~= "D"  ; If directory does not exist
+  {
+    MsgBox("Workdir not found:`n`n" cnfg.workdir, CONFIG_PATH, "Icon!")
     ExitApp(1)
   }
-  SetWorkingDir workdir
+  SetWorkingDir cnfg.workdir
 }
 
-if launch_string.IsEmpty()
+if cnfg.launch_string.IsEmpty()
 {
-  autorun_ignore :=
-    autorun_ignore.Collect(ParseAutorunPattern)
-                  .Flatten(1)
-                  .Collect(arr=>arr[1])
+  cnfg.autorun_ignore :=
+    cnfg.autorun_ignore.Collect(ParseAutorunPattern)
+                       .Flatten(1)
+                       .Collect(arr=>arr[1])
 
-  autorun_find :=
-    autorun_find.Collect(ParseAutorunPattern)
-                .Flatten(1)
-                .Reject(arr=>autorun_ignore.Contains(arr[1]))
+  cnfg.autorun_find :=
+    cnfg.autorun_find.Collect(ParseAutorunPattern)
+                     .Flatten(1)
+                     .Reject(arr=>cnfg.autorun_ignore.Contains(arr[1]))
 
-  if autorun_find.Has(1) {
-    launch_string := autorun_find[1][1]
-    extra := autorun_find[1][2]
+  if cnfg.autorun_find.Has(1) {
+    cnfg.launch_string := cnfg.autorun_find[1][1]
+    extra := cnfg.autorun_find[1][2]
     
-    ; Names are set in function GenerateWindowString()
+    ; extra.%name% are set in function ParseExtraSettings()
     for name, value in extra.OwnProps()
-      %name% := value
+      if cnfg.HasOwnProp(name)
+        cnfg.%name% := value
   }
 }
 
-if launch_string.IsEmpty()
+if cnfg.launch_string.IsEmpty()
 {
   MsgBox("Could not find anything to execute.", , "Icon!")
   ExitApp(1)
 }
 
 
-if winexe
-  winexe := "ahk_exe" winexe
-if winclass
-  winclass := "ahk_class" winclass
-window_string := Trim(winexe " " winclass)
+if cnfg.winexe
+  cnfg.winexe := "ahk_exe" cnfg.winexe
+if cnfg.winclass
+  cnfg.winclass := "ahk_class" cnfg.winclass
+cnfg.window_string := Trim(cnfg.winexe " " cnfg.winclass)
 
-if RegExMatch(wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
+if RegExMatch(cnfg.wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
 {
   ; Ex: "waittimesec(5)" -> "waittimesec", 5
-  wingrab := "waittimesec"
-  delay_millisec := Number(match[1]) * 1000
+  cnfg.wingrab := "waittimesec"
+  cnfg.delay_millisec := Number(match[1]) * 1000
 }
 
 ;DEBUG
-;MsgBox [launch_string,window_string,wingrab,delay_millisec,buttonX,buttonO,button_].Inspect()
+;MsgBox cnfg.Inspect()
 ;ExitApp(0)
 
 
@@ -1393,21 +1416,21 @@ if RegExMatch(wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
 
 ;; Run
 ; Start app
-Run(launch_string, , , &app_pid)
+Run(cnfg.launch_string, , , &app_pid), fscr.app_pid := app_pid, app_pid := unset
 
 ; Find window handle
-if window_string
+if cnfg.window_string
 {
-  while ProcessExist(app_pid)
-    app_hwnd := WinWait(window_string " " AHK_CLASS_IGNORE, , timeout_sec := 1)
-  if not app_hwnd
+  while ProcessExist(fscr.app_pid)
+    fscr.app_hwnd := WinWait(cnfg.window_string " " AHK_CLASS_IGNORE, , timeout_sec := 1)
+  if not fscr.app_hwnd
     ExitApp(0)
 
-  switch wingrab {
+  switch cnfg.wingrab {
   case "waitlauncherquit":
-    ProcessWaitClose(app_pid)
+    ProcessWaitClose(fscr.app_pid)
   case "waittimesec":
-    Sleep(delay_millisec)
+    Sleep(cnfg.delay_millisec)
   }
 }
 else
@@ -1415,88 +1438,90 @@ else
   SetTimer(Event_AppExit)
   Event_AppExit()
   {
-    if not ProcessExist(app_pid)
+    if not ProcessExist(fscr.app_pid)
       ExitApp(0)
   }
-  app_hwnd := WinWait("ahk_pid" app_pid " " AHK_CLASS_IGNORE)
+  fscr.app_hwnd := WinWait("ahk_pid" fscr.app_pid " " AHK_CLASS_IGNORE)
 }
 
 ; Create black bars
-barBL := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Bottom Left
-barTR := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Top Right
-barBL.BackColor := "Black"
-barTR.BackColor := "Black"
-barBL.Show("W0 H0")  ; Initially hidden by setting width/height to 0
-barTR.Show("W0 H0")  ; Initially hidden by setting width/height to 0
-barBL.OnEvent("Size", EventBarBLSize)
-barTR.OnEvent("Size", EventBarTRSize)
+fscr.barBL := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Bottom Left
+fscr.barTR := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Top Right
+fscr.barBL.BackColor := "Black"
+fscr.barTR.BackColor := "Black"
+fscr.barBL.Show("W0 H0")  ; Initially hidden by setting width/height to 0
+fscr.barTR.Show("W0 H0")  ; Initially hidden by setting width/height to 0
+fscr.barBL.OnEvent("Size", EventBarBLSize)
+fscr.barTR.OnEvent("Size", EventBarTRSize)
 EventBarBLSize(*)
 {
-  clickArea_reposition(barBL_clickArea) ;pixel
+  clickArea_reposition(fscr.barBL.clickArea) ;pixel
 }
 EventBarTRSize(*)
 {
-  clickArea_reposition(barTR_clickArea) ;pixel
-  if IsSet(xBtn)
-    RepositionXButton(xBtn)
+  clickArea_reposition(fscr.barTR.clickArea) ;pixel
+  if fscr.HasOwnProp("buttonX")
+    RepositionXButton(fscr.buttonX)
 }
 
 ; Create exit button
-if not buttonX = "disable"
+if not cnfg.buttonX = "disable"
 {
-  xBtn := barTR.Add("Button", "Default", "X")
-  xBtn.OnEvent("Click", EventXButtonClick)
+  fscr.buttonX := fscr.barTR.Add("Button", "Default", "X")
+  fscr.buttonX.OnEvent("Click", EventXButtonClick)
   EventXButtonClick(*)
   {
-    WinClose(app_hwnd)
+    WinClose(fscr.app_hwnd)
   }
 }
 
 ; Make mouse clicks on the bars return focus to the app
 WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
                               ; and have other elements placed on top of them.
-barBL_clickArea := barBL.Add("Picture", WS_CLIPSIBLINGS, pixel)
-barTR_clickArea := barTR.Add("Picture", WS_CLIPSIBLINGS, pixel)
-barBL_clickArea.OnEvent("Click", event_clickArea_click)
-barTR_clickArea.OnEvent("Click", event_clickArea_click)
-barBL_clickArea.OnEvent("DoubleClick", event_clickArea_click)
-barTR_clickArea.OnEvent("DoubleClick", event_clickArea_click)
+fscr.barBL.clickArea := fscr.barBL.Add("Picture", WS_CLIPSIBLINGS, pixel)
+fscr.barTR.clickArea := fscr.barTR.Add("Picture", WS_CLIPSIBLINGS, pixel)
+fscr.barBL.clickArea.OnEvent("Click", event_clickArea_click)
+fscr.barTR.clickArea.OnEvent("Click", event_clickArea_click)
+fscr.barBL.clickArea.OnEvent("DoubleClick", event_clickArea_click)
+fscr.barTR.clickArea.OnEvent("DoubleClick", event_clickArea_click)
 event_clickArea_click(*)
 {
-  WinActivate(app_hwnd)  ; Hand focus back to the app
+  WinActivate(fscr.app_hwnd)  ; Hand focus back to the app
 }
 
 ; Make app borderless
-WinGetClientPos(, , &app_width, &app_height, app_hwnd)  ; Get width/height before removing border
-DllCall("SetMenu", "uint", app_hwnd, "uint", 0)  ; Remove menu bar
+WinGetClientPos(, , &app_width, &app_height, fscr.app_hwnd)  ; Get width/height before removing border
+DllCall("SetMenu", "uint", fscr.app_hwnd, "uint", 0)  ; Remove menu bar
 win_styles := 0x00C00000  ; WS_CAPTION    (title bar)
             | 0x00800000  ; WS_BORDER     (visible border)
             | 0x00040000  ; WS_THICKFRAME (dragable border)
-WinSetStyle("-" win_styles, app_hwnd)  ; Remove styles
-WinMove(, , app_width, app_height, app_hwnd)  ; Restore width/height
+WinSetStyle("-" win_styles, fscr.app_hwnd)  ; Remove styles
+WinMove(, , app_width, app_height, fscr.app_hwnd)  ; Restore width/height
+app_width := app_height := unset
 
 ; Activate fullscreen
-app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn?)
-barBL.Opt("+AlwaysOnTop")
-barTR.Opt("+AlwaysOnTop")
-WinSetAlwaysOnTop(true, app_hwnd)
-WinMoveTop(barBL.Hwnd)
-WinMoveTop(barTR.Hwnd)
-WinMoveTop(app_hwnd)
-WinActivate(app_hwnd)  ; Focus the app window
+app_size := ResizeAndPositionWindows(fscr)
+fscr.barBL.Opt("+AlwaysOnTop")
+fscr.barTR.Opt("+AlwaysOnTop")
+WinSetAlwaysOnTop(true, fscr.app_hwnd)
+WinMoveTop(fscr.barBL.Hwnd)
+WinMoveTop(fscr.barTR.Hwnd)
+WinMoveTop(fscr.app_hwnd)
+WinActivate(fscr.app_hwnd)  ; Focus the app window
 
 
 ;; Misc Event Handlers
 
 ; Prevent moving the app window
+;TODO: Rework this code since it is prone to bugging out
 SetTimer(PreventWindowMove)
 PreventWindowMove()
 {
   global app_size
-  if WinExist(app_hwnd) {
-    WinGetClientPos(&app_x, &app_y, , , app_hwnd)
+  if WinExist(fscr.app_hwnd) {
+    WinGetClientPos(&app_x, &app_y, , , fscr.app_hwnd)
     if app_x != app_size.x || app_y != app_size.y {
-      app_size := ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn?)
+      app_size := ResizeAndPositionWindows(fscr)
     }
   }
 }
@@ -1505,8 +1530,8 @@ PreventWindowMove()
 SetTimer EventWindowClose
 EventWindowClose()
 {
-  ;if not ProcessExist(app_pid)
-  if not WinExist(app_hwnd)
+  ;if not ProcessExist(fscr.app_pid)
+  if not WinExist(fscr.app_hwnd)
   {
     ExitApp(0)  ; Script Exit
   }
@@ -1520,8 +1545,8 @@ EventFlashSecurity()
   if warn_id := WinActive("Adobe Flash Player Security")
   {
     WinClose(warn_id)
-    if WinExist(app_hwnd)
-      WinMoveTop(app_hwnd)
+    if WinExist(fscr.app_hwnd)
+      WinMoveTop(fscr.app_hwnd)
   }
 }
 
@@ -1540,30 +1565,30 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
   ; Some window moved to another monitor
   if (wParam = HSHELL_MONITORCHANGED)
   {
-    ;if (lParam = app_hwnd)
+    ;if (lParam = fscr.app_hwnd)
     ;{
     ;  ; App has moved to another monitor
-    ;  ResizeAndPositionWindows(app_hwnd, barBL, barTR, xBtn)
+    ;  ResizeAndPositionWindows(fscr)
     ;}
   }
 
   ; Some window got focus
   else if (wParam = HSHELL_RUDEAPPACTIVATED || wParam = HSHELL_WINDOWACTIVATED)
   {
-    if (lParam = app_hwnd)
+    if (lParam = fscr.app_hwnd)
     {
       ; App got focused, make app and bars AlwaysOnTop
-      if WinExist(barBL.Hwnd) {
-        barBL.Opt("+AlwaysOnTop")
-        WinMoveTop(barBL.Hwnd)
+      if WinExist(fscr.barBL.Hwnd) {
+        fscr.barBL.Opt("+AlwaysOnTop")
+        WinMoveTop(fscr.barBL.Hwnd)
       }
-      if WinExist(barTR.Hwnd) {
-        barTR.Opt("+AlwaysOnTop")
-        WinMoveTop(barTR.Hwnd)
+      if WinExist(fscr.barTR.Hwnd) {
+        fscr.barTR.Opt("+AlwaysOnTop")
+        WinMoveTop(fscr.barTR.Hwnd)
       }
-      if WinExist(app_hwnd) {
-        WinSetAlwaysOnTop(true, app_hwnd)
-        WinMoveTop(app_hwnd)
+      if WinExist(fscr.app_hwnd) {
+        WinSetAlwaysOnTop(true, fscr.app_hwnd)
+        WinMoveTop(fscr.app_hwnd)
       }
     }
     else if (lParam = 0)
@@ -1578,12 +1603,12 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
     {
       ; Something other than the app got focus
       ;  Remove AlwaysOnTop so the focused window can be seen
-      if WinExist(barBL.Hwnd)
-        barBL.Opt("-AlwaysOnTop")
-      if WinExist(barTR.Hwnd)
-        barTR.Opt("-AlwaysOnTop")
-      if WinExist(app_hwnd)
-        WinSetAlwaysOnTop(false, app_hwnd)
+      if WinExist(fscr.barBL.Hwnd)
+        fscr.barBL.Opt("-AlwaysOnTop")
+      if WinExist(fscr.barTR.Hwnd)
+        fscr.barTR.Opt("-AlwaysOnTop")
+      if WinExist(fscr.app_hwnd)
+        WinSetAlwaysOnTop(false, fscr.app_hwnd)
       if WinExist(lParam)
         WinMoveTop(lParam)  ; Make sure the newly focused window is visible
     }
