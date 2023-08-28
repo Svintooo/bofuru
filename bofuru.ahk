@@ -14,21 +14,21 @@ SetTitleMatchMode "RegEx"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;TODOS
-;; - Fix UTF-8 parse problem in *.ini files.
 ;; - Detect/ignore games in "true fullscreen".
 ;; - create transparent_pixel.ico in code
 ;;     stop relying on a separate *.ico file.
-;; - vpatch briefly show game borders, hides game window, show fullscreen dialog
-;;     make sure script do not modify hidden game window, wait until it properly starts
+;; - let config include another config.
+;; - make buttons that do not look like shit.
+;; - Make configurable what monitor to use.
 ;; - trayicon:
 ;;     * custom icon
 ;;     * custom menu: Show text: "title text of target game window"
-;;                    option: fullscreen on/off
 ;;                    option: move to another monitor
-;;                    option: quit
+;;                    option: exit and restore window
+;;                    option: exit and quit app
 ;; - compiled exe:
 ;;     * custom icon (same as trayicon)
-;; - For each game, custom pictures for use as bars (left/right or up/down of game window)
+;; - For each game, custom pictures for use as bars background (left/right or up/down of app window)
 
 
 
@@ -242,10 +242,15 @@ __Map_IsEmpty(MapObj)
 {
   return MapObj.Count = 0
 }
+Object.DefineFunc("IsEmpty", __Object_IsEmpty)
+__Object_IsEmpty(obj)
+{
+  return obj.ObjOwnPropCount = 0
+}
 
 ;; IsBlank
 ; True if the variable is considered blank.
-; True for strings, arrays, and maps, if they are empty.
+; True for strings, arrays, maps, and Objects, if they are empty.
 ; False for everything else.
 IsBlank(SomeObj)
 {
@@ -258,11 +263,6 @@ IsBlank(SomeObj)
     __Object_IsBlank(SomeObj)
 
   return StringObj
-}
-Object.DefineFunc("IsBlank", __Object_IsBlank)
-__Object_IsBlank(Obj)
-{
-  return false
 }
 Integer.DefineFunc("IsBlank", __Integer_IsBlank)
 __Integer_IsBlank(IntegerObj)
@@ -289,6 +289,11 @@ __Map_IsBlank(MapObj)
 {
   return __Map_IsEmpty(MapObj)
 }
+Object.DefineFunc("IsBlank", __Object_IsBlank)
+__Object_IsBlank(obj)
+{
+  return __Object_IsEmpty(obj)
+}
 
 ;; IsPresent
 ; True if the variable is considered present.
@@ -305,11 +310,6 @@ IsPresent(SomeObj)
     __Object_IsPresent(SomeObj)
 
   return StringObj
-}
-Object.DefineFunc("IsPresent", __Object_IsPresent)
-__Object_IsPresent(Obj)
-{
-  return true
 }
 Integer.DefineFunc("IsPresent", __Integer_IsPresent)
 __Integer_IsPresent(IntegerObj)
@@ -336,6 +336,11 @@ __Map_IsPresent(MapObj)
 {
   return not __Map_IsEmpty(MapObj)
 }
+Object.DefineFunc("IsPresent", __Object_IsPresent)
+__Object_IsPresent(obj)
+{
+  return not __Object_IsEmpty(obj)
+}
 
 ;; Contains
 Array.DefineFunc("Contains", __Array_Contains)
@@ -350,6 +355,14 @@ Map.DefineFunc("Contains", __Map_Contains)
 __Map_Contains(MapObj, needle)
 {
   for , value in MapObj
+    if value = needle
+      return true
+  return false
+}
+Object.DefineFunc("Contains", __Object_Contains)
+__Object_Contains(obj, needle)
+{
+  for , value in obj.OwnProps
     if value = needle
       return true
   return false
@@ -379,7 +392,7 @@ __Map_Values(MapObj)
   return ArrayObj
 }
 
-;; Array of all keys in a Map
+;; Array of all Prop names in an object
 Object.DefineFunc("PropNames", __Object_PropNames)
 __Object_PropNames(SomeObj)
 {
@@ -391,7 +404,7 @@ __Object_PropNames(SomeObj)
   return ArrayObj
 }
 
-;; Array of all values in a Map
+;; Array of all Prop values in an object
 Object.DefineFunc("PropValues", __Object_PropValues)
 __Object_PropValues(SomeObj)
 {
@@ -918,7 +931,7 @@ ParseAutorunPattern(autorun_pattern)
 ; extra settings after a '|' (pipe) character.
 ; Example:
 ;   [autorun]
-;   some\file.exe|name=value|name=value
+;   some\file.exe|name1=value1|name2=value2
 ParseExtraSettings(window_pattern, &extra)
 {
   if window_pattern ~= "^\s*winexe\s*="
@@ -942,15 +955,19 @@ ParseExtraSettings(window_pattern, &extra)
   {
     extra.wingrab := window_pattern.Split("=", , 2)[2].Trim()
   }
-  else if window_pattern ~= "^\s*buttonX\s*="
+  else if window_pattern ~= "^\s*buttons\s*="
+  {
+    extra.buttons := window_pattern.Split("=", , 2)[2].Trim()
+  }
+  else if window_pattern ~= "^\s*btnX\s*="
   {
     extra.buttonX := window_pattern.Split("=", , 2)[2].Trim()
   }
-  else if window_pattern ~= "^\s*buttonO\s*="
+  else if window_pattern ~= "^\s*btnO\s*="
   {
     extra.buttonO := window_pattern.Split("=", , 2)[2].Trim()
   }
-  else if window_pattern ~= "^\s*button_\s*="
+  else if window_pattern ~= "^\s*btn_\s*="
   {
     extra.button_ := window_pattern.Split("=", , 2)[2].Trim()
   }
@@ -1150,7 +1167,13 @@ ResizeAndPositionWindows(fscr)
   if fscr.HasOwnProp("buttonX")
     RepositionXButton(fscr.buttonX)
 
-  return app_size
+  ; Windows sometimes do not like the size/position we set, so it changes them.
+  ; This code tries to fetch the actual size/position of the window.
+  Sleep(250)
+  WinGetPos(&x, &y, &width, &height, fscr.app_hwnd)
+  actual_app_size := {x: x, y: y, width: width, height: height}
+
+  return actual_app_size
 }
 
 RepositionXButton(buttonX)
@@ -1167,6 +1190,24 @@ clickArea_reposition(clickArea)
   clickArea.move(0,0,w,h)
 }
 
+;TODO: Function not used yet
+RestoreAppWindow(fscr)
+{
+  ; Restore window border
+  WinSetStyle(fscr.app_origstyle, fscr.app_hwnd)
+
+  ; Restore window menu bar
+  if fscr.app_origmenu
+    DllCall("SetMenu", "uint", fscr.app_hwnd, "uint", fscr.app_origmenu)
+
+  ; Restore window size and position
+  win_x := fscr.app_origpos.x
+  win_y := fscr.app_origpos.y
+  win_width := fscr.app_origpos.width
+  win_height := fscr.app_origpos.height
+  WinMove(win_x, win_y, win_width, win_height, fscr.app_hwnd)
+}
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1180,13 +1221,13 @@ SCRIPT_DIR  := RegexReplace(A_LineFile, "[\\/][^\\/]+$", "")  ; "some\path\bofur
 CONFIG_NAME := SCRIPT_NAME ".ini"
 CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
 SEP := "|"  ; Separator: Used in the config [autorun] section
-CONFIG_AUTORUN_LINE_REGEX := "^\s*button[XO_]\s*=\s*(disable|enable|hidden)\s*$|^\s*(winexe|winclass)\s*=|^\s*wingrab\s*=\s*(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))\s*$"
+CONFIG_AUTORUN_LINE_REGEX := "^\s*buttons\s*=\s*(show|hide|slide)\s*$|^\s*btn[XO_]\s*=\s*(enable|disable)\s*$|^\s*(winexe|winclass)\s*=|^\s*wingrab\s*=\s*(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))\s*$"
 
 ;; Transparent Pixel
 ; This is needed to create clickable areas in GUI windows.
 ;TODO: Generate pixel in code instead of loading from file
 ;@Ahk2Exe-IgnoreBegin
-pixel := SCRIPT_DIR . "\resourses\transparent_pixel.ico"
+PIXEL := SCRIPT_DIR . "\resourses\transparent_pixel.ico"
 ;@Ahk2Exe-IgnoreEnd
 ;@Ahk2Exe-AddResource resourses\transparent_pixel.ico, pixel
 
@@ -1221,9 +1262,10 @@ AHK_CLASS_IGNORE := Format("ahk_class ^(?!{})", IGNORED_CLASSES.Collect(str => s
 cnfg := {}
 cnfg.launch_string  := ""
 cnfg.workdir        := ""
-cnfg.buttonX        := "disable"
-cnfg.buttonO        := "disable"
-cnfg.button_        := "disable"
+cnfg.buttons        := "hide"
+cnfg.buttonX        := "enable"
+cnfg.buttonO        := "enable"
+cnfg.button_        := "enable"
 cnfg.winexe         := ""
 cnfg.winclass       := ""
 cnfg.wingrab        := "instant"
@@ -1234,11 +1276,15 @@ cnfg.delay_millisec := 0
 
 ;; Fullscreen Variables
 fscr := {}
-fscr.app_pid := unset
-fscr.app_hwnd := unset
-fscr.barBL := unset
-fscr.barTR := unset
-fscr.buttonX := unset
+fscr.app_pid       := unset
+fscr.app_hwnd      := unset
+fscr.app_pos       := unset
+fscr.app_origpos   := unset
+fscr.app_origstyle := unset
+fscr.app_origmenu  := unset
+fscr.barBL         := unset
+fscr.barTR         := unset
+fscr.buttonX       := unset
 
 
 
@@ -1266,9 +1312,10 @@ if FileExist(CONFIG_PATH) ~= "[^D]"  ; If config file exists
   {
     cnfg.launch_string  := IniRead(CONFIG_PATH, "config", "launch", cnfg.launch_string)
     cnfg.workdir        := IniRead(CONFIG_PATH, "config", "workdir", cnfg.workdir)
-    cnfg.buttonX        := IniRead(CONFIG_PATH, "config", "buttonX", cnfg.buttonX)
-    cnfg.buttonO        := IniRead(CONFIG_PATH, "config", "buttonO", cnfg.buttonO)
-    cnfg.button_        := IniRead(CONFIG_PATH, "config", "button_", cnfg.button_)
+    cnfg.buttons        := IniRead(CONFIG_PATH, "config", "buttons", cnfg.buttons)
+    cnfg.buttonX        := IniRead(CONFIG_PATH, "config", "btnX", cnfg.buttonX)
+    cnfg.buttonO        := IniRead(CONFIG_PATH, "config", "btnO", cnfg.buttonO)
+    cnfg.button_        := IniRead(CONFIG_PATH, "config", "btn_", cnfg.button_)
     cnfg.winexe         := IniRead(CONFIG_PATH, "config", "winexe", cnfg.winexe).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
     cnfg.winclass       := IniRead(CONFIG_PATH, "config", "winclass", cnfg.winclass).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
     cnfg.wingrab        := IniRead(CONFIG_PATH, "config", "wingrab", cnfg.wingrab)
@@ -1304,11 +1351,13 @@ if not A_Args.IsEmpty()
   {
     if args[i] = "--workdir" {
       cnfg.workdir := A_Args[(i += 1, i)]
-    } else if args[i] = "--buttonX" {
+    } else if args[i] = "--buttons" {
+      cnfg.buttons := A_Args[(i += 1, i)]
+    } else if args[i] = "--btnX" {
       cnfg.buttonX := A_Args[(i += 1, i)]
-    } else if args[i] = "--buttonO" {
+    } else if args[i] = "--btnO" {
       cnfg.buttonO := A_Args[(i += 1, i)]
-    } else if args[i] = "--button_" {
+    } else if args[i] = "--btn_" {
       cnfg.button_ := A_Args[(i += 1, i)]
     } else if args[i] = "--winexe" {
       cnfg.winexe := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
@@ -1435,12 +1484,15 @@ if cnfg.window_string
 }
 else
 {
+  ; Timer makes sure we exit when app is gone
   SetTimer(Event_AppExit)
   Event_AppExit()
   {
     if not ProcessExist(fscr.app_pid)
       ExitApp(0)
   }
+
+  ; Wait forewer for the app window to appear
   fscr.app_hwnd := WinWait("ahk_pid" fscr.app_pid " " AHK_CLASS_IGNORE)
 }
 
@@ -1455,19 +1507,21 @@ fscr.barBL.OnEvent("Size", EventBarBLSize)
 fscr.barTR.OnEvent("Size", EventBarTRSize)
 EventBarBLSize(*)
 {
-  clickArea_reposition(fscr.barBL.clickArea) ;pixel
+  clickArea_reposition(fscr.barBL.clickArea) ;PIXEL
 }
 EventBarTRSize(*)
 {
-  clickArea_reposition(fscr.barTR.clickArea) ;pixel
+  clickArea_reposition(fscr.barTR.clickArea) ;PIXEL
   if fscr.HasOwnProp("buttonX")
     RepositionXButton(fscr.buttonX)
 }
 
 ; Create exit button
-if not cnfg.buttonX = "disable"
+if cnfg.buttons != "hide"
 {
-  fscr.buttonX := fscr.barTR.Add("Button", "Default", "X")
+  fscr.buttonX := fscr.barTR.Add("Button", "", "X")
+  if cnfg.buttonX = "disable"
+    fscr.buttonX.Enabled := false
   fscr.buttonX.OnEvent("Click", EventXButtonClick)
   EventXButtonClick(*)
   {
@@ -1478,8 +1532,8 @@ if not cnfg.buttonX = "disable"
 ; Make mouse clicks on the bars return focus to the app
 WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
                               ; and have other elements placed on top of them.
-fscr.barBL.clickArea := fscr.barBL.Add("Picture", WS_CLIPSIBLINGS, pixel)
-fscr.barTR.clickArea := fscr.barTR.Add("Picture", WS_CLIPSIBLINGS, pixel)
+fscr.barBL.clickArea := fscr.barBL.Add("Picture", WS_CLIPSIBLINGS, PIXEL)
+fscr.barTR.clickArea := fscr.barTR.Add("Picture", WS_CLIPSIBLINGS, PIXEL)
 fscr.barBL.clickArea.OnEvent("Click", event_clickArea_click)
 fscr.barTR.clickArea.OnEvent("Click", event_clickArea_click)
 fscr.barBL.clickArea.OnEvent("DoubleClick", event_clickArea_click)
@@ -1490,8 +1544,15 @@ event_clickArea_click(*)
 }
 
 ; Make app borderless
-WinGetClientPos(, , &app_width, &app_height, fscr.app_hwnd)  ; Get width/height before removing border
-DllCall("SetMenu", "uint", fscr.app_hwnd, "uint", 0)  ; Remove menu bar
+; Fetch current window settings
+WinGetPos(&x, &y, &width, &height, fscr.app_hwnd)  ; Get original window size/position
+fscr.app_origpos := {x: x, y: y, width: width, height: height}, x:=y:=width:=height:=unset
+WinGetClientPos(, , &app_width, &app_height, fscr.app_hwnd)  ; Get client area width/height
+fscr.app_origstyle := WinGetStyle(fscr.app_hwnd)  ; Get original window styles
+fscr.app_origmenu := DllCall("User32.dll\GetMenu", "Ptr", fscr.app_hwnd, "Ptr")
+; Modify window
+if fscr.app_origmenu
+  DllCall("SetMenu", "uint", fscr.app_hwnd, "uint", 0)  ; Remove menu bar
 win_styles := 0x00C00000  ; WS_CAPTION    (title bar)
             | 0x00800000  ; WS_BORDER     (visible border)
             | 0x00040000  ; WS_THICKFRAME (dragable border)
@@ -1500,7 +1561,7 @@ WinMove(, , app_width, app_height, fscr.app_hwnd)  ; Restore width/height
 app_width := app_height := unset
 
 ; Activate fullscreen
-app_size := ResizeAndPositionWindows(fscr)
+fscr.app_pos := ResizeAndPositionWindows(fscr)
 fscr.barBL.Opt("+AlwaysOnTop")
 fscr.barTR.Opt("+AlwaysOnTop")
 WinSetAlwaysOnTop(true, fscr.app_hwnd)
@@ -1513,14 +1574,14 @@ WinActivate(fscr.app_hwnd)  ; Focus the app window
 ;; Misc Event Handlers
 
 ; Prevent moving the app window
-;TODO: Rework this code since it is prone to bugging out
+;TODO: Let user move window.
+;      When moved, show button that moves window back when clicked.
 SetTimer(PreventWindowMove)
 PreventWindowMove()
 {
-  global app_size
   if WinExist(fscr.app_hwnd) {
     WinGetClientPos(&app_x, &app_y, , , fscr.app_hwnd)
-    if app_x != app_size.x || app_y != app_size.y {
+    if app_x != fscr.app_pos.x || app_y != fscr.app_pos.y {
       app_size := ResizeAndPositionWindows(fscr)
     }
   }
@@ -1539,6 +1600,7 @@ EventWindowClose()
 
 ; Kill eventual Flashplayer Security popups
 ; Useful when running flash, and flash tries to connect to the Internet and fails
+;TODO: Make this behaviour configurable
 SetTimer EventFlashSecurity
 EventFlashSecurity()
 {
@@ -1550,7 +1612,8 @@ EventFlashSecurity()
   }
 }
 
-; Tell Windows to notify us on events on any window
+; Tell Windows to notify us on events on all windows in the system.
+; Some window events can only be caught this way.
 ;https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registershellhookwindow
 DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
 MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
@@ -1565,11 +1628,11 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
   ; Some window moved to another monitor
   if (wParam = HSHELL_MONITORCHANGED)
   {
-    ;if (lParam = fscr.app_hwnd)
-    ;{
-    ;  ; App has moved to another monitor
-    ;  ResizeAndPositionWindows(fscr)
-    ;}
+    if (lParam = fscr.app_hwnd)
+    {
+      ; App has moved to another monitor
+      ResizeAndPositionWindows(fscr)
+    }
   }
 
   ; Some window got focus
