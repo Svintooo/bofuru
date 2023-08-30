@@ -14,7 +14,8 @@ SetTitleMatchMode "RegEx"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;TODOS
-;; - Detect/ignore games in "true fullscreen".
+;; - Only use weird fix for transparent pixel rows at top
+;;   when it is needed. Scan pixel row and see if it is all black.
 ;; - create transparent_pixel.ico in code
 ;;     stop relying on a separate *.ico file.
 ;; - let config include another config.
@@ -1062,8 +1063,8 @@ GetActiveMonitorSize()
   Return {
     x: monitor.x1,
     y: monitor.y1,
-    width:  (monitor.x2 - monitor.x1),
-    height: (monitor.y2 - monitor.y1),
+    width:  Abs(monitor.x2 - monitor.x1),
+    height: Abs(monitor.y2 - monitor.y1),
   }
 }
 
@@ -1076,17 +1077,17 @@ CalculateCorrectWindowsSizePos(app_hwnd)
   {
     win_width := Round((screen_size.height / app_height) * app_width)
     win_height := screen_size.height
-    win_x := Round(screen_size.x + ((screen_size.width - win_width) / 2))
+    win_x := Round(screen_size.x + (Abs(screen_size.width - win_width) / 2))
     win_y := screen_size.y
 
     barBL_x := screen_size.x
     barBL_y := screen_size.y
-    barBL_width := win_x - screen_size.x
+    barBL_width := Abs(win_x - screen_size.x)
     barBL_height := screen_size.height
 
     barTR_x := win_x + win_width
     barTR_y := screen_size.y
-    barTR_width := screen_size.width - barBL_width - win_width
+    barTR_width := Abs(screen_size.width - barBL_width - win_width)
     barTR_height := screen_size.height
   }
   else
@@ -1094,20 +1095,20 @@ CalculateCorrectWindowsSizePos(app_hwnd)
     win_width := screen_size.width
     win_height := Round((screen_size.width / app_width) * app_height)
     win_x := screen_size.x
-    win_y := Round(screen_size.y + ((screen_size.height - win_height) / 2))
+    win_y := Round(screen_size.y + (Abs(screen_size.height - win_height) / 2))
 
     barTR_x := screen_size.x
     barTR_y := screen_size.y
     barTR_width := screen_size.width
-    barTR_height := win_y - screen_size.y
+    barTR_height := Abs(win_y - screen_size.y)
 
     barBL_x := screen_size.x
     barBL_y := win_y + win_height
     barBL_width := screen_size.width
-    barBL_height := screen_size.height - barTR_height - win_height
+    barBL_height := Abs(screen_size.height - barTR_height - win_height)
   }
 
-  Return {
+  size_pos := {
     app_size: {
       x: win_x,
       y: win_y,
@@ -1127,19 +1128,8 @@ CalculateCorrectWindowsSizePos(app_hwnd)
       height: barTR_height,
     },
   }
-}
 
-CalculateXButtonSize(bar_width, bar_height)
-{
-  xb_width := 30 ;TODO: Make constant
-  xb_height := 30 ;TODO: Make constant
-  xb_spacing := 0 ;TODO: Make constant
-  Return {
-    x: bar_width - xb_width - xb_spacing,
-    y: xb_spacing,
-    width: xb_width,
-    height: xb_height,
-  }
+  return size_pos
 }
 
 ResizeAndPositionWindows(fscr)
@@ -1159,13 +1149,13 @@ ResizeAndPositionWindows(fscr)
 
   ; Bars sometimes gets missing (transparent) pixel rows at the top.
   ; This funky code prevents that for some reason. ¯\_(ツ)_/¯
-  fscr.barBL.Move(barBL_size.x, barBL_size.y+2, barBL_size.width, barBL_size.height)
-  fscr.barTR.Move(barTR_size.x, barTR_size.y+2, barTR_size.width, barTR_size.height)
-  fscr.barBL.Move(barBL_size.x, barBL_size.y,   barBL_size.width, barBL_size.height)
-  fscr.barTR.Move(barTR_size.x, barTR_size.y,   barTR_size.width, barTR_size.height)
+  WinMove(barBL_size.x, barBL_size.y+2, barBL_size.width, barBL_size.height, fscr.barBL.hwnd)
+  WinMove(barTR_size.x, barTR_size.y+2, barTR_size.width, barTR_size.height, fscr.barTR.hwnd)
+  WinMove(barBL_size.x, barBL_size.y  , barBL_size.width, barBL_size.height, fscr.barBL.hwnd)
+  WinMove(barTR_size.x, barTR_size.y  , barTR_size.width, barTR_size.height, fscr.barTR.hwnd)
 
   if fscr.HasOwnProp("buttonX")
-    RepositionXButton(fscr.buttonX)
+    RepositionButtons(fscr)
 
   ; Windows sometimes do not like the size/position we set, so it changes them.
   ; This code tries to fetch the actual size/position of the window.
@@ -1176,11 +1166,43 @@ ResizeAndPositionWindows(fscr)
   return actual_app_size
 }
 
-RepositionXButton(buttonX)
+RepositionButtons(fscr)
 {
-  buttonX.Gui.GetPos(, , &bar_width, &bar_height)
-  buttonX_size := CalculateXButtonSize(bar_width, bar_height)
-  buttonX.Move(buttonX_size.x, buttonX_size.y, buttonX_size.width, buttonX_size.height)
+  fscr.buttonX.Gui.GetPos(, , &bar_width, &bar_height)
+  buttons := CalculateButtonsSizes(bar_width, bar_height)
+  fscr.buttonX.Move(buttons.X.x, buttons.X.y, buttons.X.width, buttons.X.height)
+  fscr.buttonO.Move(buttons.O.x, buttons.O.y, buttons.O.width, buttons.O.height)
+  fscr.button_.Move(buttons._.x, buttons._.y, buttons._.width, buttons._.height)
+}
+
+CalculateButtonsSizes(bar_width, bar_height)
+{
+  btn_width := 30 ;TODO: Make configurable
+  btn_height := 30 ;TODO: Make configurable
+  btn_spacing := 2 ;TODO: Make configurable
+
+  buttons_sizes :=  {
+    X: {
+      x: bar_width - 1*(btn_width + btn_spacing),
+      y: btn_spacing,
+      width: btn_width,
+      height: btn_height,
+    },
+    O: {
+      x: bar_width - 2*(btn_width + btn_spacing),
+      y: btn_spacing,
+      width: btn_width,
+      height: btn_height,
+    },
+    _: {
+      x: bar_width - 3*(btn_width + btn_spacing),
+      y: btn_spacing,
+      width: btn_width,
+      height: btn_height,
+    },
+  }
+
+  return buttons_sizes
 }
 
 clickArea_reposition(clickArea)
@@ -1190,9 +1212,18 @@ clickArea_reposition(clickArea)
   clickArea.move(0,0,w,h)
 }
 
-;TODO: Function not used yet
-RestoreAppWindow(fscr)
+ExitFullScreen(fscr)
 {
+  ; Stop preventing moving the app window
+  PreventWindowMove_Unregister()
+
+  ; Stop re:fullscreening the app window when moved to another monitor
+  ShellMessage_Unregister()
+
+  ; Hide borders
+  fscr.barBL.Hide()
+  fscr.barTR.Hide()
+
   ; Restore window border
   WinSetStyle(fscr.app_origstyle, fscr.app_hwnd)
 
@@ -1201,9 +1232,9 @@ RestoreAppWindow(fscr)
     DllCall("SetMenu", "uint", fscr.app_hwnd, "uint", fscr.app_origmenu)
 
   ; Restore window size and position
-  win_x := fscr.app_origpos.x
-  win_y := fscr.app_origpos.y
-  win_width := fscr.app_origpos.width
+  win_x      := fscr.app_origpos.x
+  win_y      := fscr.app_origpos.y
+  win_width  := fscr.app_origpos.width
   win_height := fscr.app_origpos.height
   WinMove(win_x, win_y, win_width, win_height, fscr.app_hwnd)
 }
@@ -1216,8 +1247,7 @@ RestoreAppWindow(fscr)
 
 ;; Misc
 ; Note: `A_LineFile` is used since it gives same result for: current script, #Include file, compiled file
-SCRIPT_NAME := RegexReplace(A_LineFile, "^.*[\\/]|[\.][^\.]*$", "")  ; "some\path\bofuru.ahk" -> "bofuru"
-SCRIPT_DIR  := RegexReplace(A_LineFile, "[\\/][^\\/]+$", "")  ; "some\path\bofuru.ahk" -> "some\path"
+SplitPath(A_LineFile, , &SCRIPT_DIR, , &SCRIPT_NAME, )  ; "some\path\bofuru.ahk" -> "some\path" "bofuru"
 CONFIG_NAME := SCRIPT_NAME ".ini"
 CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
 SEP := "|"  ; Separator: Used in the config [autorun] section
@@ -1232,7 +1262,6 @@ PIXEL := SCRIPT_DIR . "\resourses\transparent_pixel.ico"
 ;@Ahk2Exe-AddResource resourses\transparent_pixel.ico, pixel
 
 ;; Ignored Window Classes
-; Reason why script uses: SetTitleMatchMode "RegEx"
 IGNORED_CLASSES := [
   ; https://learn.microsoft.com/en-gb/windows/win32/winmsg/about-window-classes?redirectedfrom=MSDN
   "Button",     ; button
@@ -1256,6 +1285,7 @@ IGNORED_CLASSES := [
   "WorkerW",  ; Desktop - With wallpaper
   "PseudoConsoleWindow",  ; Win11 cmd.exe
 ]
+; This is the reason why script uses: SetTitleMatchMode "RegEx"
 AHK_CLASS_IGNORE := Format("ahk_class ^(?!{})", IGNORED_CLASSES.Collect(str => str "$").Join("|"))
 
 ;; Config Variables
@@ -1285,6 +1315,8 @@ fscr.app_origmenu  := unset
 fscr.barBL         := unset
 fscr.barTR         := unset
 fscr.buttonX       := unset
+fscr.buttonO       := unset
+fscr.button_       := unset
 
 
 
@@ -1497,8 +1529,8 @@ else
 }
 
 ; Create black bars
-fscr.barBL := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Bottom Left
-fscr.barTR := Gui("+ToolWindow -Caption -DPIScale")  ; Bar at Top Right
+fscr.barBL := Gui("+ToolWindow -Caption")  ; Bar at Bottom Left
+fscr.barTR := Gui("+ToolWindow -Caption")  ; Bar at Top Right
 fscr.barBL.BackColor := "Black"
 fscr.barTR.BackColor := "Black"
 fscr.barBL.Show("W0 H0")  ; Initially hidden by setting width/height to 0
@@ -1513,19 +1545,37 @@ EventBarTRSize(*)
 {
   clickArea_reposition(fscr.barTR.clickArea) ;PIXEL
   if fscr.HasOwnProp("buttonX")
-    RepositionXButton(fscr.buttonX)
+    RepositionButtons(fscr)
 }
 
 ; Create exit button
 if cnfg.buttons != "hide"
 {
   fscr.buttonX := fscr.barTR.Add("Button", "", "X")
-  if cnfg.buttonX = "disable"
-    fscr.buttonX.Enabled := false
-  fscr.buttonX.OnEvent("Click", EventXButtonClick)
-  EventXButtonClick(*)
+  fscr.buttonO := fscr.barTR.Add("Button", "", "[ ]") ;▢O[]
+  fscr.button_ := fscr.barTR.Add("Button", "", "—")
+  for C in ["X", "O", "_"]
+  {
+    fscr.button%C%.OnEvent("Click",       EventButton%C%Click)
+    fscr.button%C%.OnEvent("DoubleClick", EventButton%C%Click)
+    if cnfg.button%C% = "disable"
+      fscr.button%C%.Enabled := false
+
+    fscr.button_.Enabled := false ;TODO: Implement click event
+  }
+  EventButtonXClick(*)
   {
     WinClose(fscr.app_hwnd)
+  }
+  EventButtonOClick(*)
+  {
+    ExitFullScreen(fscr)
+    ExitApp(0)
+  }
+  EventButton_Click(*)
+  {
+    ;TODO: Minimize app, hide borders
+    ;      When app window is restored, also restore borders
   }
 }
 
@@ -1576,7 +1626,12 @@ WinActivate(fscr.app_hwnd)  ; Focus the app window
 ; Prevent moving the app window
 ;TODO: Let user move window.
 ;      When moved, show button that moves window back when clicked.
+;      OR: Snap window back to place.
 SetTimer(PreventWindowMove)
+PreventWindowMove_Unregister()
+{
+  SetTimer(PreventWindowMove, 0)
+}
 PreventWindowMove()
 {
   if WinExist(fscr.app_hwnd) {
@@ -1618,6 +1673,10 @@ EventFlashSecurity()
 DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
 MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
 OnMessage(MsgNum, ShellMessage)
+ShellMessage_Unregister()
+{
+  OnMessage(MsgNum, ShellMessage, 0)
+}
 ShellMessage(wParam, lParam, msg, script_hwnd)
 {
   static HSHELL_MONITORCHANGED   := 0x00000010
