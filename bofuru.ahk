@@ -344,6 +344,11 @@ __Object_IsPresent(obj)
 }
 
 ;; Contains
+String.DefineFunc("Contains", __String_Contains)
+__String_Contains(StringObj, Needle)
+{
+  return InStr(StringObj, Needle, CaseSense := "On")
+}
 Array.DefineFunc("Contains", __Array_Contains)
 __Array_Contains(ArrayObj, needle)
 {
@@ -367,6 +372,13 @@ __Object_Contains(obj, needle)
     if value = needle
       return true
   return false
+}
+
+;; IsIn
+Object.DefineFunc("IsIn", __Object_IsIn)
+__Object_IsIn(Obj, collection)
+{
+  return collection.Contains(Obj)
 }
 
 ;; Array of all keys in a Map
@@ -417,9 +429,26 @@ __Object_PropValues(SomeObj)
   return ArrayObj
 }
 
+;;
+Object.DefineFunc("Tap", __Object_Tap)
+__Object_Tap(Obj, func, args*)
+{
+  FuncObj := __FuncHandler(Obj, func)
+  FuncObj(Obj, args*)
+  return Obj
+}
+
+;;
+Object.DefineFunc("YieldSelf", __Object_YieldSelf)
+__Object_YieldSelf(Obj, func, args*)
+{
+  FuncObj := __FuncHandler(Obj, func)
+  return FuncObj(Obj, args*)
+}
+
 ;; True if for all elements e: func(e, args*) => true
-Array.DefineFunc("All", __Array_All)
-__Array_All(ArrayObj, func, args*)
+Array.DefineFunc("HasAll", __Array_HasAll)
+__Array_HasAll(ArrayObj, func, args*)
 {
   loop ArrayObj.Length
   {
@@ -430,16 +459,35 @@ __Array_All(ArrayObj, func, args*)
   return true
 }
 
-;; True if for all values v: func(v, args*) => true
-Map.DefineFunc("All", __Map_All)
-__Map_All(MapObj, func, args*)
+;; True if for all k,v: func({key:k,value:v}, args*) => true
+Map.DefineFunc("HasAll", __Map_HasAll)
+__Map_HasAll(MapObj, func, args*)
 {
-  return __Array_All(__Map_Values(MapObj), func, args)
+  for key, value in MapObj
+  {
+    FuncObj := __FuncHandler({}, func)
+    if not FuncObj(key, value, args*)
+      return false
+  }
+  return true
+}
+
+;; True if for all prop n,v: func({name:n,value:v}, args*) => true
+Object.DefineFunc("HasAll", __Object_HasAll)
+__Object_HasAll(Obj, func, args*)
+{
+  for name, value in Obj.OwnProps()
+  {
+    FuncObj := __FuncHandler({}, func)
+    if not FuncObj(name, value, args*)
+      return false
+  }
+  return true
 }
 
 ;; True if for any element e: func(e, args*) => true
-Array.DefineFunc("Any", __Array_Any)
-__Array_Any(ArrayObj, func, args*)
+Array.DefineFunc("HasAny", __Array_HasAny)
+__Array_HasAny(ArrayObj, func, args*)
 {
   loop ArrayObj.Length
   {
@@ -450,11 +498,30 @@ __Array_Any(ArrayObj, func, args*)
   return false
 }
 
-;; True if for any value v: func(v, args*) => true
-Map.DefineFunc("Any", __Map_Any)
-__Map_Any(MapObj, func, args*)
+;; True if for any k,v: func({key:k,value:v}, args*) => true
+Map.DefineFunc("HasAny", __Map_HasAny)
+__Map_HasAny(MapObj, func, args*)
 {
-  return __Array_Any(__Map_Values(MapObj), func, args)
+  for key, value in MapObj
+  {
+    FuncObj := __FuncHandler({}, func)
+    if FuncObj(key, value, args*)
+      return true
+  }
+  return false
+}
+
+;; True if for any prop n,v: func({name:n,value:v}, args*) => true
+Object.DefineFunc("HasAny", __Object_HasAny)
+__Object_HasAny(Obj, func, args*)
+{
+  for name, value in Obj.OwnProps()
+  {
+    FuncObj := __FuncHandler({}, func)
+    if FuncObj(name, value, args*)
+      return true
+  }
+  return false
 }
 
 ;; For each element e: Run func(e, args*)
@@ -514,7 +581,7 @@ Array.DefineFunc("Inject", __Array_Inject)
 __Array_Inject(ArrayObj, init?, func?, args*)
 {
   if not IsSet(func)
-    Throw "`"Error: Too few parameters passed to function.`""
+    throw "`"Error: Too few parameters passed to function.`""
 
   EnumeratorObj := ArrayObj.__Enum()
 
@@ -536,7 +603,7 @@ Map.DefineFunc("Inject", __Map_Inject)
 __Map_Inject(MapObj, init?, func?, args*)
 {
   if not IsSet(func)
-    Throw "`"Error: Too few parameters passed to function.`""
+    throw "`"Error: Too few parameters passed to function.`""
 
   EnumeratorObj := MapObj.__Enum()
 
@@ -601,11 +668,11 @@ __Array_Slice(ArrayObj, start, end := -1)
     if %arg% < 0
       %arg% += 1 + ArrayObj.Length
     if not (1 <= %arg% && %arg% <= ArrayObj.Length)
-      Throw "`"Error: Invalid parameters passed to function.`""
+      throw "`"Error: Invalid parameters passed to function.`""
   }
 
   if not (start <= end)
-    Throw "`"Error: Invalid parameters passed to function.`""
+    throw "`"Error: Invalid parameters passed to function.`""
 
   loop end - (start - 1)
     NewArrayObj.Push ArrayObj[ A_Index + (start - 1) ]
@@ -633,8 +700,8 @@ __Array_Compact(ArrayObj)
 
 ;;
 ;
-String.DefineFunc("Replace", __String_Replace)
-__String_Replace(StringObj, Needle, ReplaceText?, CaseSense?, &OutputVarCount?, Limit?)
+String.DefineFunc("StrReplace", __String_StrReplace)
+__String_StrReplace(StringObj, Needle, ReplaceText?, CaseSense?, &OutputVarCount?, Limit?)
 {
   return StrReplace(StringObj, Needle, ReplaceText?, CaseSense?, &OutputVarCount?, Limit?)
 }
@@ -761,11 +828,51 @@ __Array_Product(ArrayObj, ArrayObj2)
   return NewArrayObj
 }
 
+;; Assigns array values to variables.
+; Example:
+;   arr := ["a", "b"]
+;   arr.Assign(&x, &y)
+; Same as:
+;   arr := ["a", "b"]
+;   x := arr[1]
+;   y := arr[2]
+Array.DefineFunc("Assign", __Array_Assign)
+__Array_Assign(ArrayObj, VarRefs*)
+{
+  for i, VarRef in VarRefs
+  {
+    if ArrayObj.Has(i)
+      %VarRef% := ArrayObj[i]
+  }
+}
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper Functions (setup)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Show error message, and then exit
+Abort(message)
+{
+  static WS_EX_TOPMOST := "0x40000"  ; Always On Top
+  MsgBox message, , "Icon! " WS_EX_TOPMOST
+  ExitApp(0)
+}
+
+;; Make RegEx treat all characters in StringObj as literal.
+; ref: https://www.autohotkey.com/docs/v2/misc/RegEx-QuickRef.htm#fundamentals
+RegExEscape(StringObj)
+{
+  result := unset
+
+  if InStr(StringObj,"\E")
+    result := RegExReplace(StringObj, "([\\.*?+[{|()^$])", "\$1")
+  else
+    result := "\Q" StringObj "\E"
+
+  return result
+}
 
 ;; Check if a file is encoded in UTF-8
 ; _file              FileObj or String
@@ -896,82 +1003,58 @@ contains_x_but_not_inbetween_y(haystack, x, y)
   return false
 }
 
-FindFiles(file_pattern, full_path := false)
+FindFiles(file_pattern, relative_path := false)
 {
   files := Array()
+
   loop Files file_pattern, "F"
-    files.push(full_path ? A_LoopFileFullPath : A_LoopFilePath)
+  {
+    if A_LoopFileAttrib.Contains("S")  ; Skip system files
+      continue
+    files.push(relative_path ? A_LoopFilePath : A_LoopFileFullPath)
+  }
+
   return files
 }
 
-ParseAutorunPattern(autorun_pattern)
+FindDirectories(file_pattern, relative_path := false)
 {
-  result := unset
-  extra := {}
+  files := Array()
 
-  if not InStr(autorun_pattern, SEP) {
-    launch_pattern := autorun_pattern
-  } else {
-    split := autorun_pattern.Split(SEP, , 2)
-    launch_pattern := split[1]
-    window_patterns := split[2].Split(SEP)
-    window_patterns.Each(ptrn => ParseExtraSettings(ptrn, &extra))
-  }
+  loop Files file_pattern, "D"
+    files.push(relative_path ? A_LoopFilePath : A_LoopFileFullPath)
 
-  if extra.PropValues().Any(value => value = false)
-    result := []
-  else
-    result := GenerateLaunchStrings(launch_pattern)
-              .Collect(launch_string=>[launch_string,extra])
-
-  return result
+  return files
 }
 
-;; Parse extra settings on the autorun lines in the config file
-; In config [autorun] section, each line can define
-; extra settings after a '|' (pipe) character.
-; Example:
-;   [autorun]
-;   some\file.exe|name1=value1|name2=value2
-ParseExtraSettings(window_pattern, &extra)
+;; Check if setting name is permitted, and if setting value is valid
+CheckSetting(name, value?)
 {
-  if window_pattern ~= "^\s*winexe\s*="
+  result := unset
+
+  switch name
   {
-    file_pattern := window_pattern.Split("=", , 2)[2].Trim()
-    files := FindFiles(file_pattern, full_path := true)
-    file_regexes := files.Collect(str=>RegExReplace(str, "^.*[\\]", "\\"))
-                         .Collect(str=>StrReplace(str, ".", "\."))
-                         .Join("|")
-    if file_regexes.IsEmpty()
-      extra.winexe := false
-    else
-      extra.winexe := "(" file_regexes ")$"
+  case "launch":
+    result := true
+  case "launchdir":
+    result := true
+  case "autorundir":
+    result := true
+  case "buttons":
+    result := IsSet(value) ? ["show", "hide", "slide"].Contains(value) : true
+  case "btnX", "btnO", "btn_":
+    result := IsSet(value) ? ["enable", "disable"].Contains(value) : true
+  case "winexe":
+    result := true
+  case "winclass":
+    result := true
+  case "wingrab":
+    result := IsSet(value) ? ["instant","waitlauncherquit","waittimesec\(\s*[0-9]+\s*\)"].HasAny(regex => value ~= "^" regex "$") : true
+  default:
+    result := false
   }
-  else if window_pattern ~= "^\s*winclass\s*="
-  {
-    class_regex := window_pattern.Split("=", , 2)[2].Trim()
-    extra.winclass := "^" class_regex "$"
-  }
-  else if window_pattern ~= "^\s*wingrab\s*="
-  {
-    extra.wingrab := window_pattern.Split("=", , 2)[2].Trim()
-  }
-  else if window_pattern ~= "^\s*buttons\s*="
-  {
-    extra.buttons := window_pattern.Split("=", , 2)[2].Trim()
-  }
-  else if window_pattern ~= "^\s*btnX\s*="
-  {
-    extra.buttonX := window_pattern.Split("=", , 2)[2].Trim()
-  }
-  else if window_pattern ~= "^\s*btnO\s*="
-  {
-    extra.buttonO := window_pattern.Split("=", , 2)[2].Trim()
-  }
-  else if window_pattern ~= "^\s*btn_\s*="
-  {
-    extra.button_ := window_pattern.Split("=", , 2)[2].Trim()
-  }
+
+  return result
 }
 
 ;; Match launch pattern against files on disk
@@ -991,21 +1074,21 @@ GenerateLaunchStrings(launch_pattern)
   if (files := FindFiles(file_pattern), not files.IsEmpty())
   {
     ; First str in launch_pattern is the file to be run
-    launch_strings.Push(files)
+    launch_strings.Push files.Collect(str => '"' str '"')
 
     while enum.Call(&str)
     {
       if contains_x_but_not_inbetween_y(str, x:="*?", y:='"') {
         ; wildcard found, treat str as a file pattern
         files := FindFiles(str)
-        launch_strings.Push(files)
+        launch_strings.Push files.Collect(str => '"' str '"')
       } else {
-        ; no wildcard, treat str as normal parameter
+        ; no wildcard, treat str as a normal parameter
         launch_strings.Push([str])
       }
     }
 
-    if launch_strings.Any(".IsEmpty")
+    if launch_strings.HasAny(".IsEmpty")
       launch_strings := []
     else if launch_strings.Length = 1
       launch_strings := launch_strings[1]
@@ -1177,9 +1260,9 @@ RepositionButtons(fscr)
 
 CalculateButtonsSizes(bar_width, bar_height)
 {
-  btn_width := 30 ;TODO: Make configurable
-  btn_height := 30 ;TODO: Make configurable
-  btn_spacing := 2 ;TODO: Make configurable
+  static btn_width := 30 ;TODO: Make configurable
+  static btn_height := 30 ;TODO: Make configurable
+  static btn_spacing := 2 ;TODO: Make configurable
 
   buttons_sizes :=  {
     X: {
@@ -1248,10 +1331,8 @@ ExitFullScreen(fscr)
 ;; Misc
 ; Note: `A_LineFile` is used since it gives same result for: current script, #Include file, compiled file
 SplitPath(A_LineFile, , &SCRIPT_DIR, , &SCRIPT_NAME, )  ; "some\path\bofuru.ahk" -> "some\path" "bofuru"
-CONFIG_NAME := SCRIPT_NAME ".ini"
+CONFIG_NAME := SCRIPT_NAME ".conf"
 CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
-SEP := "|"  ; Separator: Used in the config [autorun] section
-CONFIG_AUTORUN_LINE_REGEX := "^\s*buttons\s*=\s*(show|hide|slide)\s*$|^\s*btn[XO_]\s*=\s*(enable|disable)\s*$|^\s*(winexe|winclass)\s*=|^\s*wingrab\s*=\s*(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))\s*$"
 
 ;; Transparent Pixel
 ; This is needed to create clickable areas in GUI windows.
@@ -1290,19 +1371,23 @@ AHK_CLASS_IGNORE := Format("ahk_class ^(?!{})", IGNORED_CLASSES.Collect(str => s
 
 ;; Config Variables
 cnfg := {}
-cnfg.launch_string  := ""
-cnfg.workdir        := ""
+cnfg.launch         := ""
+cnfg.launchdir      := A_WorkingDir
+cnfg.autorundir     := A_WorkingDir
 cnfg.buttons        := "hide"
-cnfg.buttonX        := "enable"
-cnfg.buttonO        := "enable"
-cnfg.button_        := "enable"
+cnfg.btnX           := "enable"
+cnfg.btnO           := "enable"
+cnfg.btn_           := "enable"
 cnfg.winexe         := ""
 cnfg.winclass       := ""
 cnfg.wingrab        := "instant"
-cnfg.autorun_find   := Array()
-cnfg.autorun_ignore := Array()
 cnfg.window_string  := ""
 cnfg.delay_millisec := 0
+;
+cnfg_args   := {}
+cnfg_config := {}
+autoruns        := []
+autoruns_ignore := []
 
 ;; Fullscreen Variables
 fscr := {}
@@ -1324,9 +1409,53 @@ fscr.button_       := unset
 ;; Config
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Config File
-if FileExist(CONFIG_PATH) ~= "[^D]"  ; If config file exists
+;; Script Arguments ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Parse all "--name value" and "--name=value" upto the first non "--*" arg.
+; The remaining args are treated as a launch_string.
+; Example:
+;   bofuru.ahk [bofuru args] game.exe [game args]
+; Each arg in [bofuru args] are parsed separately.
+; "game.exe [game args]" is treated as one big launch_string arg.
+if not A_Args.IsEmpty()
 {
+  i := 0
+  while (i += 1, i <= A_Args.Length)
+  {
+    ; Get name and value
+    if RegExMatch(A_Args[i], "^--(.+?)=(.+)", &match) {
+      arg_str := A_Args[i]
+      name  := match[1].Trim()
+      value := match[2].Trim()
+    } else if RegExMatch(A_Args[i], "^--(.+)", &match) {
+      arg_str := A_Args[i] " " A_Args[i+1]
+      name  := match[1].Trim()
+      value := A_Args[i+1].Trim()
+      i += 1
+    } else {
+      if A_Args[i] = "--"
+        i += 1
+      name := "launch"
+      value := A_Args.Slice(i)
+                     .Collect(arg => (arg ~= "\s" ? '"' arg '"' : arg))
+                     .Join(" ")
+      i := A_Args.Length  ; Make this loop iteration the last one
+    }
+
+    ; Verify name and value
+    if not CheckSetting(name)
+      Abort("Invalid argument:`n`n" arg_str)
+    if not CheckSetting(name, value)
+      Abort("Cannot use argument value: " value "`n`n" arg_str)
+
+    ; Store name and value
+    cnfg_args.%name% := value
+  }
+}
+
+; Config File
+if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
+{
+  ; Detect UTF-8
   if FileIsUTF8(CONFIG_PATH, accept_ascii_only := false)
   {
     ; IniRead() do unfortunately not support UTF-8 files
@@ -1334,97 +1463,84 @@ if FileExist(CONFIG_PATH) ~= "[^D]"  ; If config file exists
     if answer != "Yes"
       ExitApp(0)
 
+    ; Convert file to UTF-16
     config_str := FileRead(CONFIG_PATH, "UTF-8")
     FileDelete(CONFIG_PATH)
     FileAppend(config_str, CONFIG_PATH, "UTF-16")
     config_str := unset
   }
 
+  ;; Config File ([config]) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; Parses all "name = value" lines in the [config] section.
   if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("config")
   {
-    cnfg.launch_string  := IniRead(CONFIG_PATH, "config", "launch", cnfg.launch_string)
-    cnfg.workdir        := IniRead(CONFIG_PATH, "config", "workdir", cnfg.workdir)
-    cnfg.buttons        := IniRead(CONFIG_PATH, "config", "buttons", cnfg.buttons)
-    cnfg.buttonX        := IniRead(CONFIG_PATH, "config", "btnX", cnfg.buttonX)
-    cnfg.buttonO        := IniRead(CONFIG_PATH, "config", "btnO", cnfg.buttonO)
-    cnfg.button_        := IniRead(CONFIG_PATH, "config", "btn_", cnfg.button_)
-    cnfg.winexe         := IniRead(CONFIG_PATH, "config", "winexe", cnfg.winexe).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
-    cnfg.winclass       := IniRead(CONFIG_PATH, "config", "winclass", cnfg.winclass).Replace(".", "\.")  ; Replace, since it is treated as a RegEx
-    cnfg.wingrab        := IniRead(CONFIG_PATH, "config", "wingrab", cnfg.wingrab)
+    loop Parse IniRead(CONFIG_PATH, "config"), "`r`n", A_Space A_Tab
+    {
+      config_line := A_LoopField
+
+      if not config_line.Contains("=")
+        Abort(CONFIG_PATH "`n`nInvalid config entry:`n`n" config_line)
+      
+      ; Get name and value
+      config_line.Split("=", , 2).Collect(".Trim").Assign(&name, &value)
+
+      ; Verify name and value
+      if not CheckSetting(name)
+        Abort(CONFIG_PATH "`n`nInvalid config name: " name "`n`n" config_line)
+      if not CheckSetting(name, value)
+        Abort(CONFIG_PATH "`n`nInvalid config value: " value "`n`n" config_line)
+
+      ; Store name and value
+      cnfg_config.%name% := value
+    }
   }
 
+  ;; Config File ([autorun]) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; Parses all "file.exe|name=val|name=val" lines in the [autorun] section.
   if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("autorun")
   {
     loop Parse IniRead(CONFIG_PATH, "autorun"), "`r`n", A_Space A_Tab
     {
-      if InStr(A_LoopField, SEP)
-      && not A_LoopField.Split(SEP).Slice(2).All(RegExMatch, CONFIG_AUTORUN_LINE_REGEX)
-      {
-        MsgBox "Invalid autorun entry:`n`n" A_LoopField, CONFIG_PATH, "Icon!"
-        ExitApp(1)
+      if A_LoopField ~= "^!" {
+        if A_LoopField.Contains("|")
+          Abort(CONFIG_PATH "`n`nInvalid autorun ignore entry:`n`n" A_LoopField)
+        launch_pattern := SubStr(A_LoopField, 2)  ; "!file_pat*ern.exe" -> "file_pat*ern.exe"
+        autoruns_ignore.Push(launch_pattern)
+        continue  ;NOTE
       }
 
-      if A_LoopField ~= "^!"
-        cnfg.autorun_ignore.Push( SubStr(A_LoopField,2) )
-      else
-        cnfg.autorun_find.Push( A_LoopField )
+      autorun_line := A_LoopField
+      autorun_cnfg := {}
+
+      for name_value in ("launch=" autorun_line).Split("|")
+      {
+        if not name_value.Contains("=")
+          Abort(CONFIG_PATH "`n`nInvalid autorun entry:`n`n" autorun_line)
+
+        ; Get name and value
+        name_value.Split("=", , 2).Collect(".Trim").Assign(&name, &value)
+
+        ; Verify name and value
+        if not CheckSetting(name) or name = "autorundir"
+          Abort(CONFIG_PATH "`n`nInvalid autorun config name: " name "`n`n" autorun_line)
+        if not CheckSetting(name, value)
+          Abort(CONFIG_PATH "`n`nInvalid config value: " value "`n`n" autorun_line)
+
+        ; Store name and value
+        autorun_cnfg.%name% := value
+      }
+
+      autoruns.Push(autorun_cnfg)
     }
   }
 }
 
-;; Arguments
-if not A_Args.IsEmpty()
-{
-  args := A_Args.Collect(arg => (arg ~= "\s" ? '"' arg.Replace('"','`"') '"' : arg))
-  launch_args := Array()
-
-  i := 0
-  while (i += 1, i <= args.Length)
-  {
-    if args[i] = "--workdir" {
-      cnfg.workdir := A_Args[(i += 1, i)]
-    } else if args[i] = "--buttons" {
-      cnfg.buttons := A_Args[(i += 1, i)]
-    } else if args[i] = "--btnX" {
-      cnfg.buttonX := A_Args[(i += 1, i)]
-    } else if args[i] = "--btnO" {
-      cnfg.buttonO := A_Args[(i += 1, i)]
-    } else if args[i] = "--btn_" {
-      cnfg.button_ := A_Args[(i += 1, i)]
-    } else if args[i] = "--winexe" {
-      cnfg.winexe := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
-    } else if args[i] = "--winclass" {
-      cnfg.winclass := A_Args[(i += 1, i)].Replace(".", "\.")  ; Replace, since it is treated as a RegEx
-    } else if args[i] = "--wingrab" {
-      cnfg.wingrab := A_Args[(i += 1, i)]
-    } else if args[i] = "--" {
-      args.Slice(i+1).Each(arg => launch_args.Push(arg))
-      break
-    } else {
-      launch_args.Push(args[i])
-    }
-  }
-
-  if not launch_args.IsEmpty()
-    cnfg.launch_string := launch_args.Join(" ")
-
-  args := launch_args := unset
-}
-
-for button in [cnfg.buttonX, cnfg.buttonO, cnfg.button_]
-{
-  if not button ~= "^(disable|enable|hidden)$"
-  {
-    MsgBox "Invalid button setting:`n`n" button, CONFIG_PATH, "Icon!"
-    ExitApp(1)
-  }
-}
-
-if not cnfg.wingrab ~= "^(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))$"
-{
-  MsgBox "Invalid wingrab setting:`n`n" cnfg.wingrab, CONFIG_PATH, "Icon!"
-  ExitApp(1)
-}
+;DEBUG
+;MsgBox cnfg_args.Inspect()
+;MsgBox cnfg_config.Inspect()
+;MsgBox autoruns.Inspect()
+;MsgBox autoruns_ignore.Inspect()
+;ExitApp(0)
 
 
 
@@ -1432,53 +1548,97 @@ if not cnfg.wingrab ~= "^(instant|waitlauncherquit|waittimesec\(\s*[0-9]+\s*\))$
 ;; Setup
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-if cnfg.workdir
+; Apply cnfg_config to cnfg
+for name, value in cnfg_config.OwnProps()
+  cnfg.%name% := value
+
+; Apply cnfg_args to cnfg
+for name, value in cnfg_args.OwnProps()
+  cnfg.%name% := value
+
+; Launch string exists
+if cnfg.launch
 {
-  if not FileExist(cnfg.workdir) ~= "D"  ; If directory does not exist
+  if cnfg.winexe
+    cnfg.winexe := "^" RegExEscape(cnfg.winexe) "$"
+
+  if cnfg.winclass
+    cnfg.winclass := "^" RegExEscape(cnfg.winclass) "$"
+}
+
+; Try finding a working launch string in autoruns
+else
+{
+  ; Set Autorun Working Directory
+  if cnfg.autorundir != A_WorkingDir
   {
-    MsgBox("Workdir not found:`n`n" cnfg.workdir, CONFIG_PATH, "Icon!")
-    ExitApp(1)
+    if not FileExist(cnfg.autorundir) ~= "D"  ; If directory does not exist
+      Abort("Autorun Directory not found:`n`n" cnfg.autorundir)
+    SetWorkingDir cnfg.autorundir
+    cnfg.launchdir := cnfg.autorundir
   }
-  SetWorkingDir cnfg.workdir
-}
 
-if cnfg.launch_string.IsEmpty()
-{
-  cnfg.autorun_ignore :=
-    cnfg.autorun_ignore.Collect(ParseAutorunPattern)
-                       .Flatten(1)
-                       .Collect(arr=>arr[1])
+  ; Find all files that should be rejected by autorun (not launched)
+  autoruns_ignore := autoruns_ignore.Collect(GenerateLaunchStrings).Flatten()
 
-  cnfg.autorun_find :=
-    cnfg.autorun_find.Collect(ParseAutorunPattern)
-                     .Flatten(1)
-                     .Reject(arr=>cnfg.autorun_ignore.Contains(arr[1]))
+  ; Find all usable autoruns
+  usable_autoruns := []
+  for autorun_cnfg in autoruns
+  {
+    launch_strings := GenerateLaunchStrings(autorun_cnfg.launch)
+    launch_strings.Collect( str => autorun_cnfg.Clone().Tap(a_cnfg => a_cnfg.launch := str) )
+                  .Reject( a_cnfg => autoruns_ignore.Contains(a_cnfg.launch) )
+                  .Select( a_cnfg => !a_cnfg.HasOwnProp("launchdir") || FileExist(a_cnfg.launchdir) ~= "[D]" )
+                  .Each(a_cnfg => usable_autoruns.Push(a_cnfg))
+  }
 
-  if cnfg.autorun_find.Has(1) {
-    cnfg.launch_string := cnfg.autorun_find[1][1]
-    extra := cnfg.autorun_find[1][2]
-    
-    ; extra.%name% are set in function ParseExtraSettings()
-    for name, value in extra.OwnProps()
-      if cnfg.HasOwnProp(name)
-        cnfg.%name% := value
+  if not usable_autoruns.IsEmpty()
+  {
+    autorun_cnfg := usable_autoruns[1]
+
+    if autorun_cnfg.HasOwnProp("winexe") {
+      files := FindFiles(autorun_cnfg.winexe)
+      files_regex := files.Collect(RegExReplace, "^.*\\", "\")
+                          .Collect(RegExEscape)
+                          .Join("|")
+      autorun_cnfg.winexe := (files_regex ? "(" files_regex ")$" : "")
+    }
+
+    if autorun_cnfg.HasOwnProp("winclass") {
+      class_regex := RegExEscape(autorun_cnfg.winclass)
+      autorun_cnfg.winclass := (class_regex ? "^" class_regex "$" : "")
+    }
+
+    ; Apply autorun config to cnfg
+    for name, value in autorun_cnfg.OwnProps()
+      cnfg.%name% := value
   }
 }
 
-if cnfg.launch_string.IsEmpty()
+if cnfg.launch.IsEmpty()
+  Abort("Could not find anything to execute.")
+
+; Set working directory
+if cnfg.launchdir != A_WorkingDir
 {
-  MsgBox("Could not find anything to execute.", , "Icon!")
-  ExitApp(1)
+  if not FileExist(cnfg.launchdir) ~= "D"  ; If directory does not exist
+    Abort("Launchdir not found:`n`n" cnfg.launchdir)
+  SetWorkingDir cnfg.launchdir
 }
 
+; Create window string
+{
+  if cnfg.winexe
+    cnfg.winexe := "ahk_exe" cnfg.winexe
 
-if cnfg.winexe
-  cnfg.winexe := "ahk_exe" cnfg.winexe
-if cnfg.winclass
-  cnfg.winclass := "ahk_class" cnfg.winclass
-cnfg.window_string := Trim(cnfg.winexe " " cnfg.winclass)
+  if cnfg.winclass
+    cnfg.winclass := "ahk_class" cnfg.winclass
 
-if RegExMatch(cnfg.wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
+  cnfg.window_string := Trim(cnfg.winexe " " cnfg.winclass)
+}
+
+; Parse wingrab "waittimesec()"
+if RegExMatch(cnfg.wingrab, "waittimesec\((.+)\)", &match)
 {
   ; Ex: "waittimesec(5)" -> "waittimesec", 5
   cnfg.wingrab := "waittimesec"
@@ -1497,7 +1657,13 @@ if RegExMatch(cnfg.wingrab, "^waittimesec\(\s*([0-9]+)\s*\)$", &match)
 
 ;; Run
 ; Start app
-Run(cnfg.launch_string, , , &app_pid), fscr.app_pid := app_pid, app_pid := unset
+try {
+  Run(cnfg.launch, , , &app_pid)
+  fscr.app_pid := app_pid
+  app_pid := unset
+} catch {
+  Abort("Failed to launch:`n`n" cnfg.launch)
+}
 
 ; Find window handle
 if cnfg.window_string
@@ -1507,7 +1673,9 @@ if cnfg.window_string
   if not fscr.app_hwnd
     ExitApp(0)
 
-  switch cnfg.wingrab {
+  ; Win Grab method
+  switch cnfg.wingrab
+  {
   case "waitlauncherquit":
     ProcessWaitClose(fscr.app_pid)
   case "waittimesec":
@@ -1524,8 +1692,17 @@ else
       ExitApp(0)
   }
 
-  ; Wait forewer for the app window to appear
+  ; Wait forever for the app window to appear
   fscr.app_hwnd := WinWait("ahk_pid" fscr.app_pid " " AHK_CLASS_IGNORE)
+
+  ; Win Grab method
+  switch cnfg.wingrab
+  {
+  case "waitlauncherquit":
+    ProcessWaitClose(fscr.app_pid)
+  case "waittimesec":
+    Sleep(cnfg.delay_millisec)
+  }
 }
 
 ; Create black bars
@@ -1558,7 +1735,7 @@ if cnfg.buttons != "hide"
   {
     fscr.button%C%.OnEvent("Click",       EventButton%C%Click)
     fscr.button%C%.OnEvent("DoubleClick", EventButton%C%Click)
-    if cnfg.button%C% = "disable"
+    if cnfg.btn%C% = "disable"
       fscr.button%C%.Enabled := false
 
     fscr.button_.Enabled := false ;TODO: Implement click event
