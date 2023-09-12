@@ -849,6 +849,71 @@ __Array_Assign(ArrayObj, VarRefs*)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helper Functions (initialization)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; URL: https://github.com/buliasz/AHKv2-Gdip
+;#Include Gdip_All.ahk
+;GenerateTransparentPixel()
+;{
+;  If !pToken := Gdip_Startup()
+;    Abort("Gdiplus failed to start. Please ensure you have gdiplus on your system")
+;  pBitmap   := Gdip_CreateBitmap(Width:=1, Height:=1, _Format:=0x26200A)
+;  ;pGraphics := Gdip_GraphicsFromImage(pBitmap)
+;  ;pBrush    := Gdip_BrushCreateSolid(ARGB:=0x00000000)
+;  ;Region    := Gdip_GetClipRegion(pGraphics)
+;  ;Gdip_FillRegion(pGraphics, pBrush, Region)  ; Not needed. Pixel seems to be transparent by default.
+;  hIcon     := Gdip_CreateHICONFromBitmap(pBitmap)
+;  ;Gdip_DeleteRegion(Region)
+;  ;Gdip_DeleteBrush(pBrush)
+;  ;Gdip_DeleteGraphics(pGraphics)
+;  Gdip_DisposeImage(pBitmap)
+;  Gdip_Shutdown(pToken)
+;  return "HICON:" hIcon
+;}
+
+;; Create a transparent pixel 
+; THANK YOU SO MUCH AHKv2-Gdip!
+; URL: https://github.com/buliasz/AHKv2-Gdip
+; I could not have figured out this code without you.
+GenerateTransparentPixel()
+{
+  ;If !pToken := Gdip_Startup()
+  ;  Abort("GDI+ failed to start. Please ensure you have GDI+ on your system")
+  if (!DllCall("LoadLibrary", "str", "gdiplus", "UPtr"))
+    Abort("FATAL ERROR: Could not load GDI+ library.")
+  si := Buffer(A_PtrSize = 8 ? 24 : 16, 0)
+  NumPut("UInt", 1, si)
+  DllCall("gdiplus\GdiplusStartup", "UPtr*", &pToken:=0, "UPtr", si.Ptr, "UPtr", 0)
+  if (!pToken)
+    Abort("FATAL ERROR: GDI+ failed to start. Please ensure you have GDI+ on your system.")
+
+  ;pBitmap := Gdip_CreateBitmap(Width:=1, Height:=1, _Format:=0x26200A)
+  DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", Width:=1, "Int", Height:=1, "Int", 0, "Int", _Format:=0x26200A, "UPtr", 0, "UPtr*", &pBitmap:=0)
+
+  ;NOTE: Pixel seems to be transparent by default. No need to paint the pixel.
+
+  ;hIcon := Gdip_CreateHICONFromBitmap(pBitmap)
+  DllCall("gdiplus\GdipCreateHICONFromBitmap", "UPtr", pBitmap, "UPtr*", &hIcon:=0)
+
+  ;Gdip_DisposeImage(pBitmap)
+  DllCall("gdiplus\GdipDisposeImage", "UPtr", pBitmap)
+
+  ;Gdip_Shutdown(pToken)
+  DllCall("gdiplus\GdiplusShutdown", "UPtr", pToken)
+  hModule := DllCall("GetModuleHandle", "str", "gdiplus", "UPtr")
+  if (!hModule)
+    Abort("FATAL ERROR: GDI+ library already unloaded.")
+  if (!DllCall("FreeLibrary", "UPtr", hModule))
+    Abort("FATAL ERROR: Could not free GDI+ library.")
+
+  ; return
+  return "HICON:" hIcon
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper Functions (setup)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1336,11 +1401,7 @@ CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
 
 ;; Transparent Pixel
 ; This is needed to create clickable areas in GUI windows.
-;TODO: Generate pixel in code instead of loading from file
-;@Ahk2Exe-IgnoreBegin
-PIXEL := SCRIPT_DIR . "\resourses\transparent_pixel.ico"
-;@Ahk2Exe-IgnoreEnd
-;@Ahk2Exe-AddResource resourses\transparent_pixel.ico, pixel
+PIXEL := GenerateTransparentPixel()
 
 ;; Ignored Window Classes
 IGNORED_CLASSES := [
@@ -1847,7 +1908,7 @@ EventFlashSecurity()
 ; Tell Windows to notify us on events on all windows in the system.
 ; Some window events can only be caught this way.
 ;https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registershellhookwindow
-DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+ok := DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
 MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
 OnMessage(MsgNum, ShellMessage)
 ShellMessage_Unregister()
