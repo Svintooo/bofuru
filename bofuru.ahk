@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2.0
 #WinActivateForce
 SetTitleMatchMode "RegEx"
+CoordMode "Mouse", "Screen"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BoFuru - Borderless Fullscreen Launcher       ;;
@@ -16,8 +17,9 @@ SetTitleMatchMode "RegEx"
 ;;TODOS
 ;; - Only use weird fix for transparent pixel rows at top
 ;;   when it is needed. Scan pixel row and see if it is all black.
-;; - create transparent_pixel.ico in code
-;;     stop relying on a separate *.ico file.
+;; - Implement window mode, with black bars ([]-button).
+;;   X-button becomes Q-button, which removes black bars only.
+;; - Cross-aim which let you click the window you want fullscreen.
 ;; - let config include another config.
 ;; - make buttons that do not look like shit.
 ;; - Make configurable what monitor to use.
@@ -852,29 +854,9 @@ __Array_Assign(ArrayObj, VarRefs*)
 ;; Helper Functions (initialization)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; URL: https://github.com/buliasz/AHKv2-Gdip
-;#Include Gdip_All.ahk
-;GenerateTransparentPixel()
-;{
-;  If !pToken := Gdip_Startup()
-;    Abort("Gdiplus failed to start. Please ensure you have gdiplus on your system")
-;  pBitmap   := Gdip_CreateBitmap(Width:=1, Height:=1, _Format:=0x26200A)
-;  ;pGraphics := Gdip_GraphicsFromImage(pBitmap)
-;  ;pBrush    := Gdip_BrushCreateSolid(ARGB:=0x00000000)
-;  ;Region    := Gdip_GetClipRegion(pGraphics)
-;  ;Gdip_FillRegion(pGraphics, pBrush, Region)  ; Not needed. Pixel seems to be transparent by default.
-;  hIcon     := Gdip_CreateHICONFromBitmap(pBitmap)
-;  ;Gdip_DeleteRegion(Region)
-;  ;Gdip_DeleteBrush(pBrush)
-;  ;Gdip_DeleteGraphics(pGraphics)
-;  Gdip_DisposeImage(pBitmap)
-;  Gdip_Shutdown(pToken)
-;  return "HICON:" hIcon
-;}
-
 ;; Create a transparent pixel 
 ; THANK YOU SO MUCH AHKv2-Gdip!
-; URL: https://github.com/buliasz/AHKv2-Gdip
+; URL: https://github.com/buliasz/AHKv2-Gdip/blob/master/Gdip_All.ahk
 ; I could not have figured out this code without you.
 GenerateTransparentPixel()
 {
@@ -891,7 +873,18 @@ GenerateTransparentPixel()
   ;pBitmap := Gdip_CreateBitmap(Width:=1, Height:=1, _Format:=0x26200A)
   DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", Width:=1, "Int", Height:=1, "Int", 0, "Int", _Format:=0x26200A, "UPtr", 0, "UPtr*", &pBitmap:=0)
 
-  ;NOTE: Pixel seems to be transparent by default. No need to paint the pixel.
+  ;pGraphics := Gdip_GraphicsFromImage(pBitmap)
+  DllCall("gdiplus\GdipGetImageGraphicsContext", "UPtr", pBitmap, "UPtr*", &pGraphics:=0)
+
+  ;pBrush := Gdip_BrushCreateSolid(ARGB:=0x00000000)
+  DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB:=0x00000000, "UPtr*", &pBrush:=0)
+
+  ;Region := Gdip_GetClipRegion(pGraphics)
+  DllCall("gdiplus\GdipCreateRegion", "UInt*", &Region:=0)
+  DllCall("gdiplus\GdipGetClip", "UPtr", pGraphics, "UInt", Region)
+
+  ;Gdip_FillRegion(pGraphics, pBrush, Region)
+  DllCall("gdiplus\GdipFillRegion", "UPtr", pGraphics, "UPtr", pBrush, "UPtr", Region)
 
   ;hIcon := Gdip_CreateHICONFromBitmap(pBitmap)
   DllCall("gdiplus\GdipCreateHICONFromBitmap", "UPtr", pBitmap, "UPtr*", &hIcon:=0)
@@ -1171,6 +1164,139 @@ GenerateLaunchStrings(launch_pattern)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper Functions (fullscreen)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+; Code stolen from AHKv2_GuiCtrlTips
+; url: https://github.com/AHK-just-me/AHKv2_GuiCtrlTips
+Class GuiCtrlTips {
+  static TOOLINFO {
+    Get {
+      static SizeOfTI := 24 + (A_PtrSize * 6)
+      local TI := Buffer(SizeOfTI, 0)
+      NumPut("UInt", SizeOfTI, TI)
+      return TI
+    }
+  }
+
+  static FLAGS {
+    Get {
+      return 0x11 ; TTF_SUBCLASS | TTF_IDISHWND
+    }
+  }
+
+  ; -------------------------------------------------------------------------------------------------------------------
+  ; https://learn.microsoft.com/en-us/windows/win32/controls/ttm-addtool
+  ; https://learn.microsoft.com/en-us/windows/win32/controls/ttm-setmaxtipwidth
+  ; https://learn.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-tttoolinfow
+  __New(GuiObj) {
+    local HGUI, HTIP, TI
+
+    ; GuiObj
+    if !(GuiObj is Gui)
+      throw TypeError(A_ThisFunc . ": Expected a Gui object!", -1 "GuiObj")
+    HGUI := GuiObj.Hwnd
+
+    ; Create the TOOLINFO structure
+    TI := GuiCtrlTips.TOOLINFO
+    NumPut("UInt", GuiCtrlTips.FLAGS, "UPtr", HGUI, "UPtr", HGUI, TI, 4) ; uFlags, hwnd, uID
+
+    ; Create a tooltip control for this Gui
+    HTIP := DllCall("CreateWindowEx", "UInt", 0, "Str", "tooltips_class32", "Ptr", 0
+                                    , "UInt", 0x80000003, "Int", 0x80000000
+                                    , "Int",  0x80000000, "Int", 0x80000000
+                                    , "Int",  0x80000000, "Ptr", HGUI, "Ptr", 0
+                                    , "Ptr",  0, "Ptr", 0, "UPtr")
+    if !HTIP {
+      throw Error(A_ThisFunc . ": Could not create a tooltip control", -1)
+    }
+    DllCall("Uxtheme.dll\SetWindowTheme", "Ptr", HTIP, "Ptr", 0, "Str", " ") ; AHK style
+    ;SendMessage(0x0418, 0, A_ScreenWidth, HTIP) ; TTM_SETMAXTIPWIDTH
+
+    This.DefineProp("HTIP", {Get: (*) => HTIP})
+  }
+
+  ; -------------------------------------------------------------------------------------------------------------------
+  ; https://learn.microsoft.com/en-us/windows/win32/controls/ttm-addtool
+  ; https://learn.microsoft.com/en-us/windows/win32/controls/ttm-deltool
+  ; https://learn.microsoft.com/en-us/windows/win32/controls/ttm-updatetiptext
+  SetTip(GuiCtrl, TipText) {
+    local HCTL, HGUI, TI
+
+    ; GuiCtrl
+    HCTL := GuiCtrl.Hwnd
+    HGUI := GuiCtrl.Gui.Hwnd
+
+    ; Create the TOOLINFO structure
+    TI := GuiCtrlTips.TOOLINFO
+    NumPut("UInt", GuiCtrlTips.FLAGS, "UPtr", HGUI, "UPtr", HCTL, TI, 4) ; cbSize, uFlags, hwnd, uID
+
+    ; Delete existing tooltip
+    if (TipText = "") {
+      SendMessage(0x0433, 0, TI.Ptr, This.HTIP) ; TTM_DELTOOLW
+    }
+
+    ; Create new tooltip
+    else {
+      SendMessage(0x0432, 0, TI.Ptr, This.HTIP) ; TTM_ADDTOOLW
+      NumPut("UPtr", StrPtr(TipText), TI, 24 + (A_PtrSize * 3))  ; lpszText
+      SendMessage(0x0439, 0, TI.Ptr, This.HTIP) ; TTM_UPDATETIPTEXTW
+    }
+
+    ; Return
+    return true
+  }
+}
+
+; Either slides the buttons into view
+; OR slides them away from view.
+TimerButtonsSlide(fscr)
+{
+  ControlGetPos(, &y, , &height, fscr.button_)
+
+  if fscr.buttons_show = true && y < 0 {
+    ControlMove(, y+5, , , fscr.buttonX)
+    ControlMove(, y+5, , , fscr.buttonO)
+    ControlMove(, y+5, , , fscr.button_)
+  } else if fscr.buttons_show = false && y+height > 0 {
+    ControlMove(, y-5, , , fscr.buttonX)
+    ControlMove(, y-5, , , fscr.buttonO)
+    ControlMove(, y-5, , , fscr.button_)
+  }
+}
+
+; Trigger button slide when mouse is hovering in the top-right corner
+TimerMouseHoverButtons(fscr)
+{
+  target_win_hwnd := fscr.barTR.hwnd
+
+  WinGetClientPos( , , &w_width, &w_height, "ahk_id" target_win_hwnd)
+  ControlGetPos(&b_x, , , &b_height, fscr.button_)
+  b_width := w_width - b_x
+  MouseGetPos(&_m_x, &_m_y, &w_hwnd)  ; Coords are screen based, not window based
+  Coord_ScreenToClient(_m_x, _m_y, target_win_hwnd, &m_x, &m_y)
+  ;m_x := _m_x, m_y := _m_y
+
+  ;MsgBox Format("Window w:{},h:{}`nMouse x:{},y:{}`nButton w:{}, h:{}`ncorrect_win: {}, btn_show: {}"
+  ;             , w_width, w_height, m_x, m_y, b_width, b_height, w_hwnd = target_win_hwnd, fscr.buttons_show)
+  ;       ,
+  ;       , "0x40000"
+
+  if        w_hwnd = target_win_hwnd && fscr.buttons_show = false && m_x >= w_width-2      && m_y <= 0+2 {
+    fscr.buttons_show := true
+  } else if w_hwnd = target_win_hwnd && fscr.buttons_show = true  && m_x < w_width-b_width && m_y > b_height {
+    fscr.buttons_show := false
+  }
+}
+
+; Transform screen coordinates to relative coordinates for a specific window
+Coord_ScreenToClient(screen_x, screen_y, win_hwnd, &client_x, &client_y)
+{
+  point := Buffer(8, 0)
+  NumPut("int",screen_x, "int",screen_y, point, 0)
+  DllCall("user32\ScreenToClient", "Ptr",win_hwnd, "Ptr",point)
+  client_x := NumGet(point, 0, "int")
+  client_y := NumGet(point, 4, "int")
+}
 
 GetActiveMonitorSize()
 {
@@ -1463,6 +1589,7 @@ fscr.barTR         := unset
 fscr.buttonX       := unset
 fscr.buttonO       := unset
 fscr.button_       := unset
+fscr.buttons_show  := false  ; Used when cnfg.buttons = "slide" 
 
 
 
@@ -1567,11 +1694,12 @@ if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
           Abort(CONFIG_PATH "`n`nInvalid autorun ignore entry:`n`n" A_LoopField)
         launch_pattern := SubStr(A_LoopField, 2)  ; "!file_pat*ern.exe" -> "file_pat*ern.exe"
         autoruns_ignore.Push(launch_pattern)
-        continue  ;NOTE
+        continue  ;NOTE: Jumps to next loop iteration
       }
 
       autorun_line := A_LoopField
       autorun_cnfg := {}
+      autorun_used := []
 
       for name_value in ("launch=" autorun_line).Split("|")
       {
@@ -1580,6 +1708,11 @@ if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
 
         ; Get name and value
         name_value.Split("=", , 2).Collect(".Trim").Assign(&name, &value)
+
+        ; Make sure a name is not used more than once
+        if autorun_used.Contains(name)
+          Abort(CONFIG_PATH "`n`nAutorun entry contains too many '" name "=':`n`n" autorun_line)
+        autorun_used.Push(name)
 
         ; Verify name and value
         if not CheckSetting(name) or name = "autorundir"
@@ -1594,6 +1727,9 @@ if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
       autoruns.Push(autorun_cnfg)
     }
   }
+
+  ; Free
+  autorun_line := autorun_cnfg := autorun_used := unset
 }
 
 ;DEBUG
@@ -1626,7 +1762,6 @@ if cnfg.launch
   if cnfg.winclass
     cnfg.winclass := "^" RegExEscape(cnfg.winclass) "$"
 }
-
 ; Try finding a working launch string in autoruns
 else
 {
@@ -1775,6 +1910,7 @@ fscr.barBL.Show("W0 H0")  ; Initially hidden by setting width/height to 0
 fscr.barTR.Show("W0 H0")  ; Initially hidden by setting width/height to 0
 fscr.barBL.OnEvent("Size", EventBarBLSize)
 fscr.barTR.OnEvent("Size", EventBarTRSize)
+fscr.barTR.Tips := GuiCtrlTips(fscr.barTR)
 EventBarBLSize(*)
 {
   clickArea_reposition(fscr.barBL.clickArea) ;PIXEL
@@ -1786,12 +1922,15 @@ EventBarTRSize(*)
     RepositionButtons(fscr)
 }
 
-; Create exit button
+; Buttons
 if cnfg.buttons != "hide"
 {
   fscr.buttonX := fscr.barTR.Add("Button", "", "X")
   fscr.buttonO := fscr.barTR.Add("Button", "", "[ ]") ;▢O[]
   fscr.button_ := fscr.barTR.Add("Button", "", "—")
+  fscr.barTR.Tips.SetTip(fscr.buttonX, "Close")
+  fscr.barTR.Tips.SetTip(fscr.buttonO, "TODO")
+  fscr.barTR.Tips.SetTip(fscr.button_, "TODO")
   for C in ["X", "O", "_"]
   {
     fscr.button%C%.OnEvent("Click",       EventButton%C%Click)
@@ -1807,14 +1946,19 @@ if cnfg.buttons != "hide"
   }
   EventButtonOClick(*)
   {
-    ExitFullScreen(fscr)
-    ExitApp(0)
+    ;ExitFullScreen(fscr)
+    ;ExitApp(0)
   }
   EventButton_Click(*)
   {
     ;TODO: Minimize app, hide borders
     ;      When app window is restored, also restore borders
   }
+}
+if cnfg.buttons = "slide"
+{
+  SetTimer( ()=>TimerButtonsSlide(fscr), 10 )
+  SetTimer( ()=>TimerMouseHoverButtons(fscr) )
 }
 
 ; Make mouse clicks on the bars return focus to the app
@@ -1872,7 +2016,7 @@ PreventWindowMove_Unregister()
 }
 PreventWindowMove()
 {
-  if WinExist(fscr.app_hwnd) {
+  if WinExist("ahk_id" fscr.app_hwnd) {
     WinGetClientPos(&app_x, &app_y, , , fscr.app_hwnd)
     if app_x != fscr.app_pos.x || app_y != fscr.app_pos.y {
       app_size := ResizeAndPositionWindows(fscr)
@@ -1885,7 +2029,7 @@ SetTimer EventWindowClose
 EventWindowClose()
 {
   ;if not ProcessExist(fscr.app_pid)
-  if not WinExist(fscr.app_hwnd)
+  if not WinExist("ahk_id" fscr.app_hwnd)
   {
     ExitApp(0)  ; Script Exit
   }
@@ -1900,7 +2044,7 @@ EventFlashSecurity()
   if warn_id := WinActive("Adobe Flash Player Security")
   {
     WinClose(warn_id)
-    if WinExist(fscr.app_hwnd)
+    if WinExist("ahk_id" fscr.app_hwnd)
       WinMoveTop(fscr.app_hwnd)
   }
 }
@@ -1938,15 +2082,15 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
     if (lParam = fscr.app_hwnd)
     {
       ; App got focused, make app and bars AlwaysOnTop
-      if WinExist(fscr.barBL.Hwnd) {
+      if WinExist("ahk_id" fscr.barBL.Hwnd) {
         fscr.barBL.Opt("+AlwaysOnTop")
         WinMoveTop(fscr.barBL.Hwnd)
       }
-      if WinExist(fscr.barTR.Hwnd) {
+      if WinExist("ahk_id" fscr.barTR.Hwnd) {
         fscr.barTR.Opt("+AlwaysOnTop")
         WinMoveTop(fscr.barTR.Hwnd)
       }
-      if WinExist(fscr.app_hwnd) {
+      if WinExist("ahk_id" fscr.app_hwnd) {
         WinSetAlwaysOnTop(true, fscr.app_hwnd)
         WinMoveTop(fscr.app_hwnd)
       }
@@ -1963,13 +2107,13 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
     {
       ; Something other than the app got focus
       ;  Remove AlwaysOnTop so the focused window can be seen
-      if WinExist(fscr.barBL.Hwnd)
+      if WinExist("ahk_id" fscr.barBL.Hwnd)
         fscr.barBL.Opt("-AlwaysOnTop")
-      if WinExist(fscr.barTR.Hwnd)
+      if WinExist("ahk_id" fscr.barTR.Hwnd)
         fscr.barTR.Opt("-AlwaysOnTop")
-      if WinExist(fscr.app_hwnd)
+      if WinExist("ahk_id" fscr.app_hwnd)
         WinSetAlwaysOnTop(false, fscr.app_hwnd)
-      if WinExist(lParam)
+      if WinExist("ahk_id" lParam)
         WinMoveTop(lParam)  ; Make sure the newly focused window is visible
     }
   }
