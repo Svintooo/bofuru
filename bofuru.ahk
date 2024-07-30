@@ -15,13 +15,17 @@ CoordMode "Mouse", "Screen"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;TODOS
+;; - Make it easier to use through LaunchBox:
+;;     * First parameter is the file to be launched/executed.
+;;     * Change autorun to work on files, not folders.
+;;     * Have launching games through thcrap in mind.
 ;; - Only use weird fix for transparent pixel rows at top
 ;;   when it is needed. Scan pixel row and see if it is all black.
 ;; - Implement window mode, with black bars ([]-button).
 ;;   X-button becomes Q-button, which removes black bars only.
 ;; - Cross-aim which let you click the window you want fullscreen.
 ;; - let config include another config.
-;; - make buttons that do not look like shit.
+;; - Use buttons that do not look like shit.
 ;; - Make configurable what monitor to use.
 ;; - trayicon:
 ;;     * custom icon
@@ -32,6 +36,15 @@ CoordMode "Mouse", "Screen"
 ;; - compiled exe:
 ;;     * custom icon (same as trayicon)
 ;; - For each game, custom pictures for use as bars background (left/right or up/down of app window)
+
+;;NOTES
+;; How thcrap launches games:
+;;   thcrap_loader.exe  thc_conf.js  th06
+;; 
+;; Hur jag vill använda thcrap med aunchBox:
+;; - application: game file to run
+;;      emulator: Bofuru
+;;    emu params: --launch-with vpatch thcrap
 
 
 
@@ -84,7 +97,7 @@ __FuncHandler(this, func)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Helper Functions (stdLib)
+;; Helper Functions (the Stdlib of this script)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Inspect
@@ -1014,7 +1027,7 @@ FileIsUTF8(_file, accept_ascii_only := true)
 ; Example:
 ;   'cd "C:\Program Files"' -> ["cd", "C:\Program Files"]
 ;   'file.exe /flag1 -flag2 "value one" --flag3 "value two"' -> ["some\file.exe" "/flag1" "-flag2" "value one" "--flag3" "value two"]
-SplitCmdString(CmdString)
+SplitCmdString(CmdString) ;DEBUG
 {
   ArrayObj  := Array()
   StringObj := ""
@@ -1520,8 +1533,7 @@ ExitFullScreen(fscr)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Misc
-; Note: `A_LineFile` is used since it gives same result for: current script, #Include file, compiled file
-SplitPath(A_LineFile, , &SCRIPT_DIR, , &SCRIPT_NAME, )  ; "some\path\bofuru.ahk" -> "some\path" "bofuru"
+SplitPath(A_ScriptFullPath, , &SCRIPT_DIR, , &SCRIPT_NAME, )  ; "some\path\bofuru.ahk" -> "some\path" "bofuru"
 CONFIG_NAME := SCRIPT_NAME ".conf"
 CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
 
@@ -1530,6 +1542,7 @@ CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
 PIXEL := GenerateTransparentPixel()
 
 ;; Ignored Window Classes
+; Windows of these Class types will be ignored (not be made fullscreen).
 IGNORED_CLASSES := [
   ; https://learn.microsoft.com/en-gb/windows/win32/winmsg/about-window-classes?redirectedfrom=MSDN
   "Button",     ; button
@@ -1679,7 +1692,8 @@ if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
         Abort(CONFIG_PATH "`n`nInvalid config value: " value "`n`n" config_line)
 
       ; Store name and value
-      cnfg_config.%name% := value
+      if value != ""
+        cnfg_config.%name% := value
     }
   }
 
@@ -1721,7 +1735,8 @@ if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
           Abort(CONFIG_PATH "`n`nInvalid config value: " value "`n`n" autorun_line)
 
         ; Store name and value
-        autorun_cnfg.%name% := value
+        if value != ""
+          autorun_cnfg.%name% := value
       }
 
       autoruns.Push(autorun_cnfg)
