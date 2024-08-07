@@ -729,6 +729,24 @@ __String_RegExReplace(StringObj, NeedleRegEx ,Replacement?, &OutputVarCount?, Li
   return RegExReplace(StringObj, NeedleRegEx ,Replacement?, &OutputVarCount?, Limit?, StartingPos?)
 }
 
+;;
+;
+String.DefineFunc("BaseName", __String_BaseName)
+__String_BaseName(StringObj)
+{
+  SplitPath StringObj, &basename
+  return basename
+}
+
+;;
+;
+String.DefineFunc("DirName", __String_DirName)
+__String_DirName(StringObj)
+{
+  SplitPath StringObj, , &dirname
+  return dirname
+}
+
 ;; Trim a string
 ; Example:
 ;   "  asdf ".Trim() -> "asdf"
@@ -740,7 +758,7 @@ __String_Trim(StringObj, OmitChars?)
 
 ;; Left trim a string
 ; Example:
-;   "  asdf ".Trim() -> "asdf "
+;   "  asdf ".LTrim() -> "asdf "
 String.DefineFunc("LTrim", __String_LTrim)
 __String_LTrim(StringObj, OmitChars?)
 {
@@ -749,7 +767,7 @@ __String_LTrim(StringObj, OmitChars?)
 
 ;; Right trim a string
 ; Example:
-;   "  asdf ".Trim() -> "  asdf"
+;   "  asdf ".RTrim() -> "  asdf"
 String.DefineFunc("RTrim", __String_RTrim)
 __String_RTrim(StringObj, OmitChars?)
 {
@@ -1108,8 +1126,6 @@ CheckSetting(name, value?)
   case "launch":
     result := true
   case "launchdir":
-    result := true
-  case "autorundir":
     result := true
   case "buttons":
     result := IsSet(value) ? ["show", "hide", "slide"].Contains(value) : true
@@ -1538,7 +1554,7 @@ CONFIG_NAME := SCRIPT_NAME ".conf"
 CONFIG_PATH := SCRIPT_DIR "\" CONFIG_NAME
 
 ;; Transparent Pixel
-; This is needed to create clickable areas in GUI windows.
+; This is needed to create clickable areas in empty GUI windows.
 PIXEL := GenerateTransparentPixel()
 
 ;; Ignored Window Classes
@@ -1566,28 +1582,26 @@ IGNORED_CLASSES := [
   "WorkerW",  ; Desktop - With wallpaper
   "PseudoConsoleWindow",  ; Win11 cmd.exe
 ]
-; This is the reason why script uses: SetTitleMatchMode "RegEx"
+; This is the reason why this is set at the beginning of this file: SetTitleMatchMode "RegEx"
 AHK_CLASS_IGNORE := Format("ahk_class ^(?!{})", IGNORED_CLASSES.Collect(str => str "$").Join("|"))
 
-;; Config Variables
+;; Config Variables (and their defaults)
 cnfg := {}
 cnfg.launch         := ""
 cnfg.launchdir      := A_WorkingDir
-cnfg.autorundir     := A_WorkingDir
-cnfg.buttons        := "hide"
+cnfg.buttons        := "slide"    ; show, hide, slide
 cnfg.btnX           := "enable"
-cnfg.btnO           := "enable"
-cnfg.btn_           := "enable"
+cnfg.btnO           := "disable"  ; Functionality not implemented yet
+cnfg.btn_           := "disable"  ; Functionality not implemented yet
 cnfg.winexe         := ""
 cnfg.winclass       := ""
-cnfg.wingrab        := "instant"
-cnfg.window_string  := ""
-cnfg.delay_millisec := 0
+cnfg.wingrab        := "instant"  ; instant waittimesec(5) waitlauncherquit
+cnfg.window_string  := ""         ; Cannot be set in the config file. Will contain both winexe and winclass (if they are set).
+cnfg.delay_millisec := 0          ; Cannot be set in the config file. Will contain the number from waittimesec(5), multiplied by 1000.
 ;
 cnfg_args   := {}
-cnfg_config := {}
-autoruns        := []
-autoruns_ignore := []
+cnfg_file   := {}
+autoconfigs := []
 
 ;; Fullscreen Variables
 fscr := {}
@@ -1693,65 +1707,56 @@ if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
 
       ; Store name and value
       if value != ""
-        cnfg_config.%name% := value
+        cnfg_file.%name% := value
     }
   }
 
-  ;; Config File ([autorun]) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ; Parses all "file.exe|name=val|name=val" lines in the [autorun] section.
-  if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("autorun")
+  ;; Config File ([autoconfig]) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; Parses all "file.exe|name=val|name=val" lines in the [autoconfig] section.
+  if IniRead(CONFIG_PATH).Split(["`r","`n"]).Contains("autoconfig")
   {
-    loop Parse IniRead(CONFIG_PATH, "autorun"), "`r`n", A_Space A_Tab
+    loop Parse IniRead(CONFIG_PATH, "autoconfig"), "`r`n", A_Space A_Tab
     {
-      if A_LoopField ~= "^!" {
-        if A_LoopField.Contains("|")
-          Abort(CONFIG_PATH "`n`nInvalid autorun ignore entry:`n`n" A_LoopField)
-        launch_pattern := SubStr(A_LoopField, 2)  ; "!file_pat*ern.exe" -> "file_pat*ern.exe"
-        autoruns_ignore.Push(launch_pattern)
-        continue  ;NOTE: Jumps to next loop iteration
-      }
+      autoconfig_line := A_LoopField
+      autoconfig_cnfg := {}
+      autoconfig_used := []
 
-      autorun_line := A_LoopField
-      autorun_cnfg := {}
-      autorun_used := []
-
-      for name_value in ("launch=" autorun_line).Split("|")
+      for name_value in ("launch=" autoconfig_line).Split("|")
       {
         if not name_value.Contains("=")
-          Abort(CONFIG_PATH "`n`nInvalid autorun entry:`n`n" autorun_line)
+          Abort(CONFIG_PATH "`n`nInvalid autoconfig entry:`n`n" autoconfig_line)
 
         ; Get name and value
         name_value.Split("=", , 2).Collect(".Trim").Assign(&name, &value)
 
         ; Make sure a name is not used more than once
-        if autorun_used.Contains(name)
-          Abort(CONFIG_PATH "`n`nAutorun entry contains too many '" name "=':`n`n" autorun_line)
-        autorun_used.Push(name)
+        if autoconfig_used.Contains(name)
+          Abort(CONFIG_PATH "`n`nAutoconfig entry contains too many '" name "=':`n`n" autoconfig_line)
+        autoconfig_used.Push(name)
 
         ; Verify name and value
-        if not CheckSetting(name) or name = "autorundir"
-          Abort(CONFIG_PATH "`n`nInvalid autorun config name: " name "`n`n" autorun_line)
+        if not CheckSetting(name)
+          Abort(CONFIG_PATH "`n`nInvalid autoconfig name: " name "`n`n" autoconfig_line)
         if not CheckSetting(name, value)
-          Abort(CONFIG_PATH "`n`nInvalid config value: " value "`n`n" autorun_line)
+          Abort(CONFIG_PATH "`n`nInvalid autoconfig value: " value "`n`n" autoconfig_line)
 
         ; Store name and value
         if value != ""
-          autorun_cnfg.%name% := value
+          autoconfig_cnfg.%name% := value
       }
 
-      autoruns.Push(autorun_cnfg)
+      autoconfigs.Push(autoconfig_cnfg)
     }
   }
 
   ; Free
-  autorun_line := autorun_cnfg := autorun_used := unset
+  autoconfig_line := autoconfig_cnfg := autoconfig_used := unset
 }
 
 ;DEBUG
 ;MsgBox cnfg_args.Inspect()
-;MsgBox cnfg_config.Inspect()
-;MsgBox autoruns.Inspect()
-;MsgBox autoruns_ignore.Inspect()
+;MsgBox cnfg_file.Inspect()
+;MsgBox autoconfigs.Inspect()
 ;ExitApp(0)
 
 
@@ -1760,82 +1765,72 @@ if FileExist(CONFIG_PATH) ~= "^[^D]+$"  ; If config file exists
 ;; Setup
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Apply cnfg_config to cnfg
-for name, value in cnfg_config.OwnProps()
+; Apply cnfg_file to cnfg
+for name, value in cnfg_file.OwnProps()
   cnfg.%name% := value
 
 ; Apply cnfg_args to cnfg
 for name, value in cnfg_args.OwnProps()
   cnfg.%name% := value
 
-; Launch string exists
-if cnfg.launch
-{
-  if cnfg.winexe
-    cnfg.winexe := "^" RegExEscape(cnfg.winexe) "$"
-
-  if cnfg.winclass
-    cnfg.winclass := "^" RegExEscape(cnfg.winclass) "$"
-}
-; Try finding a working launch string in autoruns
-else
-{
-  ; Set Autorun Working Directory
-  if cnfg.autorundir != A_WorkingDir
-  {
-    if not FileExist(cnfg.autorundir) ~= "D"  ; If directory does not exist
-      Abort("Autorun Directory not found:`n`n" cnfg.autorundir)
-    SetWorkingDir cnfg.autorundir
-    cnfg.launchdir := cnfg.autorundir
-  }
-
-  ; Find all files that should be rejected by autorun (not launched)
-  autoruns_ignore := autoruns_ignore.Collect(GenerateLaunchStrings).Flatten()
-
-  ; Find all usable autoruns
-  usable_autoruns := []
-  for autorun_cnfg in autoruns
-  {
-    launch_strings := GenerateLaunchStrings(autorun_cnfg.launch)
-    launch_strings.Collect( str => autorun_cnfg.Clone().Tap(a_cnfg => a_cnfg.launch := str) )
-                  .Reject( a_cnfg => autoruns_ignore.Contains(a_cnfg.launch) )
-                  .Select( a_cnfg => !a_cnfg.HasOwnProp("launchdir") || FileExist(a_cnfg.launchdir) ~= "[D]" )
-                  .Each(a_cnfg => usable_autoruns.Push(a_cnfg))
-  }
-
-  if not usable_autoruns.IsEmpty()
-  {
-    autorun_cnfg := usable_autoruns[1]
-
-    if autorun_cnfg.HasOwnProp("winexe") {
-      files := FindFiles(autorun_cnfg.winexe)
-      files_regex := files.Collect(RegExReplace, "^.*\\", "\")
-                          .Collect(RegExEscape)
-                          .Join("|")
-      autorun_cnfg.winexe := (files_regex ? "(" files_regex ")$" : "")
-    }
-
-    if autorun_cnfg.HasOwnProp("winclass") {
-      class_regex := RegExEscape(autorun_cnfg.winclass)
-      autorun_cnfg.winclass := (class_regex ? "^" class_regex "$" : "")
-    }
-
-    ; Apply autorun config to cnfg
-    for name, value in autorun_cnfg.OwnProps()
-      cnfg.%name% := value
-  }
-}
+if not cnfg.launch
+  Abort("Usage: " SCRIPT_NAME " [bofuru args] game.exe [game args]")
 
 if cnfg.launch.IsEmpty()
   Abort("Could not find anything to execute.")
 
+if cnfg.winexe
+  cnfg.winexe := "^" RegExEscape(cnfg.winexe) "$"
+
+if cnfg.winclass
+  cnfg.winclass := "^" RegExEscape(cnfg.winclass) "$"
+
 ; Set working directory
+if cnfg.launchdir = A_WorkingDir
+  cnfg.launchdir := SplitCmdString(cnfg.launch)[1].DirName()
 if cnfg.launchdir != A_WorkingDir
 {
   if not FileExist(cnfg.launchdir) ~= "D"  ; If directory does not exist
     Abort("Launchdir not found:`n`n" cnfg.launchdir)
   SetWorkingDir cnfg.launchdir
 }
+
+; Autoconfig
+cnfg_launch := SplitCmdString(cnfg.launch).Join(" ") ;Removes any eventual usage of quotes ("") in the launch string
+for autoconfig in autoconfigs
+{
+  autoconfig_launch_pattern := autoconfig.launch
+  autoconfig_launch_pattern := autoconfig_launch_pattern.RegExReplace("([\\.?+[{}|()^$])","\$1") ;Escape all regex chars, except *
+                                                        .RegExReplace("\*", ".*")
+                                                        .RegExReplace("$", "(\s|$)")
+                                                        .RegExReplace("^(?=[A-Za-z]:\\)", "^") ;Prepend ^ for absolute file paths
+                                                        .RegExReplace("^(?!\^)", "^.*\\") ;Prepend .*\ if string does not start with ^
+  if RegExMatch(cnfg_launch, autoconfig_launch_pattern)
+  {
+    if autoconfig.HasOwnProp("winexe") {
+      files := FindFiles(autoconfig.winexe)
+      files_regex := files.Collect(RegExReplace, "^.*\\", "\")
+                          .Collect(RegExEscape)
+                          .Join("|")
+      autoconfig.winexe := (files_regex ? "(" files_regex ")$" : "")
+    }
+
+    if autoconfig.HasOwnProp("winclass") {
+      class_regex := RegExEscape(autoconfig.winclass)
+      autoconfig.winclass := (class_regex ? "^" class_regex "$" : "")
+    }
+
+    for name, value in autoconfig.OwnProps()
+      if name != "launch"
+        cnfg.%name% := value
+
+    break
+  }
+}
+cnfg_launch := autoconfig_launch_pattern := unset
+;MsgBox cnfg.Inspect()  ;DEBUG DELETEME
+;ExitApp 0 ;DEBUG DELETEME
+
 
 ; Create window string
 {
@@ -1953,7 +1948,8 @@ if cnfg.buttons != "hide"
     if cnfg.btn%C% = "disable"
       fscr.button%C%.Enabled := false
 
-    fscr.button_.Enabled := false ;TODO: Implement click event
+    fscr.buttonO.Visible := false ;TODO: Implement click event
+    fscr.button_.Visible := false ;TODO: Implement click event
   }
   EventButtonXClick(*)
   {
@@ -2090,7 +2086,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
       ResizeAndPositionWindows(fscr)
     }
   }
-
+ 
   ; Some window got focus
   else if (wParam = HSHELL_RUDEAPPACTIVATED || wParam = HSHELL_WINDOWACTIVATED)
   {
