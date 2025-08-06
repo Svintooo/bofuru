@@ -1,4 +1,4 @@
-userWindowSelect(timeout := 0) {
+lib_userWindowSelect(timeout := 0) {
   ; Get desktop bounds
   SM_XVIRTUALSCREEN  := 76  ; x coord
   SM_YVIRTUALSCREEN  := 77  ; y coord
@@ -9,20 +9,20 @@ userWindowSelect(timeout := 0) {
   w := SysGet(SM_CXVIRTUALSCREEN)
   h := SysGet(SM_CYVIRTUALSCREEN)
 
-  ; Create transparent desktop overlay
+  ; Create desktop overlay
   mygui := Gui("+AlwaysOnTop +ToolWindow -Caption")
   ctl := mygui.Add("Text", "w" w " h" h)  ; Empty control to handle clicks
 
-  ; Overlay exit actions
+  ; Create overlay exit actions
   exit_reason := "(none)"
   ctl.OnEvent(  "Click",  (*) => (exit_reason := "click" ) && mygui.Destroy())
   mygui.OnEvent("Escape", (*) => (exit_reason := "escape") && mygui.Destroy())
 
-  ; Enable overlay
+  ; Enable overlay and make it transparent
   mygui.Show("x" x " y" y " w" w " h" h)
   WinSetTransparent(35, "ahk_id " mygui.Hwnd)
 
-  ; Change to a crosshair cursor
+  ; Change overlay cursor to a crosshair
   hCross := DllCall("LoadCursor", "Ptr" , 0
                                 , "UInt", 32515
                                 , "Ptr")
@@ -45,11 +45,13 @@ userWindowSelect(timeout := 0) {
 
   ; Return window that mouse points at
   if exit_reason = "timeout" {
-    return { ok: false }
+    return { ok: false, reason: "timeout" }
   } else if exit_reason = "escape" {
-    return { ok: false }
+    return { ok: false, reason: "user cancel" }
   } else if exit_reason = "click" {
     MouseGetPos(, , &hWnd)
-    return { ok: true, hWnd: hWnd}
+    pid       := WinGetPID("ahk_id " hWnd)
+    className := WinGetClass("ahk_id " hWnd)
+    return { ok: true, hWnd: hWnd, pid: pid, className: className}
   }
 }

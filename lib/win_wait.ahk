@@ -3,7 +3,7 @@ SetTitleMatchMode "RegEx"
 
 ; Wrapper around standard library WinWait()
 ; https://www.autohotkey.com/docs/v2/lib/WinWait.htm
-Bofuru_WinWait(WinTitle, timeout := 0) {
+lib_WinWait(WinTitle, timeout := 0) {
   ; App Windows of these Class types will be ignored
   ; https://learn.microsoft.com/en-gb/windows/win32/winmsg/about-window-classes?redirectedfrom=MSDN
   IGNORED_CLASSES := [

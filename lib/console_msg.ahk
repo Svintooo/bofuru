@@ -7,7 +7,7 @@ ConsoleMsg(msg, wait := false) {
     ; 1. Allocate a console on first call
     if (!hasConsole) {
         DllCall("AllocConsole")  ; WinAPI call to create a console window
-        ih := InputHook("", "{Enter}")
+        ih := InputHook("", "{Enter}{NumpadEnter}")
         hasConsole := true
     }
 
