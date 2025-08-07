@@ -92,11 +92,16 @@ if ! cnfg.HasOwnProp("hWnd")
 }
 
 ;; Print window info
+cnfg.winClass := WinGetClass("ahk_id" cnfg.hWnd)
+cnfg.winTitle := WinGetTitle("ahk_id" cnfg.hWnd)
+cnfg.winText  := WinGetText( "ahk_id" cnfg.hWnd).Trim("`r`n ")
+cnfg.fullWinTitleQuery := cnfg.winTitle . " ahk_id" cnfg.hWnd . " ahk_class" cnfg.winClass
 ConsoleMsg("INFO: Window found" , _wait_for_enter := false)
-ConsoleMsg("         ahk_id: " cnfg.hWnd, _wait_for_enter := false)
-ConsoleMsg("      ahk_class: " WinGetClass("ahk_id" cnfg.hWnd), _wait_for_enter := false)
-ConsoleMsg("       WinTitle: " WinGetTitle("ahk_id" cnfg.hWnd), _wait_for_enter := false)
-ConsoleMsg("        WinText: " WinGetText("ahk_id" cnfg.hWnd), _wait_for_enter := false)
+ConsoleMsg("      title          = " cnfg.winTitle.Inspect(),          _wait_for_enter := false)
+ConsoleMsg("      ahk_id         = " cnfg.hWnd,                        _wait_for_enter := false)
+ConsoleMsg("      ahk_class      = " cnfg.winClass.Inspect(),          _wait_for_enter := false)
+ConsoleMsg("      --ahk-wintitle = " cnfg.fullWinTitleQuery.Inspect(), _wait_for_enter := false)
+;ConsoleMsg("      WinText   = " cnfg.winText.Inspect(), _wait_for_enter := false)
 
 ;; Bind exit to window close
 ConsoleMsg("INFO: Will now automatically exit when window is closed", _wait_for_enter := false)
@@ -104,7 +109,8 @@ Event_AppExit() {
   if not WinExist("ahk_id" cnfg.hWnd)
     ExitApp(0)
 }
-SetTimer(Event_AppExit, , _prio := 2147483647)
+MAX_PRIORITY := 2147483647
+SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 
 ;;
 ;ConsoleMsg("Press enter to continue...", _wait_for_enter := true)

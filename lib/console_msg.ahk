@@ -1,29 +1,24 @@
 #Requires AutoHotkey v2.0
 
 ConsoleMsg(msg, wait_for_enter := false) {
-  static hConsole := false
-  static ih
+  static stdin  := false
+  static stdout := false
 
   ; 1. Allocate a console on first call
-  if (!hConsole) {
+  if (!stdout) {
     DllCall("AllocConsole")  ; WinAPI call to create a console window
-    hConsole := DllCall("kernel32.dll\GetConsoleWindow", "Ptr")
-    ih := InputHook("", "{Enter}{NumpadEnter}")
+    stdin  := FileOpen("*", "r")
+    stdout := FileOpen("*", "w")
   }
 
   ; 2. Write the message to the console
-  ;    FileAppend to "*" writes directly to the script’s console
-  FileAppend(msg . "`n", "*")
+  stdout.WriteLine(msg)
+  stdout.Read(0) ; Flush the write buffer.
 
   ; 3. Wait for Enter
   if wait_for_enter {
-    FileAppend("(press enter to continue...)" . "`n", "*")
-    while true
-    {
-      ih.Start(), ih.Wait(), ih.Stop()
-      hForeground := DllCall("user32.dll\GetForegroundWindow", "Ptr")
-      if hConsole = hForeground
-        break
-    }
+    stdout.Write("(press enter to continue...)")
+    stdout.Read(0) ; Flush the write buffer.
+    stdin.ReadLine()
   }
 }
