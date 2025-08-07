@@ -172,14 +172,17 @@ parseArgs(args)
   {
     ; Get name and value
     if RegExMatch(A_Args[i], "^--(.+?)=(.+)", &match) {
-      arg_str := A_Args[i]
+
       name  := match[1].Trim().StrReplace("-", "_")
       value := match[2].Trim()
+
     } else if RegExMatch(A_Args[i], "^--(.+)", &match) {
-      arg_str := A_Args[i]
+
       name  := match[1].Trim().StrReplace("-", "_")
       value := true
+
     } else {
+
       if A_Args[i] = "--"
         i += 1
 
@@ -187,16 +190,26 @@ parseArgs(args)
       value := A_Args.Slice(i)
                      .Collect(arg => (arg ~= "\s" ? '"' arg '"' : arg))
                      .Join(" ")
+
       i := A_Args.Length  ; Make this loop iteration the last one
+
     }
 
     ; Validate name and value
     ;TODO
 
+    ; Modify value
+    if value = "true"
+      value := true
+
+    if value = "false"
+      value := false
+
     ; Store name and value
     cnfg.%name% := value
   }
 
+  ; Return
   return cnfg
 }
 
