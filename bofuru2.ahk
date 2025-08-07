@@ -16,6 +16,7 @@
 #Include %A_ScriptDir%\lib\user_window_select.ahk
 #Include %A_ScriptDir%\lib\is_window_class_allowed.ahk
 #Include %A_ScriptDir%\lib\generate_transparent_pixel.ahk
+#Include %A_ScriptDir%\lib\parse_window_style.ahk
 
 ; Sets how matching is done for the WinTitle parameter used by various
 ; AHK functions.
@@ -163,13 +164,86 @@ SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Main - Make Window Fullscreen
+ConsoleMsg(""                     , _wait_for_enter := false)
+ConsoleMsg("=== Modify Window ===", _wait_for_enter := false)
 
-;TODO
+
+;; Collect Window State
+ConsoleMsg("INFO: Collecting current window state", _wait_for_enter := false)
+
+
+; Get window size/position
+WinGetPos(&x, &y, &winWidth, &winHeight, cnfg.hWnd)
+
+
+; Get window client area width/height
+; (this is the area without the window border)
+WinGetClientPos(, , &width, &height, cnfg.hWnd)
+
+
+; Get window style (border)
+winStyle   := WinGetStyle(cnfg.hWnd)
+winExStyle := WinGetExStyle(cnfg.hWnd)
+
+
+; Get window menu bar
+winMenu := DllCall("User32.dll\GetMenu", "Ptr", cnfg.hWnd, "Ptr")
+
+
+; Log window state
+winStyleStr   := Format("0x{:08X}", winStyle)   . " (" . lib_parseWindowStyle(winStyle)    .Join(" | ") . ")"
+winExStyleStr := Format("0x{:08X}", winExStyle) . " (" . lib_parseWindowExStyle(winExStyle).Join(" | ") . ")"
+winMenuStr    := Format("0x{:08X}", winMenu)
+
+ConsoleMsg("INFO: Current window state",        _wait_for_enter := false)
+ConsoleMsg("      x          = " x,             _wait_for_enter := false)
+ConsoleMsg("      y          = " y,             _wait_for_enter := false)
+ConsoleMsg("      winWidth   = " winWidth,      _wait_for_enter := false)
+ConsoleMsg("      winHeight  = " winHeight,     _wait_for_enter := false)
+ConsoleMsg("      width      = " width,         _wait_for_enter := false)
+ConsoleMsg("      height     = " height,        _wait_for_enter := false)
+ConsoleMsg("      winStyle   = " winStyleStr,   _wait_for_enter := false)
+ConsoleMsg("      winExStyle = " winExStyleStr, _wait_for_enter := false)
+ConsoleMsg("      winMenu    = " winMenuStr,    _wait_for_enter := false)
+
+winStyleStr := winExStyleStr := winMenuStr := unset
+
+
+; Store window original state
+cnfg.origState := {
+  x:x, y:y,
+  winWidth:winWidth, winHeight:winHeight,
+  width:width, height:height,
+  winStyle:winStyle, winExStyle:winExStyle,
+  winMenu:winMenu,
+}
+
+
+; Unset temporary vars
+x:=y:=winWidth:=winHeight:=width:=height:=winStyle:=winExStyle:=winMenu:=unset
+
+
+;; Modify Window State
+; Remove window menu bar
+if cnfg.origState.winMenu
+  DllCall("SetMenu", "uint", cnfg.hWnd, "uint", 0)
+
+
+; Remove styles (border)
+winStylesToRemove := 0x00C00000  ; WS_CAPTION    (title bar)
+                   | 0x00800000  ; WS_BORDER     (visible border)
+                   | 0x00040000  ; WS_THICKFRAME (dragable border)
+WinSetStyle("-" winStylesToRemove, cnfg.hWnd)  ; Note the minus (-) sign
+
+
+; Restore the window client area width/height
+; (these gets modified when styles are removed)
+WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program Functions
+;; Program Functions and Classes
 
 ;; Parse args
 parseArgs(args)
