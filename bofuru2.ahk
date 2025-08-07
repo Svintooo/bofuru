@@ -15,6 +15,7 @@
 #Include %A_ScriptDir%\lib\console_msg.ahk
 #Include %A_ScriptDir%\lib\user_window_select.ahk
 #Include %A_ScriptDir%\lib\is_window_class_allowed.ahk
+#Include %A_ScriptDir%\lib\generate_transparent_pixel.ahk
 
 ; Sets how matching is done for the WinTitle parameter used by various
 ; AHK functions.
