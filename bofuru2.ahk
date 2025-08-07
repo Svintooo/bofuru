@@ -3,7 +3,6 @@
 #Include %A_ScriptDir%\lib\stdlib.ahk
 #Include %A_ScriptDir%\lib\console_msg.ahk
 #Include %A_ScriptDir%\lib\user_window_select.ahk
-#Include %A_ScriptDir%\lib\win_wait.ahk
 #Include %A_ScriptDir%\lib\is_window_class_allowed.ahk
 
 ; Sets how matching is done for the WinTitle parameter used by various
@@ -58,14 +57,12 @@ if cnfg.HasOwnProp("ahk_wintitle")
 ;; Wait for a window to show up belonging to PID
 if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
 {
-  ;ConsoleMsg("INFO: Will exit when PID", false)
-  ;Event_AppExit() { if not ProcessExist(fscr.app_pid) ExitApp(0) }
-  ;SetTimer(Event_AppExit, , 2147483647)
-
   ConsoleMsg("INFO: Waiting for window beloning to PID", _wait_for_enter := false)
   cnfg.hWnd := false
+
   while !cnfg.hWnd && ProcessExist(cnfg.pid)
     cnfg.hWnd := WinWait("ahk_pid" cnfg.pid, , _timeout := 1)
+
   if !cnfg.hWnd
   {
     ConsoleMsg("ERROR: PID disappeared before window was found", _wait_for_enter := true)
@@ -79,29 +76,36 @@ if ! cnfg.HasOwnProp("hWnd")
   ConsoleMsg("INFO: Manual Window selection activated", _wait_for_enter := false)
   ConsoleMsg("INSTRUCTIONS: Click on game window.", _wait_for_enter := false)
   ConsoleMsg("              Press Esc to cancel.", _wait_for_enter := false)
+
   result := lib_userWindowSelect()
   while result.ok && !lib_isWindowClassAllowed(result.className)
   {
     ConsoleMsg("ERROR: Unallowed window: Try again", _wait_for_enter := false)
     result := lib_userWindowSelect()
   }
+
   if ! result.ok  ; User cancelled the operation
     ExitApp
+
   cnfg.hWnd := result.hWnd
   result := unset
 }
 
 ;; Print window info
-cnfg.winClass := WinGetClass("ahk_id" cnfg.hWnd)
-cnfg.winTitle := WinGetTitle("ahk_id" cnfg.hWnd)
-cnfg.winText  := WinGetText( "ahk_id" cnfg.hWnd).Trim("`r`n ")
-cnfg.fullWinTitleQuery := cnfg.winTitle . " ahk_id" cnfg.hWnd . " ahk_class" cnfg.winClass
+cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
+cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
+cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
+cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
+cnfg.proc_name    := WinGetProcessName( "ahk_id" cnfg.hWnd )
+cnfg.ahk_wintitle := cnfg.winTitle . " ahk_class " cnfg.winClass . " ahk_exe " cnfg.proc_name
 ConsoleMsg("INFO: Window found" , _wait_for_enter := false)
-ConsoleMsg("      title          = " cnfg.winTitle.Inspect(),          _wait_for_enter := false)
-ConsoleMsg("      ahk_id         = " cnfg.hWnd,                        _wait_for_enter := false)
-ConsoleMsg("      ahk_class      = " cnfg.winClass.Inspect(),          _wait_for_enter := false)
-ConsoleMsg("      --ahk-wintitle = " cnfg.fullWinTitleQuery.Inspect(), _wait_for_enter := false)
-;ConsoleMsg("      WinText   = " cnfg.winText.Inspect(), _wait_for_enter := false)
+ConsoleMsg("      Process Name  = " cnfg.proc_name,                   _wait_for_enter := false)
+ConsoleMsg("      PID           = " cnfg.pid,                         _wait_for_enter := false)
+ConsoleMsg("      hWnd          = " cnfg.hWnd,                        _wait_for_enter := false)
+ConsoleMsg("      Title         = " cnfg.winTitle.Inspect(),          _wait_for_enter := false)
+ConsoleMsg("      Class         = " cnfg.winClass.Inspect(),          _wait_for_enter := false)
+;ConsoleMsg("      Text          = " cnfg.winText.Inspect(),           _wait_for_enter := false)
+ConsoleMsg("      --ahk-wintitle=" cnfg.ahk_wintitle.Inspect(),       _wait_for_enter := false)
 
 ;; Bind exit to window close
 ConsoleMsg("INFO: Will now automatically exit when window is closed", _wait_for_enter := false)
