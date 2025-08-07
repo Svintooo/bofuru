@@ -1,5 +1,16 @@
 #Requires AutoHotkey v2.0
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BoFuru2 - Borderless Fullscreen                                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Run games in fullscreen without changing screen resolution.
+;;
+;; Usage Example:
+;;   ```
+;;   ```
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 #Include %A_ScriptDir%\lib\stdlib.ahk
 #Include %A_ScriptDir%\lib\console_msg.ahk
 #Include %A_ScriptDir%\lib\user_window_select.ahk
@@ -14,38 +25,47 @@ SetTitleMatchMode "RegEx"
 CoordMode "Mouse", "Screen"
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Sandbox
+;; Sandbox - My Personal Playground
+
 
 ;; Test retrieving args
 ;ConsoleMsg(A_Args.Inspect())
+
 
 ;; Test run app and receive PID
 ;Run("calc.exe", , , &app_pid)
 ;ConsoleMsg(app_pid)
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program Start
+;; Program Start - Find a Window to make Fullscreen
 ConsoleMsg("=== BoFuRu2 ===", _wait_for_enter := false)
+
 
 ;; Parse args
 cnfg := parseArgs(A_Args)
-ConsoleMsg("INFO: args: " cnfg.Inspect(), _wait_for_enter := false)
+ConsoleMsg("INFO: parsed args: " cnfg.Inspect(), _wait_for_enter := false)
+
 
 ;; Run an *.exe
 if cnfg.HasOwnProp("launch")
 {
   ConsoleMsg("INFO: Launching: " cnfg.launch, _wait_for_enter := false)
   result := launchExe(cnfg.launch)
+
   if ! result.ok {
     ConsoleMsg("ERROR: Launch failed", _wait_for_enter := true)
     ExitApp
   }
+
   cnfg.pid := result.pid
   result := unset
   ConsoleMsg("INFO: Launch success, got PID: " cnfg.pid, _wait_for_enter := false)
 }
+
 
 ;; Wait for a window to show up
 if cnfg.HasOwnProp("ahk_wintitle")
@@ -53,6 +73,7 @@ if cnfg.HasOwnProp("ahk_wintitle")
   ConsoleMsg("INFO: Waiting for window: " cnfg.ahk_wintitle, _wait_for_enter := false)
   cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
 }
+
 
 ;; Wait for a window to show up belonging to PID
 if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
@@ -70,12 +91,13 @@ if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
   }
 }
 
+
 ;; Let user manually select a window
 if ! cnfg.HasOwnProp("hWnd")
 {
   ConsoleMsg("INFO: Manual Window selection activated", _wait_for_enter := false)
-  ConsoleMsg("INSTRUCTIONS: Click on game window.", _wait_for_enter := false)
-  ConsoleMsg("              Press Esc to cancel.", _wait_for_enter := false)
+  ConsoleMsg("      - Click on game window", _wait_for_enter := false)
+  ConsoleMsg("      - Press Esc to cancel", _wait_for_enter := false)
 
   result := lib_userWindowSelect()
   while result.ok && !lib_isWindowClassAllowed(result.className)
@@ -90,6 +112,7 @@ if ! cnfg.HasOwnProp("hWnd")
   cnfg.hWnd := result.hWnd
   result := unset
 }
+
 
 ;; Print window info
 cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
@@ -107,12 +130,14 @@ ConsoleMsg("      Class         = " cnfg.winClass.Inspect(),          _wait_for_
 ;ConsoleMsg("      Text          = " cnfg.winText.Inspect(),           _wait_for_enter := false)
 ConsoleMsg("      --ahk-wintitle=" cnfg.ahk_wintitle.Inspect(),       _wait_for_enter := false)
 
+
 ;; Check if window is allowed
 if !lib_isWindowClassAllowed(cnfg.winClass)
 {
   ConsoleMsg("ERROR: Unallowed window selected", _wait_for_enter := true)
   ExitApp
 }
+
 
 ;; Bind exit to window close
 ConsoleMsg("INFO: Will now automatically exit when window is closed", _wait_for_enter := false)
@@ -123,12 +148,18 @@ Event_AppExit() {
 MAX_PRIORITY := 2147483647
 SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 
-;;
-;ConsoleMsg("Press enter to continue...", _wait_for_enter := true)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program Main - Make Window Fullscreen
+
+;TODO
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program Functions
+
 ;; Parse args
 parseArgs(args)
 {
@@ -167,7 +198,7 @@ parseArgs(args)
   return cnfg
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; Run an *.exe file
 launchExe(launch_string)
 {
