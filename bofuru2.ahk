@@ -42,8 +42,17 @@ CoordMode "Mouse", "Screen"
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program Intro
+ConsoleMsg("###############", _wait_for_enter := false)
+ConsoleMsg("#   BoFuRu2   #", _wait_for_enter := false)
+ConsoleMsg("###############", _wait_for_enter := false)
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Start - Find a Window to make Fullscreen
-ConsoleMsg("=== BoFuRu2 ===", _wait_for_enter := false)
+;ConsoleMsg(""                   , _wait_for_enter := false)
+ConsoleMsg("=== Find Window ===", _wait_for_enter := false)
 
 
 ;; Parse args
