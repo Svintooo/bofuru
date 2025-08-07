@@ -107,6 +107,13 @@ ConsoleMsg("      Class         = " cnfg.winClass.Inspect(),          _wait_for_
 ;ConsoleMsg("      Text          = " cnfg.winText.Inspect(),           _wait_for_enter := false)
 ConsoleMsg("      --ahk-wintitle=" cnfg.ahk_wintitle.Inspect(),       _wait_for_enter := false)
 
+;; Check if window is allowed
+if !lib_isWindowClassAllowed(cnfg.winClass)
+{
+  ConsoleMsg("ERROR: Unallowed window selected", _wait_for_enter := true)
+  ExitApp
+}
+
 ;; Bind exit to window close
 ConsoleMsg("INFO: Will now automatically exit when window is closed", _wait_for_enter := false)
 Event_AppExit() {
