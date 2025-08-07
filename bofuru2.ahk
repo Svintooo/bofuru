@@ -71,7 +71,7 @@ if cnfg.HasOwnProp("launch")
 ;; Wait for a window to show up
 if cnfg.HasOwnProp("ahk_wintitle")
 {
-  ConsoleMsg("INFO: Waiting for window: " cnfg.ahk_wintitle, _wait_for_enter := false)
+  ConsoleMsg("INFO: Waiting for window: " cnfg.ahk_wintitle.Inspect(), _wait_for_enter := false)
   cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
 }
 
@@ -122,6 +122,7 @@ cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
 cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
 cnfg.proc_name    := WinGetProcessName( "ahk_id" cnfg.hWnd )
 cnfg.ahk_wintitle := cnfg.winTitle . " ahk_class " cnfg.winClass . " ahk_exe " cnfg.proc_name
+
 ConsoleMsg("INFO: Window found" , _wait_for_enter := false)
 ConsoleMsg("      Process Name  = " cnfg.proc_name,                   _wait_for_enter := false)
 ConsoleMsg("      PID           = " cnfg.pid,                         _wait_for_enter := false)
