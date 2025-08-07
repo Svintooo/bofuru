@@ -133,9 +133,9 @@ cnfg.proc_name    := WinGetProcessName( "ahk_id" cnfg.hWnd )
 cnfg.ahk_wintitle := cnfg.winTitle . " ahk_class " cnfg.winClass . " ahk_exe " cnfg.proc_name
 
 ConsoleMsg("INFO: Window found" , _wait_for_enter := false)
-ConsoleMsg("      Process Name  = " cnfg.proc_name,                   _wait_for_enter := false)
 ConsoleMsg("      PID           = " cnfg.pid,                         _wait_for_enter := false)
 ConsoleMsg("      hWnd          = " cnfg.hWnd,                        _wait_for_enter := false)
+ConsoleMsg("      Process Name  = " cnfg.proc_name,                   _wait_for_enter := false)
 ConsoleMsg("      Title         = " cnfg.winTitle.Inspect(),          _wait_for_enter := false)
 ConsoleMsg("      Class         = " cnfg.winClass.Inspect(),          _wait_for_enter := false)
 ;ConsoleMsg("      Text          = " cnfg.winText.Inspect(),           _wait_for_enter := false)
@@ -151,7 +151,7 @@ if !lib_isWindowClassAllowed(cnfg.winClass)
 
 
 ;; Bind exit to window close
-ConsoleMsg("INFO: Will now automatically exit when window is closed", _wait_for_enter := false)
+ConsoleMsg("INFO: Bind exit event to window close", _wait_for_enter := false)
 Event_AppExit() {
   if not WinExist("ahk_id" cnfg.hWnd)
     ExitApp(0)
