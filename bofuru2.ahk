@@ -152,7 +152,7 @@ if !lib_isWindowClassAllowed(cnfg.winClass)
 }
 
 
-;; Bind exit to window close
+;; Exit BoFuRu if the game window is closed
 ConsoleMsg("INFO: Bind exit event to window close", _wait_enter := false)
 Event_AppExit() {
   if not WinExist("ahk_id" cnfg.hWnd)
@@ -204,7 +204,7 @@ catch as e
   ConsolePrintException(e)
 
 ; Restore the window client area width/height
-; (these gets distorted when styles are removed)
+; (these gets distorted when the border is removed)
 ConsoleMsg("INFO: Restore window width/height that got distorted when removing styles", _wait_enter := false)
 WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
