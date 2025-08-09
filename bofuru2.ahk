@@ -44,9 +44,10 @@ CoordMode "Mouse", "Screen"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Intro
-ConsoleMsg("###############", _wait_enter := false)
-ConsoleMsg("#   BoFuRu2   #", _wait_enter := false)
-ConsoleMsg("###############", _wait_enter := false)
+ConsoleMsg("#########################", _wait_enter := false)
+ConsoleMsg("#     === BoFuRu ===    #", _wait_enter := false)
+ConsoleMsg("# Borderless Fullscreen #", _wait_enter := false)
+ConsoleMsg("#########################", _wait_enter := false)
 
 
 
