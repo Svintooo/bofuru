@@ -170,76 +170,48 @@ ConsoleMsg("=== Modify Window ===", _wait_for_enter := false)
 
 ;; Collect Window State
 ConsoleMsg("INFO: Collecting current window state", _wait_for_enter := false)
-
-
-; Get window size/position
-WinGetPos(&x, &y, &winWidth, &winHeight, cnfg.hWnd)
-
-
-; Get window client area width/height
-; (this is the area without the window border)
-WinGetClientPos(, , &width, &height, cnfg.hWnd)
-
-
-; Get window style (border)
-winStyle   := WinGetStyle(cnfg.hWnd)
-winExStyle := WinGetExStyle(cnfg.hWnd)
-
-
-; Get window menu bar
-winMenu := DllCall("User32.dll\GetMenu", "Ptr", cnfg.hWnd, "Ptr")
-
-
-; Log window state
-winStyleStr   := Format("0x{:08X}", winStyle)   . " (" . lib_parseWindowStyle(winStyle)    .Join(" | ") . ")"
-winExStyleStr := Format("0x{:08X}", winExStyle) . " (" . lib_parseWindowExStyle(winExStyle).Join(" | ") . ")"
-winMenuStr    := Format("0x{:08X}", winMenu)
-
-ConsoleMsg("INFO: Current window state",        _wait_for_enter := false)
-ConsoleMsg("      x          = " x,             _wait_for_enter := false)
-ConsoleMsg("      y          = " y,             _wait_for_enter := false)
-ConsoleMsg("      winWidth   = " winWidth,      _wait_for_enter := false)
-ConsoleMsg("      winHeight  = " winHeight,     _wait_for_enter := false)
-ConsoleMsg("      width      = " width,         _wait_for_enter := false)
-ConsoleMsg("      height     = " height,        _wait_for_enter := false)
-ConsoleMsg("      winStyle   = " winStyleStr,   _wait_for_enter := false)
-ConsoleMsg("      winExStyle = " winExStyleStr, _wait_for_enter := false)
-ConsoleMsg("      winMenu    = " winMenuStr,    _wait_for_enter := false)
-
-winStyleStr := winExStyleStr := winMenuStr := unset
-
-
-; Store window original state
-cnfg.origState := {
-  x:x, y:y,
-  winWidth:winWidth, winHeight:winHeight,
-  width:width, height:height,
-  winStyle:winStyle, winExStyle:winExStyle,
-  winMenu:winMenu,
-}
-
-
-; Unset temporary vars
-x:=y:=winWidth:=winHeight:=width:=height:=winStyle:=winExStyle:=winMenu:=unset
+cnfg.origState := CollectWindowState(cnfg.hWnd)
+ConsolePrintWindowState(cnfg.origState, "Original window state")
 
 
 ;; Modify Window State
 ; Remove window menu bar
+ConsoleMsg("INFO: Remove window menu bar (if one exists)", _wait_for_enter := false)
 if cnfg.origState.winMenu
   DllCall("SetMenu", "uint", cnfg.hWnd, "uint", 0)
 
-
 ; Remove styles (border)
-winStylesToRemove := 0x00C00000  ; WS_CAPTION    (title bar)
-                   | 0x00800000  ; WS_BORDER     (visible border)
-                   | 0x00040000  ; WS_THICKFRAME (dragable border)
-WinSetStyle("-" winStylesToRemove, cnfg.hWnd)  ; Note the minus (-) sign
+ConsoleMsg("INFO: Remove window styles (border, title bar, etc)", _wait_for_enter := false)
+newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
+             | 0x10000000  ; WS_VISIBLE
+try
+  WinSetStyle(newWinStyle, "ahk_id" cnfg.hWnd)
+catch as e
+  ConsolePrintException(e)
 
+; Remove extended styles (NOTE: may not be needed)
+ConsoleMsg("INFO: Remove window extended styles", _wait_for_enter := false)
+removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
+                  | 0x00000100 ; WS_EX_WINDOWEDGE    (raised border edges)
+                  | 0x00000200 ; WS_EX_CLIENTEDGE    (sunken border edges)
+                  | 0x00020000 ; WS_EX_STATICEDGE    (three-dimensional border)
+                  | 0x00000400 ; WS_EX_CONTEXTHELP   (title bar question mark)
+                  | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
+try
+  WinSetExStyle("-" removeWinExStyle, "ahk_id" cnfg.hWnd)   ; The minus (-) removes the styles from the current window styles
+catch as e
+  ConsolePrintException(e)
 
 ; Restore the window client area width/height
-; (these gets modified when styles are removed)
+; (these gets distorted when styles are removed)
+ConsoleMsg("INFO: Restore window width/height that got distorted when removing styles", _wait_for_enter := false)
 WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
+; Print new window state
+ConsolePrintWindowState(cnfg.hWnd, "New window state")
+
+
+;; Restore Window State (testing)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -310,4 +282,68 @@ launchExe(launch_string)
 
   ; Return 
   return result
+}
+
+
+;; Collect Window state
+CollectWindowState(hWnd)
+{
+  ; Get window size/position
+  WinGetPos(&x, &y, &winWidth, &winHeight, hWnd)
+
+  ; Get window client area width/height
+  ; (this is the area without the window border)
+  WinGetClientPos(, , &width, &height, hWnd)
+
+  ; Get window style (border)
+  winStyle   := WinGetStyle(hWnd)
+  winExStyle := WinGetExStyle(hWnd)
+
+  ; Get window menu bar
+  winMenu := DllCall("User32.dll\GetMenu", "Ptr", hWnd, "Ptr")
+
+  winState := {
+    hWnd:hWnd,
+    x:x, y:y,
+    winWidth:winWidth, winHeight:winHeight,
+    width:width, height:height,
+    winStyle:winStyle, winExStyle:winExStyle,
+    winMenu:winMenu,
+  }
+
+  return winState
+}
+
+
+;; Print window state to console
+ConsolePrintWindowState(hWnd_or_winState, message)
+{
+  if hWnd_or_winState is Number
+    winState := CollectWindowState(hWnd_or_winState)
+  else
+    winState := hWnd_or_winState
+
+  winStyleStr   := Format("0x{:08X}", winState.winStyle)   . " (" . lib_parseWindowStyle(winState.winStyle)    .Join(" | ") . ")"
+  winExStyleStr := Format("0x{:08X}", winState.winExStyle) . " (" . lib_parseWindowExStyle(winState.winExStyle).Join(" | ") . ")"
+  winMenuStr    := Format("0x{:08X}", winState.winMenu)
+
+  ConsoleMsg("INFO: " message,                         _wait_for_enter := false)
+  ConsoleMsg("      x          = " winState.x,         _wait_for_enter := false)
+  ConsoleMsg("      y          = " winState.y,         _wait_for_enter := false)
+  ConsoleMsg("      winWidth   = " winState.winWidth,  _wait_for_enter := false)
+  ConsoleMsg("      winHeight  = " winState.winHeight, _wait_for_enter := false)
+  ConsoleMsg("      width      = " winState.width,     _wait_for_enter := false)
+  ConsoleMsg("      height     = " winState.height,    _wait_for_enter := false)
+  ConsoleMsg("      winStyle   = " winStyleStr,        _wait_for_enter := false)
+  ConsoleMsg("      winExStyle = " winExStyleStr,      _wait_for_enter := false)
+  ConsoleMsg("      winMenu    = " winMenuStr,         _wait_for_enter := false)
+}
+
+
+;; Print exception to console
+ConsolePrintException(e)
+{
+  ConsoleMsg(Format("UNKNOWN: {1} threw error of type {2}", e.What.Inspect(), Type(e)), false)
+  ConsoleMsg(Format("         msg: {1}", e.Message.Inspect()), false)
+  ConsoleMsg(Format("         xtra: {1}", e.Extra.Inspect()), false)
 }
