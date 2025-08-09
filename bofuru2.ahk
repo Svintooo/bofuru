@@ -140,7 +140,7 @@ ConsoleMsg("      Process Name  = " cnfg.proc_name,                   _wait_for_
 ConsoleMsg("      Title         = " cnfg.winTitle.Inspect(),          _wait_for_enter := false)
 ConsoleMsg("      Class         = " cnfg.winClass.Inspect(),          _wait_for_enter := false)
 ;ConsoleMsg("      Text          = " cnfg.winText.Inspect(),           _wait_for_enter := false)
-ConsoleMsg("      --ahk-wintitle=" cnfg.ahk_wintitle.Inspect(),       _wait_for_enter := false)
+ConsoleMsg("      --ahk-wintitle="  cnfg.ahk_wintitle.Inspect(),      _wait_for_enter := false)
 
 
 ;; Check if window is allowed
