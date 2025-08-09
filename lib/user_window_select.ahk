@@ -23,12 +23,14 @@ lib_userWindowSelect(timeout := 0) {
   WinSetTransparent(35, "ahk_id " mygui.Hwnd)
 
   ; Change overlay cursor to a crosshair
-  hCross := DllCall("LoadCursor", "Ptr" , 0
-                                , "UInt", 32515
-                                , "Ptr")
-  DllCall("SetClassLongPtrW", "Ptr", ctl.Hwnd
-                            , "Int", -12  ; GCLP_HCURSOR
-                            , "Ptr", hCross)
+  hCross := DllCall("User32.dll\LoadCursor"
+                   , "Ptr" , 0
+                   , "UInt", 32515
+                   , "Ptr")
+  DllCall((A_PtrSize = 8 ? "User32.dll\SetClassLongPtr" : "User32.dll\SetClassLong")
+         , "Ptr", ctl.Hwnd
+         , "Int", -12  ; GCLP_HCURSOR
+         , "Ptr", hCross)
 
   ; Create function that waits for the overlay to disappear
   if timeout {
