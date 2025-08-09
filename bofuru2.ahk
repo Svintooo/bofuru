@@ -44,44 +44,44 @@ CoordMode "Mouse", "Screen"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Intro
-ConsoleMsg("###############", _wait_for_enter := false)
-ConsoleMsg("#   BoFuRu2   #", _wait_for_enter := false)
-ConsoleMsg("###############", _wait_for_enter := false)
+ConsoleMsg("###############", _wait_enter := false)
+ConsoleMsg("#   BoFuRu2   #", _wait_enter := false)
+ConsoleMsg("###############", _wait_enter := false)
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Start - Find a Window to make Fullscreen
-;ConsoleMsg(""                   , _wait_for_enter := false)
-ConsoleMsg("=== Find Window ===", _wait_for_enter := false)
+;ConsoleMsg(""                   , _wait_enter := false)
+ConsoleMsg("=== Find Window ===", _wait_enter := false)
 
 
 ;; Parse args
 cnfg := parseArgs(A_Args)
-ConsoleMsg("INFO: parsed args: " cnfg.Inspect(), _wait_for_enter := false)
+ConsoleMsg("INFO: parsed args: " cnfg.Inspect(), _wait_enter := false)
 
 
 ;; Run an *.exe
 if cnfg.HasOwnProp("launch")
 {
-  ConsoleMsg("INFO: Launching: " cnfg.launch, _wait_for_enter := false)
+  ConsoleMsg("INFO: Launching: " cnfg.launch, _wait_enter := false)
   result := launchExe(cnfg.launch)
 
   if ! result.ok {
-    ConsoleMsg("ERROR: Launch failed", _wait_for_enter := true)
+    ConsoleMsg("ERROR: Launch failed", _wait_enter := true)
     ExitApp
   }
 
   cnfg.pid := result.pid
   result := unset
-  ConsoleMsg("INFO: Launch success, got PID: " cnfg.pid, _wait_for_enter := false)
+  ConsoleMsg("INFO: Launch success, got PID: " cnfg.pid, _wait_enter := false)
 }
 
 
 ;; Wait for a window to show up
 if cnfg.HasOwnProp("ahk_wintitle")
 {
-  ConsoleMsg("INFO: Waiting for window: " cnfg.ahk_wintitle.Inspect(), _wait_for_enter := false)
+  ConsoleMsg("INFO: Waiting for window: " cnfg.ahk_wintitle.Inspect(), _wait_enter := false)
   cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
 }
 
@@ -89,7 +89,7 @@ if cnfg.HasOwnProp("ahk_wintitle")
 ;; Wait for a window to show up belonging to PID
 if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
 {
-  ConsoleMsg("INFO: Waiting for window beloning to PID", _wait_for_enter := false)
+  ConsoleMsg("INFO: Waiting for window beloning to PID", _wait_enter := false)
   cnfg.hWnd := false
 
   while !cnfg.hWnd && ProcessExist(cnfg.pid)
@@ -97,7 +97,7 @@ if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
 
   if !cnfg.hWnd
   {
-    ConsoleMsg("ERROR: PID disappeared before window was found", _wait_for_enter := true)
+    ConsoleMsg("ERROR: PID disappeared before window was found", _wait_enter := true)
     ExitApp
   }
 }
@@ -106,14 +106,14 @@ if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
 ;; Let user manually select a window
 if ! cnfg.HasOwnProp("hWnd")
 {
-  ConsoleMsg("INFO: Manual Window selection activated", _wait_for_enter := false)
-  ConsoleMsg("      - Click on game window", _wait_for_enter := false)
-  ConsoleMsg("      - Press Esc to cancel", _wait_for_enter := false)
+  ConsoleMsg("INFO: Manual Window selection activated", _wait_enter := false)
+  ConsoleMsg("      - Click on game window", _wait_enter := false)
+  ConsoleMsg("      - Press Esc to cancel", _wait_enter := false)
 
   result := lib_userWindowSelect()
   while result.ok && !lib_isWindowClassAllowed(result.className)
   {
-    ConsoleMsg("ERROR: Unallowed window: Try again", _wait_for_enter := false)
+    ConsoleMsg("ERROR: Unallowed window: Try again", _wait_enter := false)
     result := lib_userWindowSelect()
   }
 
@@ -133,26 +133,26 @@ cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
 cnfg.proc_name    := WinGetProcessName( "ahk_id" cnfg.hWnd )
 cnfg.ahk_wintitle := cnfg.winTitle . " ahk_class " cnfg.winClass . " ahk_exe " cnfg.proc_name
 
-ConsoleMsg("INFO: Window found" , _wait_for_enter := false)
-ConsoleMsg("      PID           = " cnfg.pid,                         _wait_for_enter := false)
-ConsoleMsg("      hWnd          = " cnfg.hWnd,                        _wait_for_enter := false)
-ConsoleMsg("      Process Name  = " cnfg.proc_name,                   _wait_for_enter := false)
-ConsoleMsg("      Title         = " cnfg.winTitle.Inspect(),          _wait_for_enter := false)
-ConsoleMsg("      Class         = " cnfg.winClass.Inspect(),          _wait_for_enter := false)
-;ConsoleMsg("      Text          = " cnfg.winText.Inspect(),           _wait_for_enter := false)
-ConsoleMsg("      --ahk-wintitle="  cnfg.ahk_wintitle.Inspect(),      _wait_for_enter := false)
+ConsoleMsg("INFO: Window found" , _wait_enter := false)
+ConsoleMsg("      PID           = " cnfg.pid,                         _wait_enter := false)
+ConsoleMsg("      hWnd          = " cnfg.hWnd,                        _wait_enter := false)
+ConsoleMsg("      Process Name  = " cnfg.proc_name,                   _wait_enter := false)
+ConsoleMsg("      Title         = " cnfg.winTitle.Inspect(),          _wait_enter := false)
+ConsoleMsg("      Class         = " cnfg.winClass.Inspect(),          _wait_enter := false)
+;ConsoleMsg("      Text          = " cnfg.winText.Inspect(),           _wait_enter := false)
+ConsoleMsg("      --ahk-wintitle="  cnfg.ahk_wintitle.Inspect(),      _wait_enter := false)
 
 
 ;; Check if window is allowed
 if !lib_isWindowClassAllowed(cnfg.winClass)
 {
-  ConsoleMsg("ERROR: Unallowed window selected", _wait_for_enter := true)
+  ConsoleMsg("ERROR: Unallowed window selected", _wait_enter := true)
   ExitApp
 }
 
 
 ;; Bind exit to window close
-ConsoleMsg("INFO: Bind exit event to window close", _wait_for_enter := false)
+ConsoleMsg("INFO: Bind exit event to window close", _wait_enter := false)
 Event_AppExit() {
   if not WinExist("ahk_id" cnfg.hWnd)
     ExitApp(0)
@@ -164,24 +164,24 @@ SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Main - Make Window Fullscreen
-ConsoleMsg(""                     , _wait_for_enter := false)
-ConsoleMsg("=== Modify Window ===", _wait_for_enter := false)
+ConsoleMsg(""                     , _wait_enter := false)
+ConsoleMsg("=== Modify Window ===", _wait_enter := false)
 
 
 ;; Collect Window State
-ConsoleMsg("INFO: Collecting current window state", _wait_for_enter := false)
+ConsoleMsg("INFO: Collecting current window state", _wait_enter := false)
 cnfg.origState := CollectWindowState(cnfg.hWnd)
 ConsolePrintWindowState(cnfg.origState, "Original window state")
 
 
 ;; Modify Window State
 ; Remove window menu bar
-ConsoleMsg("INFO: Remove window menu bar (if one exists)", _wait_for_enter := false)
+ConsoleMsg("INFO: Remove window menu bar (if one exists)", _wait_enter := false)
 if cnfg.origState.winMenu
   DllCall("SetMenu", "uint", cnfg.hWnd, "uint", 0)
 
 ; Remove styles (border)
-ConsoleMsg("INFO: Remove window styles (border, title bar, etc)", _wait_for_enter := false)
+ConsoleMsg("INFO: Remove window styles (border, title bar, etc)", _wait_enter := false)
 newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
              | 0x10000000  ; WS_VISIBLE
 try
@@ -190,7 +190,7 @@ catch as e
   ConsolePrintException(e)
 
 ; Remove extended styles (NOTE: may not be needed)
-ConsoleMsg("INFO: Remove window extended styles", _wait_for_enter := false)
+ConsoleMsg("INFO: Remove window extended styles", _wait_enter := false)
 removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
                   | 0x00000100 ; WS_EX_WINDOWEDGE    (raised border edges)
                   | 0x00000200 ; WS_EX_CLIENTEDGE    (sunken border edges)
@@ -204,7 +204,7 @@ catch as e
 
 ; Restore the window client area width/height
 ; (these gets distorted when styles are removed)
-ConsoleMsg("INFO: Restore window width/height that got distorted when removing styles", _wait_for_enter := false)
+ConsoleMsg("INFO: Restore window width/height that got distorted when removing styles", _wait_enter := false)
 WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
 ; Print new window state
@@ -332,16 +332,16 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   winExStyleStr := Format("0x{:08X}", winState.winExStyle) . " (" . lib_parseWindowExStyle(winState.winExStyle).Join(" | ") . ")"
   winMenuStr    := Format("0x{:08X}", winState.winMenu)
 
-  ConsoleMsg("INFO: " message,                         _wait_for_enter := false)
-  ConsoleMsg("      x          = " winState.x,         _wait_for_enter := false)
-  ConsoleMsg("      y          = " winState.y,         _wait_for_enter := false)
-  ConsoleMsg("      winWidth   = " winState.winWidth,  _wait_for_enter := false)
-  ConsoleMsg("      winHeight  = " winState.winHeight, _wait_for_enter := false)
-  ConsoleMsg("      width      = " winState.width,     _wait_for_enter := false)
-  ConsoleMsg("      height     = " winState.height,    _wait_for_enter := false)
-  ConsoleMsg("      winStyle   = " winStyleStr,        _wait_for_enter := false)
-  ConsoleMsg("      winExStyle = " winExStyleStr,      _wait_for_enter := false)
-  ConsoleMsg("      winMenu    = " winMenuStr,         _wait_for_enter := false)
+  ConsoleMsg("INFO: " message,                         _wait_enter := false)
+  ConsoleMsg("      x          = " winState.x,         _wait_enter := false)
+  ConsoleMsg("      y          = " winState.y,         _wait_enter := false)
+  ConsoleMsg("      winWidth   = " winState.winWidth,  _wait_enter := false)
+  ConsoleMsg("      winHeight  = " winState.winHeight, _wait_enter := false)
+  ConsoleMsg("      width      = " winState.width,     _wait_enter := false)
+  ConsoleMsg("      height     = " winState.height,    _wait_enter := false)
+  ConsoleMsg("      winStyle   = " winStyleStr,        _wait_enter := false)
+  ConsoleMsg("      winExStyle = " winExStyleStr,      _wait_enter := false)
+  ConsoleMsg("      winMenu    = " winMenuStr,         _wait_enter := false)
 }
 
 
