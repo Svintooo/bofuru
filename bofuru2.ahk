@@ -212,7 +212,12 @@ WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 ConsolePrintWindowState(cnfg.hWnd, "New window state")
 
 
-;; Restore Window State (testing)
+;; Restore window state on exit
+ConsoleMsg("Register OnExit callback to restore window state on exit", _wait_enter := false)
+OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
+
+ConsoleMsg("", true)
+ExitApp
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -318,6 +323,22 @@ CollectWindowState(hWnd)
   }
 
   return winState
+}
+
+
+;; Restore window state
+restoreWindowState(hWnd, winState)
+{
+  ; Set window menu bar
+  if winState.winMenu
+    winMenu := DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.winMenu)
+
+  ; Set window style
+  winStyle   := WinSetStyle(winState.winStyle, "ahk_id" hWnd)
+  winExStyle := WinSetExStyle(winState.winExStyle, "ahk_id" hWnd)
+
+  ; Get window size/position
+  WinMove(winState.x, winState.y, winState.winWidth, winState.winHeight, "ahk_id" hWnd)
 }
 
 
