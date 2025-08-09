@@ -46,7 +46,7 @@ lib_parseWindowStyle(winStyle)
 }
 
 
-; https://learn.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles?redirectedfrom=MSDN
+; https://learn.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles
 lib_parseWindowExStyle(winExStyle)
 {
   WinExStyles := {
