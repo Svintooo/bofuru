@@ -1,12 +1,13 @@
 #Requires AutoHotkey v2.0
 
-ConsoleMsg(msg, wait_for_enter := false) {
+lib_ConsoleMsg(msg, wait_for_enter := false) {
   static stdin  := false
   static stdout := false
 
   ; 1. Allocate a console on first call
   if (!stdout) {
-    DllCall("AllocConsole")  ; WinAPI call to create a console window
+    ; WinAPI call to create a console window
+    DllCall("AllocConsole")
     stdin  := FileOpen("*", "r")
     stdout := FileOpen("*", "w")
   }

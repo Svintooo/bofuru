@@ -217,6 +217,11 @@ ConsolePrintWindowState(cnfg.hWnd, "New window state")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Functions and Classes
 
+ConsoleMsg(msg, wait_enter)
+{
+  return lib_ConsoleMsg(msg, wait_enter)
+}
+
 ;; Parse args
 parseArgs(args)
 {
