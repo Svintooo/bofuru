@@ -53,7 +53,7 @@ ConsoleMsg("#########################", _wait_enter := false)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Start - Find a Window to make Fullscreen
-;ConsoleMsg(""                   , _wait_enter := false)
+ConsoleMsg(""                   , _wait_enter := false)
 ConsoleMsg("=== Find Window ===", _wait_enter := false)
 
 
