@@ -29,20 +29,6 @@ CoordMode "Mouse", "Screen"
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Sandbox - My Personal Playground
-
-
-;; Test retrieving args
-;ConsoleMsg(A_Args.Inspect())
-
-
-;; Test run app and receive PID
-;Run("calc.exe", , , &app_pid)
-;ConsoleMsg(app_pid)
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Intro
 ConsoleMsg("#########################", _wait_enter := false)
 ConsoleMsg("#     === BoFuRu ===    #", _wait_enter := false)
@@ -126,7 +112,7 @@ if ! cnfg.HasOwnProp("hWnd")
 }
 
 
-;; Print window info
+;; Fetch window info
 cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
 cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
 cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
@@ -134,6 +120,8 @@ cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
 cnfg.proc_name    := WinGetProcessName( "ahk_id" cnfg.hWnd )
 cnfg.ahk_wintitle := cnfg.winTitle . " ahk_class " cnfg.winClass . " ahk_exe " cnfg.proc_name
 
+
+;; Print window info
 ConsoleMsg("INFO: Window found" , _wait_enter := false)
 ConsoleMsg("      PID           = " cnfg.pid,                         _wait_enter := false)
 ConsoleMsg("      hWnd          = " cnfg.hWnd,                        _wait_enter := false)
@@ -208,7 +196,8 @@ catch as e
 ConsoleMsg("INFO: Restore window width/height that got distorted when removing styles", _wait_enter := false)
 WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
-; Print new window state
+
+;; Print new window state
 ConsolePrintWindowState(cnfg.hWnd, "New window state")
 
 
