@@ -216,7 +216,15 @@ ConsolePrintWindowState(cnfg.hWnd, "New window state")
 ConsoleMsg("Register OnExit callback to restore window state on exit", _wait_enter := false)
 OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
-ConsoleMsg("", true)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program End - Wait until window or script exits
+ConsoleMsg(""                     , _wait_enter := false)
+ConsoleMsg("=== DONE ===", _wait_enter := false)
+
+ConsoleMsg("Your app should now be in fullscreen.", false)
+ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", true)
 ExitApp
 
 
