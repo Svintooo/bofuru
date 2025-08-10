@@ -163,7 +163,12 @@ cnfg.origState := CollectWindowState(cnfg.hWnd)
 ConsolePrintWindowState(cnfg.origState, "Original window state")
 
 
-;; Modify Window State
+;; Restore window state on exit
+ConsoleMsg("Register OnExit callback to restore window state on exit", _wait_enter := false)
+OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
+
+
+;; Remove window border
 ; Remove window menu bar
 ConsoleMsg("INFO: Remove window menu bar (if one exists)", _wait_enter := false)
 if cnfg.origState.winMenu
@@ -197,13 +202,18 @@ ConsoleMsg("INFO: Restore window width/height that got distorted when removing s
 WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
 
-;; Print new window state
+;; Resize and center window
+; Support full fullscreen
+; Support DOT by DOT fullscreen
+; Support fullscreen inside windows taskbar
+
+
+;; Create black bars
+; Try making game window a child of a fullscreen black window
+
+
+;; Print new window state without border
 ConsolePrintWindowState(cnfg.hWnd, "New window state")
-
-
-;; Restore window state on exit
-ConsoleMsg("Register OnExit callback to restore window state on exit", _wait_enter := false)
-OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
 
