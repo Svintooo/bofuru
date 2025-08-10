@@ -220,12 +220,13 @@ OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program End - Wait until window or script exits
-ConsoleMsg(""                     , _wait_enter := false)
+ConsoleMsg(""            , _wait_enter := false)
 ConsoleMsg("=== DONE ===", _wait_enter := false)
 
 ConsoleMsg("Your app should now be in fullscreen.", false)
 ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", true)
 ExitApp
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -235,6 +236,7 @@ ConsoleMsg(msg, wait_enter)
 {
   return lib_ConsoleMsg(msg, wait_enter)
 }
+
 
 ;; Parse args
 parseArgs(args)
