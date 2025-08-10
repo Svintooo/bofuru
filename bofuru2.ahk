@@ -314,7 +314,6 @@ CollectWindowState(hWnd)
   winMenu := DllCall("User32.dll\GetMenu", "Ptr", hWnd, "Ptr")
 
   winState := {
-    hWnd:hWnd,
     x:x, y:y,
     winWidth:winWidth, winHeight:winHeight,
     width:width, height:height,
@@ -334,8 +333,8 @@ restoreWindowState(hWnd, winState)
     winMenu := DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.winMenu)
 
   ; Set window style
-  winStyle   := WinSetStyle(winState.winStyle, "ahk_id" hWnd)
-  winExStyle := WinSetExStyle(winState.winExStyle, "ahk_id" hWnd)
+  WinSetStyle(winState.winStyle, "ahk_id" hWnd)
+  WinSetExStyle(winState.winExStyle, "ahk_id" hWnd)
 
   ; Get window size/position
   WinMove(winState.x, winState.y, winState.winWidth, winState.winHeight, "ahk_id" hWnd)
