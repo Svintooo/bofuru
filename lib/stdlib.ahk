@@ -833,3 +833,30 @@ __Array_Assign(ArrayObj, VarRefs*)
       %VarRef% := ArrayObj[i]
   }
 }
+
+
+;; Create Array by size and value
+; Example1:
+;   arr := Array.New(4, "a")
+; Same as:
+;   arr := ["a", "a", "a", "a"]
+; Example2:
+;   arr := Array.New(4, (i) => (i*2))
+; Same as:
+;   arr := [2, 4, 6, 8]
+Array.New := __Array_New
+__Array_New(ArrayObj, length, funcOrValue)
+{
+  arrayObj := []
+
+  if (funcOrValue is Func)
+    fun := funcOrValue
+  else
+    fun := (*) => funcOrValue
+
+  loop length {
+    arrayObj.Push(fun(A_Index))
+  }
+
+  return arrayObj
+}
