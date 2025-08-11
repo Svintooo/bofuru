@@ -1,6 +1,6 @@
 #Requires AutoHotkey v2.0
 
-lib_ConsoleMsg(msg, wait_for_enter := false) {
+lib_consoleMsg(msg, wait_for_enter := false) {
   static stdin  := false
   static stdout := false
 

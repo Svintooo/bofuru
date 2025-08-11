@@ -233,7 +233,7 @@ ExitApp
 
 ConsoleMsg(msg, wait_enter)
 {
-  return lib_ConsoleMsg(msg, wait_enter)
+  return lib_consoleMsg(msg, wait_enter)
 }
 
 
