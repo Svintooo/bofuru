@@ -17,6 +17,7 @@
 #Include %A_ScriptDir%\lib\is_window_class_allowed.ahk
 #Include %A_ScriptDir%\lib\generate_transparent_pixel.ahk
 #Include %A_ScriptDir%\lib\parse_window_style.ahk
+#Include %A_ScriptDir%\lib\calc_win_fullscreen.ahk
 
 ; Sets how matching is done for the WinTitle parameter used by various
 ; AHK functions.
@@ -203,9 +204,8 @@ WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
 
 ;; Resize and center window
-; Support full fullscreen
-; Support DOT by DOT fullscreen
-; Support fullscreen inside windows taskbar
+fscr := lib_calcWinFullscreen(cnfg.hWnd, _monitor := false, _noTaskbar := false, _dotByDot := false)
+WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 
 
 ;; Create black bars
