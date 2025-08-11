@@ -197,7 +197,7 @@ try
 catch as e
   ConsolePrintException(e)
 
-; Restore the window client area width/height
+; Restore the correct window client area width/height
 ; (these gets distorted when the border is removed)
 ConsoleMsg("INFO: Restore window width/height that got distorted when removing styles", _wait_enter := false)
 WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
