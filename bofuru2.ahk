@@ -209,7 +209,38 @@ WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 
 
 ;; Create black bars
-; Try making game window a child of a fullscreen black window
+; Generate pixel
+result := lib_GenerateTransparentPixel()
+if !result.ok {
+  ConsoleMsg("ERROR: Failed generating transparent image: " result.reason, _wait_enter := false)
+  ExitApp
+}
+pixel := result.data
+result := unset
+
+; Create black background
+;bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
+bkgr := Gui("+ToolWindow -Caption +AlwaysOnTop")
+bkgr.BackColor := "Black"
+WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
+                              ; and have other elements placed on top of them.
+bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
+bkgr.clickArea.Move(0,0,fscr.monitor.w,fscr.monitor.h)
+bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
+bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+bkgr.Show(Format("x{} y{} w{} h{}", fscr.monitor.x, fscr.monitor.y, fscr.monitor.w, fscr.monitor.h))
+polygonStr := Format(
+  "0-0 {1}-0 {1}-{2} 0-{2} 0-0 "
+  "{3}-{5} {4}-{5} {4}-{6} {3}-{6} {3}-{5}",
+  fscr.monitor.w, fscr.monitor.h,
+  fscr.window.x-fscr.monitor.x, fscr.window.x-fscr.monitor.x+fscr.window.w,
+  fscr.window.y-fscr.monitor.y, fscr.window.y-fscr.monitor.y+fscr.window.h
+)
+WinSetRegion(polygonStr, bkgr.hwnd)
+; Make background click-through
+bkgr.exStyle := 0x000020 ; WS_EX_TRANSPARENT
+              | 0x080000 ; WS_EX_LAYERED
+WinSetExStyle("+" bkgr.exStyle, bkgr.hwnd)
 
 
 ;; Print new window state without border
