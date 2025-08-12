@@ -119,7 +119,7 @@ cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
 cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
 cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
 cnfg.proc_name    := WinGetProcessName( "ahk_id" cnfg.hWnd )
-cnfg.ahk_wintitle := cnfg.winTitle . " ahk_class " cnfg.winClass . " ahk_exe " cnfg.proc_name
+cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.proc_name)
 
 
 ;; Print window info
@@ -156,6 +156,11 @@ SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 ;; Program Main - Make Window Fullscreen
 ConsoleMsg(""                     , _wait_enter := false)
 ConsoleMsg("=== Modify Window ===", _wait_enter := false)
+
+
+;; Focus the window
+ConsoleMsg "INFO: Put the game window in focus"
+WinActivate(cnfg.hWnd)
 
 
 ;; Collect Window State
