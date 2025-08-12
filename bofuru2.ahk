@@ -208,7 +208,7 @@ fscr := lib_calcWinFullscreen(cnfg.hWnd, _monitor := false, _noTaskbar := false,
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 
 
-;; Create black bars
+;; Create black background
 ; Generate pixel
 result := lib_GenerateTransparentPixel()
 if !result.ok {
@@ -219,8 +219,7 @@ pixel := result.data
 result := unset
 
 ; Create black background
-;bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
-bkgr := Gui("+ToolWindow -Caption +AlwaysOnTop")
+bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
 bkgr.BackColor := "Black"
 WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
                               ; and have other elements placed on top of them.
@@ -230,7 +229,7 @@ bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
 bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
 bkgr.Show("x{} y{} w{} h{}".f(fscr.monitor.x, fscr.monitor.y, fscr.monitor.w, fscr.monitor.h))
 polygonStr := Format(
-  "0-0 {1}-0 {1}-{2} 0-{2} 0-0 "
+  "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
   "{3}-{5} {4}-{5} {4}-{6} {3}-{6} {3}-{5}",
   fscr.monitor.w, fscr.monitor.h,
   fscr.window.x-fscr.monitor.x, fscr.window.x-fscr.monitor.x+fscr.window.w,
