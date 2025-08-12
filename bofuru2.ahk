@@ -243,7 +243,7 @@ polygonStr := Format(
 WinSetRegion(polygonStr, bkgr.hwnd)
 
 
-;; Print new window state without border
+;; Print new window state
 ConsolePrintWindowState(cnfg.hWnd, "New window state")
 
 
@@ -253,7 +253,7 @@ ConsolePrintWindowState(cnfg.hWnd, "New window state")
 ConsoleMsg ""
 ConsoleMsg "=== DONE ==="
 
-ConsoleMsg "Your app should now be in fullscreen."
+ConsoleMsg "Your game should now be in fullscreen."
 ;; ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", _wait_enter := true)
 ;; ExitApp
 
