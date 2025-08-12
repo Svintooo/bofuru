@@ -19,7 +19,7 @@ lib_userWindowSelect(timeout := 0) {
   mygui.OnEvent("Escape", (*) => (exit_reason := "escape") && mygui.Destroy())
 
   ;; Enable overlay and make it transparent
-  mygui.Show("x" x " y" y " w" w " h" h)
+  mygui.Show("x{} y{} w{} h{}".f(x, y, w, h))
   WinSetTransparent(35, "ahk_id " mygui.Hwnd)
 
   ;; Fetch crosshair cursor

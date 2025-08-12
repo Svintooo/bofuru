@@ -860,3 +860,11 @@ __Array_New(ArrayObj, length, funcOrValue)
 
   return arrayObj
 }
+
+
+;; Format string
+String.DefineFunc("f", __String_Format)
+__String_Format(StringObj, Vars*)
+{
+  return Format(StringObj, Vars*)
+}

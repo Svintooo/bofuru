@@ -228,7 +228,7 @@ bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
 bkgr.clickArea.Move(0,0,fscr.monitor.w,fscr.monitor.h)
 bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
 bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
-bkgr.Show(Format("x{} y{} w{} h{}", fscr.monitor.x, fscr.monitor.y, fscr.monitor.w, fscr.monitor.h))
+bkgr.Show("x{} y{} w{} h{}".f(fscr.monitor.x, fscr.monitor.y, fscr.monitor.w, fscr.monitor.h))
 polygonStr := Format(
   "0-0 {1}-0 {1}-{2} 0-{2} 0-0 "
   "{3}-{5} {4}-{5} {4}-{6} {3}-{6} {3}-{5}",
@@ -389,27 +389,27 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   else
     winState := hWnd_or_winState
 
-  winStyleStr   := Format("0x{:08X}", winState.winStyle)   . " (" . lib_parseWindowStyle(winState.winStyle)    .Join(" | ") . ")"
-  winExStyleStr := Format("0x{:08X}", winState.winExStyle) . " (" . lib_parseWindowExStyle(winState.winExStyle).Join(" | ") . ")"
-  winMenuStr    := Format("0x{:08X}", winState.winMenu)
+  winStyleStr   := "0x{:08X} ({})".f(winState.winStyle,   lib_parseWindowStyle(winState.winStyle)    .Join(" | "))
+  winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
+  winMenuStr    := "0x{:08X}".f(winState.winMenu)
 
-  ConsoleMsg("INFO: " message,                         _wait_enter := false)
-  ConsoleMsg("      x          = " winState.x,         _wait_enter := false)
-  ConsoleMsg("      y          = " winState.y,         _wait_enter := false)
-  ConsoleMsg("      winWidth   = " winState.winWidth,  _wait_enter := false)
-  ConsoleMsg("      winHeight  = " winState.winHeight, _wait_enter := false)
-  ConsoleMsg("      width      = " winState.width,     _wait_enter := false)
-  ConsoleMsg("      height     = " winState.height,    _wait_enter := false)
-  ConsoleMsg("      winStyle   = " winStyleStr,        _wait_enter := false)
-  ConsoleMsg("      winExStyle = " winExStyleStr,      _wait_enter := false)
-  ConsoleMsg("      winMenu    = " winMenuStr,         _wait_enter := false)
+  ConsoleMsg("INFO: {}".f(message),                         _wait_enter := false)
+  ConsoleMsg("      x          = {}".f(winState.x),         _wait_enter := false)
+  ConsoleMsg("      y          = {}".f(winState.y),         _wait_enter := false)
+  ConsoleMsg("      winWidth   = {}".f(winState.winWidth),  _wait_enter := false)
+  ConsoleMsg("      winHeight  = {}".f(winState.winHeight), _wait_enter := false)
+  ConsoleMsg("      width      = {}".f(winState.width),     _wait_enter := false)
+  ConsoleMsg("      height     = {}".f(winState.height),    _wait_enter := false)
+  ConsoleMsg("      winStyle   = {}".f(winStyleStr),        _wait_enter := false)
+  ConsoleMsg("      winExStyle = {}".f(winExStyleStr),      _wait_enter := false)
+  ConsoleMsg("      winMenu    = {}".f(winMenuStr),         _wait_enter := false)
 }
 
 
 ;; Print exception to console
 ConsolePrintException(e)
 {
-  ConsoleMsg(Format("UNKNOWN: {1} threw error of type {2}", e.What.Inspect(), Type(e)), false)
-  ConsoleMsg(Format("         msg: {1}", e.Message.Inspect()), false)
-  ConsoleMsg(Format("         xtra: {1}", e.Extra.Inspect()), false)
+  ConsoleMsg("UNKNOWN: {1} threw error of type {2}".f(e.What.Inspect(), Type(e)), false)
+  ConsoleMsg("         msg: {1}".f(e.Message.Inspect()), false)
+  ConsoleMsg("         xtra: {1}".f(e.Extra.Inspect()), false)
 }
