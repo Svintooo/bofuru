@@ -368,6 +368,9 @@ CollectWindowState(hWnd)
 ;; Restore window state
 restoreWindowState(hWnd, winState)
 {
+  ; Remove AlwaysOnTop
+  WinSetAlwaysOnTop(false, hWnd)
+
   ; Set window menu bar
   if winState.winMenu
     winMenu := DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.winMenu)
