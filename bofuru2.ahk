@@ -237,10 +237,6 @@ polygonStr := Format(
   fscr.window.y-fscr.monitor.y, fscr.window.y-fscr.monitor.y+fscr.window.h
 )
 WinSetRegion(polygonStr, bkgr.hwnd)
-; Make background click-through
-bkgr.exStyle := 0x000020 ; WS_EX_TRANSPARENT
-              | 0x080000 ; WS_EX_LAYERED
-WinSetExStyle("+" bkgr.exStyle, bkgr.hwnd)
 
 
 ;; Print new window state without border
