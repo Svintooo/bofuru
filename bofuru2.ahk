@@ -254,8 +254,8 @@ ConsoleMsg(""            , _wait_enter := false)
 ConsoleMsg("=== DONE ===", _wait_enter := false)
 
 ConsoleMsg("Your app should now be in fullscreen.", false)
-ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", true)
-ExitApp
+;; ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", true)
+;; ExitApp
 
 
 
