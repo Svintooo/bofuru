@@ -243,6 +243,79 @@ polygonStr := Format(
 WinSetRegion(polygonStr, bkgr.hwnd)
 
 
+;; Toggle AlwaysOnTop on window focus switch
+; NOTE: This is probably the most bug prone, racey code in this codebase.
+;       MS Windows will automatically hide the taskbar if a single window is
+;       both in focus AND cover exactly a single monitor (this is, to my
+;       knowledge, how fullscreen in MS Windows actually works).
+;         This is usually not the case here. The game window is as big as
+;       possible while keeping its aspect ratio, and the rest of the monitor
+;       is covered by a black overlay that is not in focus.
+;         To mimic fullscreen the code here will react to the game window
+;       getting and losing focus and toggle ALwaysOnTop accordingly (since
+;       AlwaysOnTop will let the game window be drawn over the taskbar).
+;         But as mentioned, this is racey and are prone to:
+;       1) show the taskbar even while the game is in focus,
+;       2) not show other windows when switching focus to them.
+;         To fix this the code has basically been hacked and tested until
+;       it seems to work good enough.
+
+; Tell MS Windows to notify us of events for all windows
+ConsoleMsg("INFO: Bind focus change event to toggle AlwaysOnTop")
+if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+{
+  MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
+  OnMessage(MsgNum, ShellMessage)
+}
+
+; This is now run when any event happens in MS Windows on any window
+ShellMessage(wParam, lParam, msg, script_hwnd)
+{
+  static HSHELL_WINDOWACTIVATED  := 0x00000004
+       , HSHELL_HIGHBIT          := 0x00008000
+       , HSHELL_RUDEAPPACTIVATED := HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT
+
+  ; React on events about switching focus to another window
+  if wParam = HSHELL_WINDOWACTIVATED
+  || wParam = HSHELL_RUDEAPPACTIVATED {
+    if lParam = cnfg.hWnd {
+      ; Game Window got focus: Set AlwaysOnTop
+      ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+      WinSetAlwaysOnTop(true, cnfg.hWnd)
+      WinSetAlwaysOnTop(true, bkgr.hWnd)
+      ; RACE CONDITION HACK: Do everything again (ugly hack)
+      ;   MS Windows sometimes paints the taskbar above the Game Window even if
+      ;   we set AlwaysOnTop. Setting AlwaysOnTop again after a short sleep
+      ;   seems to fix the issue.
+      sleep 200  ; Milliseconds
+      WinSetAlwaysOnTop(true, cnfg.hWnd)
+      WinSetAlwaysOnTop(true, bkgr.hWnd)
+    } else if lParam = 0 {
+      ; DO NOTHING
+      ;   Focus was changed to the Windows taskbar, the overlay
+      ;   we created around the Game Window, or something unknown.
+      ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+    } else {
+      ; Another Window got focus: Turn off AlwaysOnTop
+      ;ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+      WinSetAlwaysOnTop(false, cnfg.hWnd)
+      WinSetAlwaysOnTop(false, bkgr.hWnd)
+      try {
+        ; RACE CONDITION FIX: Move focused window to the top
+        ;   MS Windows tried to to this already, but the Game Window probably
+        ;   was still in AlwaysOnTop mode.
+        WinMoveTop(lParam)
+      } catch {
+        ; RACE CONDITION FAIL
+        ;   This happens if focus is changed to a window we do not have
+        ;   permission to modify (windows with elevated permissions,
+        ;   running as administrator).
+      }
+    }
+  }
+}
+
+
 ;; Print new window state
 ConsolePrintWindowState(cnfg.hWnd, "New window state")
 
