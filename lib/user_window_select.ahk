@@ -13,27 +13,40 @@ lib_userWindowSelect(timeout := 0) {
   mygui := Gui("+AlwaysOnTop +ToolWindow -Caption")
   ctl := mygui.Add("Text", "w" w " h" h)  ; Create empty control to handle clicks
 
-  ;; Create overlay exit actions
-  exit_reason := "(none)"
-  ctl.OnEvent(  "Click",  (*) => (exit_reason := "click" ) && mygui.Destroy())
-  mygui.OnEvent("Escape", (*) => (exit_reason := "escape") && mygui.Destroy())
-
   ;; Enable overlay and make it transparent
   mygui.Show("x{} y{} w{} h{}".f(x, y, w, h))
   WinSetTransparent(35, "ahk_id " mygui.Hwnd)
 
-  ;; Fetch crosshair cursor
-  hCross := DllCall("User32.dll\LoadCursor"
-                   , "Ptr" , 0
-                   , "UInt", 32515
-                   , "Ptr")
+  ;; Change cursor - Preparations
+  GCLP_HCURSOR := -12
+  GetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "GetClassLongPtr" : "GetClassLong")
+  SetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "SetClassLongPtr" : "SetClassLong")
+  origCursor := DllCall(GetClassCursor
+                       , "Ptr", ctl.Hwnd
+                       , "Int", GCLP_HCURSOR
+                       , "Ptr")
+  newCursor := DllCall("User32.dll\LoadCursor"
+                       , "Ptr" , 0
+                       , "UInt", 32515  ; Crosshair
+                       , "Ptr")
 
-  ;; Change overlay cursor to a crosshair
-  ; Call correct function depending if running 32-bit or 64-bit
-  DllCall((A_PtrSize = 8 ? "User32.dll\SetClassLongPtr" : "User32.dll\SetClassLong")
+  ;; Change cursor - Execute
+  DllCall(SetClassCursor
          , "Ptr", ctl.Hwnd
-         , "Int", -12  ; GCLP_HCURSOR
-         , "Ptr", hCross)
+         , "Int", GCLP_HCURSOR
+         , "Ptr", newCursor)
+
+  ;; Change cursor - Restore
+  ; Otherwise other windows we create will have their default cursor changed
+  restoreCursorFunc := () => DllCall(SetClassCursor
+                                    , "Ptr", ctl.Hwnd
+                                    , "Int", GCLP_HCURSOR
+                                    , "Ptr", origCursor)
+
+  ;; Create overlay exit actions
+  exit_reason := "(none)"
+  ctl.OnEvent(  "Click",  (*) => (exit_reason := "click" , restoreCursorFunc(), mygui.Destroy()))
+  mygui.OnEvent("Escape", (*) => (exit_reason := "escape", restoreCursorFunc(), mygui.Destroy()))
 
   ;; Create function that waits for the overlay to disappear
   if timeout {
