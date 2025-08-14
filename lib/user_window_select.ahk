@@ -1,4 +1,5 @@
-lib_userWindowSelect(timeout := unset) {
+lib_userWindowSelect(timeout := unset)
+{
   ;; Get desktop bounds
   SM_XVIRTUALSCREEN  := 76  ; x coord
   SM_YVIRTUALSCREEN  := 77  ; y coord
@@ -24,10 +25,13 @@ lib_userWindowSelect(timeout := unset) {
   ; Otherwise other windows we create will have their default cursor changed for some reason
   restoreCursorFunc := () => lib_changeCursor(ctl.Hwnd, origCursor)
 
-  ;; Create overlay exit actions
+  ;; Create overlay exit function
   exitReason := "(none)"
-  ctl.OnEvent(  "Click",  (*) => (exitReason := "click" , restoreCursorFunc(), mygui.Destroy()))
-  mygui.OnEvent("Escape", (*) => (exitReason := "escape", restoreCursorFunc(), mygui.Destroy()))
+  overlayCloseFunc := (reason) => (exitReason := reason, restoreCursorFunc(), mygui.Destroy())
+
+  ;; Create overlay exit actions
+  ctl.OnEvent(  "Click",  (*) => overlayCloseFunc("click") )
+  mygui.OnEvent("Escape", (*) => overlayCloseFunc("escape"))
 
   ;; Enable overlay and make it transparent
   mygui.Show("x{} y{} w{} h{}".f(x, y, w, h))
@@ -35,7 +39,7 @@ lib_userWindowSelect(timeout := unset) {
 
   ;; Wait until overlay has disappeared
   if ! WinWaitClose(mygui.Hwnd, , IsSet(timeout) ? timeout : unset) {
-    (exitReason := "timeout", restoreCursorFunc(), mygui.Destroy())
+    overlayCloseFunc("timeout")
   }
 
   ;; Return window that mouse points at
@@ -48,6 +52,8 @@ lib_userWindowSelect(timeout := unset) {
     pid       := WinGetPID("ahk_id " hWnd)
     className := WinGetClass("ahk_id " hWnd)
     return { ok: true, hWnd: hWnd, pid: pid, className: className}
+  } else {
+    return { ok: false, reason: "FATAL: THIS SHOULD NEVER HAPPEN" }
   }
 }
 

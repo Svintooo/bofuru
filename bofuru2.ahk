@@ -105,8 +105,13 @@ if ! cnfg.HasOwnProp("hWnd")
     result := lib_userWindowSelect()
   }
 
-  if ! result.ok  ; User cancelled the operation
+  if ! result.ok && result.reason = "user cancel" {
+    ; User cancelled the operation
     ExitApp
+  } else if ! result.ok {
+    ConsoleMsg "ERROR: {}".f(result.reason), _wait_enter := true
+    ExitApp
+  }
 
   cnfg.hWnd := result.hWnd
   result := unset
