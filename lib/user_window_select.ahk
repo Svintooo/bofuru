@@ -44,9 +44,9 @@ lib_userWindowSelect(timeout := 0) {
                                     , "Ptr", origCursor)
 
   ;; Create overlay exit actions
-  exit_reason := "(none)"
-  ctl.OnEvent(  "Click",  (*) => (exit_reason := "click" , restoreCursorFunc(), mygui.Destroy()))
-  mygui.OnEvent("Escape", (*) => (exit_reason := "escape", restoreCursorFunc(), mygui.Destroy()))
+  exitReason := "(none)"
+  ctl.OnEvent(  "Click",  (*) => (exitReason := "click" , restoreCursorFunc(), mygui.Destroy()))
+  mygui.OnEvent("Escape", (*) => (exitReason := "escape", restoreCursorFunc(), mygui.Destroy()))
 
   ;; Create function that waits for the overlay to disappear
   if timeout {
@@ -58,15 +58,15 @@ lib_userWindowSelect(timeout := 0) {
   ;; Wait until overlay has disappeared
   if ! winWaitFunc() {
     WinClose("ahk_id " mygui.Hwnd)
-    exit_reason := "timeout"
+    exitReason := "timeout"
   }
 
   ;; Return window that mouse points at
-  if exit_reason = "timeout" {
+  if exitReason = "timeout" {
     return { ok: false, reason: "timeout" }
-  } else if exit_reason = "escape" {
+  } else if exitReason = "escape" {
     return { ok: false, reason: "user cancel" }
-  } else if exit_reason = "click" {
+  } else if exitReason = "click" {
     MouseGetPos(, , &hWnd)
     pid       := WinGetPID("ahk_id " hWnd)
     className := WinGetClass("ahk_id " hWnd)
