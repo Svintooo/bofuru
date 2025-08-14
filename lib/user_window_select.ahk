@@ -11,7 +11,7 @@ lib_userWindowSelect(timeout := 0) {
 
   ;; Create desktop overlay
   mygui := Gui("+AlwaysOnTop +ToolWindow -Caption")
-  ctl := mygui.Add("Text", "w" w " h" h)  ; Create empty control to handle clicks
+  ctl := mygui.Add("Text", "w{} h{}".f(w, h))  ; Create empty control to handle clicks
 
   ;; Enable overlay and make it transparent
   mygui.Show("x{} y{} w{} h{}".f(x, y, w, h))
