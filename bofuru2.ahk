@@ -214,6 +214,7 @@ WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
 
 ;; Resize and center window
+ConsoleMsg "INFO: Resize window"
 fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false, _winSize := "fit", _taskbar := "hide")
 if ! fscr.ok {
   ConsoleMsg "ERROR: {}".f(fscr.reason)
@@ -224,6 +225,7 @@ WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 
 ;; Create black background
 ; Generate pixel
+ConsoleMsg "INFO: Generate transparent pixel"
 result := lib_GenerateTransparentPixel()
 if !result.ok {
   ConsoleMsg "ERROR: Failed generating transparent image: {}".f(result.reason)
@@ -233,6 +235,7 @@ pixel := result.data
 result := unset
 
 ; Create black background
+ConsoleMsg "INFO: Create background overlay"
 bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
 bkgr.BackColor := "Black"
 WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
