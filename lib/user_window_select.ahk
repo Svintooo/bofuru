@@ -13,45 +13,29 @@ lib_userWindowSelect(timeout := unset) {
   mygui := Gui("+AlwaysOnTop +ToolWindow -Caption")
   ctl := mygui.Add("Text", "w{} h{}".f(w, h))  ; Create empty control to handle clicks
 
-  ;; Enable overlay and make it transparent
-  mygui.Show("x{} y{} w{} h{}".f(x, y, w, h))
-  WinSetTransparent(35, "ahk_id " mygui.Hwnd)
-
-  ;; Change cursor - Preparations
-  GCLP_HCURSOR := -12
-  GetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "GetClassLongPtr" : "GetClassLong")
-  SetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "SetClassLongPtr" : "SetClassLong")
-  origCursor := DllCall(GetClassCursor
-                       , "Ptr", ctl.Hwnd
-                       , "Int", GCLP_HCURSOR
-                       , "Ptr")
+  ;; Change overlay mouse cursor
   newCursor := DllCall("User32.dll\LoadCursor"
                        , "Ptr" , 0
-                       , "UInt", 32515  ; Crosshair
+                       , "UInt", 32515  ; Crosshair cursor
                        , "Ptr")
+  origCursor := lib_changeCursor(ctl.Hwnd, newCursor)
 
-  ;; Change cursor - Execute
-  DllCall(SetClassCursor
-         , "Ptr", ctl.Hwnd
-         , "Int", GCLP_HCURSOR
-         , "Ptr", newCursor)
-
-  ;; Change cursor - Restore
-  ; Otherwise other windows we create will have their default cursor changed
-  restoreCursorFunc := () => DllCall(SetClassCursor
-                                    , "Ptr", ctl.Hwnd
-                                    , "Int", GCLP_HCURSOR
-                                    , "Ptr", origCursor)
+  ;; Restore overlay mouse cursor
+  ; Otherwise other windows we create will have their default cursor changed for some reason
+  restoreCursorFunc := () => lib_changeCursor(ctl.Hwnd, origCursor)
 
   ;; Create overlay exit actions
   exitReason := "(none)"
   ctl.OnEvent(  "Click",  (*) => (exitReason := "click" , restoreCursorFunc(), mygui.Destroy()))
   mygui.OnEvent("Escape", (*) => (exitReason := "escape", restoreCursorFunc(), mygui.Destroy()))
 
+  ;; Enable overlay and make it transparent
+  mygui.Show("x{} y{} w{} h{}".f(x, y, w, h))
+  WinSetTransparent(35, "ahk_id " mygui.Hwnd)
+
   ;; Wait until overlay has disappeared
   if ! WinWaitClose(mygui.Hwnd, , IsSet(timeout) ? timeout : unset) {
-    WinClose("ahk_id " mygui.Hwnd)
-    exitReason := "timeout"
+    (exitReason := "timeout", restoreCursorFunc(), mygui.Destroy())
   }
 
   ;; Return window that mouse points at
@@ -65,4 +49,28 @@ lib_userWindowSelect(timeout := unset) {
     className := WinGetClass("ahk_id " hWnd)
     return { ok: true, hWnd: hWnd, pid: pid, className: className}
   }
+}
+
+
+lib_changeCursor(hWnd, newCursor)
+{
+  ;; Constants
+  static GCLP_HCURSOR   := -12
+  static GetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "GetClassLongPtr" : "GetClassLong")
+  static SetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "SetClassLongPtr" : "SetClassLong")
+
+  ;; Old cursor
+  oldCursor := DllCall(GetClassCursor
+                      , "Ptr", hWnd
+                      , "Int", GCLP_HCURSOR
+                      , "Ptr")
+
+  ;; Change cursor
+  DllCall(SetClassCursor
+         , "Ptr", hWnd
+         , "Int", GCLP_HCURSOR
+         , "Ptr", newCursor)
+
+  ;; Return old cursor
+  return oldCursor
 }
