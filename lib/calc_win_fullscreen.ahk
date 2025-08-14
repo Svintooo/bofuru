@@ -1,9 +1,10 @@
 ;; Calculate coordinate, size, and screen area to make window fullscreen
 lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
 {
-  ;; Set defautl return values
-  ok := true
+  ;; Set default return values
+  ok     := true
   reason := ""
+
 
   ;; Get Window Position
   WinGetPos(&winX, &winY, &winW, &winH, "ahk_id" hWnd)
