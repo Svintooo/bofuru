@@ -165,7 +165,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   }
 
 
-  ;; Return new window size and position
+  ;; Return
   return {
     ok:     ok,
     reason: reason,
