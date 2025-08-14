@@ -1,3 +1,5 @@
+#Include %A_ScriptDir%\lib\change_cursor.ahk
+
 lib_userWindowSelect(timeout := unset)
 {
   ;; Get desktop bounds
@@ -55,28 +57,4 @@ lib_userWindowSelect(timeout := unset)
   } else {
     return { ok: false, reason: "FATAL: THIS SHOULD NEVER HAPPEN" }
   }
-}
-
-
-lib_changeCursor(hWnd, newCursor)
-{
-  ;; Constants
-  static GCLP_HCURSOR   := -12
-  static GetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "GetClassLongPtr" : "GetClassLong")
-  static SetClassCursor := "User32.dll\{}".f(A_PtrSize = 8 ? "SetClassLongPtr" : "SetClassLong")
-
-  ;; Old cursor
-  oldCursor := DllCall(GetClassCursor
-                      , "Ptr", hWnd
-                      , "Int", GCLP_HCURSOR
-                      , "Ptr")
-
-  ;; Change cursor
-  DllCall(SetClassCursor
-         , "Ptr", hWnd
-         , "Int", GCLP_HCURSOR
-         , "Ptr", newCursor)
-
-  ;; Return old cursor
-  return oldCursor
 }
