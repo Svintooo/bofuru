@@ -14,7 +14,7 @@
 #Include %A_ScriptDir%\lib\stdlib.ahk
 #Include %A_ScriptDir%\lib\console_msg.ahk
 #Include %A_ScriptDir%\lib\user_window_select.ahk
-#Include %A_ScriptDir%\lib\is_window_class_allowed.ahk
+#Include %A_ScriptDir%\lib\can_window_be_fullscreened.ahk
 #Include %A_ScriptDir%\lib\generate_transparent_pixel.ahk
 #Include %A_ScriptDir%\lib\parse_window_style.ahk
 #Include %A_ScriptDir%\lib\calc_win_fullscreen.ahk
@@ -99,9 +99,9 @@ if ! cnfg.HasOwnProp("hWnd")
   ConsoleMsg "      - Press Esc to cancel"
 
   result := lib_userWindowSelect()
-  while result.ok && !lib_isWindowClassAllowed(result.className)
+  while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
   {
-    ConsoleMsg "ERROR: Unallowed window: Try again"
+    ConsoleMsg "ERROR: This window is unsupported: Try again"
     result := lib_userWindowSelect()
   }
 
@@ -139,9 +139,9 @@ ConsoleMsg "      --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
 
 
 ;; Check if window is allowed
-if !lib_isWindowClassAllowed(cnfg.winClass)
+if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
 {
-  ConsoleMsg("ERROR: Unallowed window selected", _wait_enter := true)
+  ConsoleMsg("ERROR: Unsupported window selected", _wait_enter := true)
   ExitApp
 }
 
