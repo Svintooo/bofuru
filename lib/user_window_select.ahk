@@ -1,4 +1,4 @@
-lib_userWindowSelect(timeout := 0) {
+lib_userWindowSelect(timeout := unset) {
   ;; Get desktop bounds
   SM_XVIRTUALSCREEN  := 76  ; x coord
   SM_YVIRTUALSCREEN  := 77  ; y coord
@@ -48,15 +48,8 @@ lib_userWindowSelect(timeout := 0) {
   ctl.OnEvent(  "Click",  (*) => (exitReason := "click" , restoreCursorFunc(), mygui.Destroy()))
   mygui.OnEvent("Escape", (*) => (exitReason := "escape", restoreCursorFunc(), mygui.Destroy()))
 
-  ;; Create function that waits for the overlay to disappear
-  if timeout {
-    winWaitFunc := () => WinWaitClose("ahk_id " mygui.Hwnd, , timeout)
-  } else {
-    winWaitFunc := () => WinWaitClose("ahk_id " mygui.Hwnd)
-  }
-
   ;; Wait until overlay has disappeared
-  if ! winWaitFunc() {
+  if ! WinWaitClose(mygui.Hwnd, , IsSet(timeout) ? timeout : unset) {
     WinClose("ahk_id " mygui.Hwnd)
     exitReason := "timeout"
   }
