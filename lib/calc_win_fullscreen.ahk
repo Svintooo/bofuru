@@ -10,8 +10,10 @@
 lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
 {
   ;; Set default return values
-  ok     := true
-  reason := ""
+  ok                     := true  ; No errors
+  reason                 := ""    ; No error reason message
+  needsBackgroundOverlay := true  ; Usually needed for monitor area not covered by window
+  needsAlwaysOnTop       := true  ; Usually needed to hide MS Windows taskbar
 
 
   ;; Get Window Position
@@ -64,37 +66,54 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   case "hide":
     ; DO NOTHING
   case "show":
+    ; AlwaysOnTop not needed since taskbar will be shown
+    needsAlwaysOnTop := false
+
+    ; Subtract the taskbar area from the screen area
     for trayHwnd in WinGetList("ahk_class ^(Shell_TrayWnd|Shell_SecondaryTrayWnd)$") {
       WinGetPos(&trayX, &trayY, &trayW, &trayH, "ahk_id" trayHwnd)
       tray := { x:trayX, y:trayY, w:trayW, h:trayH }
       trayX := trayY := trayW := trayH := unset
 
-      if (scr.x <= tray.x && tray.x <= scr.x+scr.w && scr.y <= tray.y && tray.y <= scr.y+scr.h) {
-        if tray.w = scr.w {
-          ; Taskbar is placed at the top or bottom
-          scr.y += tray.h
-          scr.h -= tray.h * 2
-          win.noTaskbar := "ok"
-        } else if tray.h = scr.h {
-          ; Taskbar is placed at the left or right side
-          scr.x += tray.w
-          scr.w -= tray.w * 2
-          win.noTaskbar := "ok"
+      if (mon.x <= tray.x && tray.x <= mon.x+mon.w && mon.y <= tray.y && tray.y <= mon.y+mon.h) {
+        if tray.w = mon.w {
+          if tray.y > mon.y {
+            ; Taskbar at the bottom
+            scr.h -= tray.h
+          } else {
+            ; Taskbar at the top
+            scr.y += tray.h
+            scr.h -= tray.h
+          }
+        } else if tray.h = mon.h {
+          if tray.x > mon.x {
+            ; Taskbar to the right
+            scr.w -= tray.w
+          } else {
+            ; Taskbar to the left
+            scr.x += tray.w
+            scr.w -= tray.w
+          }
         } else {
           ; THIS SHOULD NEVER HAPPEN
-          win.noTaskbar := "error"
+          ok     := false
+          reason := "Failed to detect position of the MS Windows taskbar"
         }
       }
     }
   default:
     ; ERROR
-    ok := false
+    ok     := false
     reason := "Invalid arg: taskbar={}".f(taskbar.Inspect())
   }
 
 
   ;; Calculate new window position and size
   switch winSize {
+  case "original":
+    ; Center the window on the monitor (keeping window original size)
+    win.x := scr.x + ((scr.w - win.w) // 2)
+    win.y := scr.y + ((scr.h - win.h) // 2)
   case "fit":
     ; Maximum enlargement while keeping window aspect ratio
     if (scr.w / scr.h) > (win.w / win.h) {
@@ -108,26 +127,51 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
       win.x := scr.x
       win.y := Round(scr.y + (Abs(scr.h - win.h) / 2))
     }
-  case "pixel-perfect":
-    ; Only enlarge window by exakt pixels
-    mult := Min(scr.w // win.w, scr.h // win.h)
-
-    win.w *= mult
-    win.h *= mult
+  case "stretch":
+    ; Stretch the window over the whole screen area
     win.x := scr.x
     win.y := scr.y
+    win.w := scr.w
+    win.h := scr.h
+  case "pixel-perfect":
+    ; Only enlarge window by exact pixels
+    mult := Min(scr.w // win.w, scr.h // win.h)
 
-    if win.w != scr.w
-      win.x += (( scr.w - win.w ) // 2)
-    if win.h != scr.h
-      win.y += (( scr.h - win.h ) // 2)
+    if mult != 0 {
+      win.w *= mult
+      win.h *= mult
+    }
+
+    ; Center the window on the monitor
+    win.x := scr.x + ((scr.w - win.w) // 2)
+    win.y := scr.y + ((scr.h - win.h) // 2)
   default:
     ; ERROR
-    ok := false
+    ok     := false
     reason := "Invalid arg: winSize={}".f(winSize.Inspect())
   }
 
 
+  ;; Check if window will cover the whole monitor area
+  if win.x = mon.x
+  && win.y = mon.y
+  && win.w = mon.w
+  && win.h = mon.h {
+    ; Not needed: window will cover the whole monitor by itself
+    needsBackgroundOverlay := false
+
+    ; Not needed: MS Windows will hide the taskbar automatically
+    needsAlwaysOnTop := false
+  }
+
+
   ;; Return new window size and position
-  return { ok: ok, reason: reason, window: win, screen: scr }
+  return {
+    ok:     ok,
+    reason: reason,
+    window: win,
+    screen: scr,
+    needsBackgroundOverlay: needsBackgroundOverlay,
+    needsAlwaysOnTop:       needsAlwaysOnTop,
+  }
 }
