@@ -1,6 +1,10 @@
-;; Calculate new window size and position to make it fullscreen
-lib_calcWinFullscreen(hWnd, selectedMonitorNumber := 0, noTaskbar := false, dotByDot := false)
+;; Calculate coordinate, size, and screen area to make window fullscreen
+lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
 {
+  ;; Set defautl return values
+  ok := true
+  reason := ""
+
   ;; Get Window Position
   WinGetPos(&winX, &winY, &winW, &winH, "ahk_id" hWnd)
   win := { x:winX, y:winY, w:winW, h:winH }
@@ -33,34 +37,39 @@ lib_calcWinFullscreen(hWnd, selectedMonitorNumber := 0, noTaskbar := false, dotB
     MonitorGet(monitorNumber, &monX1, &monY1, &monX2, &monY2)
   }
 
+  ;NOTE: mon = monitor area
+  ;      scr = screen area
   mon := {
     x: Min(monX1,monX2),
     y: Min(monY1,monY2),
     w: Abs(monX1-monX2),
     h: Abs(monY1-monY2)
   }
-
+  scr := mon.Clone()
   monX1 := monX2 := monY1 := monY2 := unset
 
 
   ;; (optional) Exclude taskbar area from monitor area
   ; Can be used in case there is a problem overlaying the Window taskbar
-  if noTaskbar {
+  switch taskbar {
+  case "hide":
+    ; DO NOTHING
+  case "show":
     for trayHwnd in WinGetList("ahk_class ^(Shell_TrayWnd|Shell_SecondaryTrayWnd)$") {
       WinGetPos(&trayX, &trayY, &trayW, &trayH, "ahk_id" trayHwnd)
       tray := { x:trayX, y:trayY, w:trayW, h:trayH }
       trayX := trayY := trayW := trayH := unset
 
-      if (mon.x <= tray.x && tray.x <= mon.x+mon.w && mon.y <= tray.y && tray.y <= mon.y+mon.h) {
-        if tray.w = mon.w {
+      if (scr.x <= tray.x && tray.x <= scr.x+scr.w && scr.y <= tray.y && tray.y <= scr.y+scr.h) {
+        if tray.w = scr.w {
           ; Taskbar is placed at the top or bottom
-          mon.y += tray.h
-          mon.h -= tray.h * 2
+          scr.y += tray.h
+          scr.h -= tray.h * 2
           win.noTaskbar := "ok"
-        } else if tray.h = mon.h {
+        } else if tray.h = scr.h {
           ; Taskbar is placed at the left or right side
-          mon.x += tray.w
-          mon.w -= tray.w * 2
+          scr.x += tray.w
+          scr.w -= tray.w * 2
           win.noTaskbar := "ok"
         } else {
           ; THIS SHOULD NEVER HAPPEN
@@ -68,39 +77,48 @@ lib_calcWinFullscreen(hWnd, selectedMonitorNumber := 0, noTaskbar := false, dotB
         }
       }
     }
+  default:
+    ; ERROR
+    ok := false
+    reason := "Invalid arg: taskbar={}".f(taskbar.Inspect())
   }
 
 
   ;; Calculate new window position and size
-  if dotByDot {
+  switch winSize {
+  case "fit":
+    ; Maximum enlargement while keeping window aspect ratio
+    if (scr.w / scr.h) > (win.w / win.h) {
+      win.w := Round((scr.h / win.h) * win.w)
+      win.h := scr.h
+      win.x := Round(scr.x + (Abs(scr.w - win.w) / 2))
+      win.y := scr.y
+    } else {
+      win.w := scr.w
+      win.h := Round((scr.w / win.w) * win.h)
+      win.x := scr.x
+      win.y := Round(scr.y + (Abs(scr.h - win.h) / 2))
+    }
+  case "pixel-perfect":
     ; Only enlarge window by exakt pixels
-    mult := Min(mon.w // win.w, mon.h // win.h)
+    mult := Min(scr.w // win.w, scr.h // win.h)
 
     win.w *= mult
     win.h *= mult
-    win.x := mon.x
-    win.y := mon.y
+    win.x := scr.x
+    win.y := scr.y
 
-    if win.w != mon.w
-      win.x += (( mon.w - win.w ) // 2)
-    if win.h != mon.h
-      win.y += (( mon.h - win.h ) // 2)
-  } else {
-    ; Maximum enlargement
-    if (mon.w / mon.h) > (win.w / win.h) {
-      win.w := Round((mon.h / win.h) * win.w)
-      win.h := mon.h
-      win.x := Round(mon.x + (Abs(mon.w - win.w) / 2))
-      win.y := mon.y
-    } else {
-      win.w := mon.w
-      win.h := Round((mon.w / win.w) * win.h)
-      win.x := mon.x
-      win.y := Round(mon.y + (Abs(mon.h - win.h) / 2))
-    }
+    if win.w != scr.w
+      win.x += (( scr.w - win.w ) // 2)
+    if win.h != scr.h
+      win.y += (( scr.h - win.h ) // 2)
+  default:
+    ; ERROR
+    ok := false
+    reason := "Invalid arg: winSize={}".f(winSize.Inspect())
   }
 
 
   ;; Return new window size and position
-  return { window: win, monitor: mon }
+  return { ok: ok, reason: reason, window: win, screen: scr }
 }

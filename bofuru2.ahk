@@ -214,7 +214,11 @@ WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 
 
 ;; Resize and center window
-fscr := lib_calcWinFullscreen(cnfg.hWnd, _monitor := false, _noTaskbar := false, _dotByDot := false)
+fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false, _winSize := "fit", _taskbar := "hide")
+if ! fscr.ok {
+  ConsoleMsg "ERROR: {}".f(fscr.reason)
+  ExitApp
+}
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 
 
@@ -234,16 +238,16 @@ bkgr.BackColor := "Black"
 WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
                               ; and have other elements placed on top of them.
 bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
-bkgr.clickArea.Move(0,0,fscr.monitor.w,fscr.monitor.h)
+bkgr.clickArea.Move(0,0,fscr.screen.w,fscr.screen.h)
 bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
 bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
-bkgr.Show("x{} y{} w{} h{}".f(fscr.monitor.x, fscr.monitor.y, fscr.monitor.w, fscr.monitor.h))
+bkgr.Show("x{} y{} w{} h{}".f(fscr.screen.x, fscr.screen.y, fscr.screen.w, fscr.screen.h))
 polygonStr := Format(
   "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
   "{3}-{5} {4}-{5} {4}-{6} {3}-{6} {3}-{5}",
-  fscr.monitor.w, fscr.monitor.h,
-  fscr.window.x-fscr.monitor.x, fscr.window.x-fscr.monitor.x+fscr.window.w,
-  fscr.window.y-fscr.monitor.y, fscr.window.y-fscr.monitor.y+fscr.window.h
+  fscr.screen.w, fscr.screen.h,
+  fscr.window.x-fscr.screen.x, fscr.window.x-fscr.screen.x+fscr.window.w,
+  fscr.window.y-fscr.screen.y, fscr.window.y-fscr.screen.y+fscr.window.h
 )
 WinSetRegion(polygonStr, bkgr.hwnd)
 
