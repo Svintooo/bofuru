@@ -17,7 +17,7 @@
 #Include %A_ScriptDir%\lib\can_window_be_fullscreened.ahk
 #Include %A_ScriptDir%\lib\generate_transparent_pixel.ahk
 #Include %A_ScriptDir%\lib\parse_window_style.ahk
-#Include %A_ScriptDir%\lib\calc_win_fullscreen.ahk
+#Include %A_ScriptDir%\lib\calc_fullscreen_args.ahk
 
 ; Sets how matching is done for the WinTitle parameter used by various
 ; AHK functions.
