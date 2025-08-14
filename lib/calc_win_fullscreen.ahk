@@ -1,4 +1,12 @@
 ;; Calculate coordinate, size, and screen area to make window fullscreen
+;
+; winSize    original         Keep original window size (no enlargement).
+;            fit              Enlarge window as much as possible while keeping its aspect ratio.
+;            stretch          Stretch window to fit the whole screen area.
+;            pixel-perfect    Enlarge window by exact multiple.
+;
+; taskbar    show             Show the MS Windows taskbar.
+;            hide             Hide the MS Windows taskbar.
 lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
 {
   ;; Set default return values
