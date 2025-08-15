@@ -174,11 +174,8 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
 
 
   ;; Check if window will cover the whole monitor area
-  if win.x = mon.x
-  && win.y = mon.y
-  && win.w = mon.w
-  && win.h = mon.h {
-    ; Not needed: window will cover the whole monitor by itself
+  if win.x = mon.x && win.y = mon.y && win.w = mon.w && win.h = mon.h {
+    ; Not needed: window will cover the whole area by itself
     needsBackgroundOverlay := false
 
     ; Not needed: MS Windows will hide the taskbar automatically
