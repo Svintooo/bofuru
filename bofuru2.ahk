@@ -223,34 +223,48 @@ if ! fscr.ok {
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 
 
-;; Create black background
-; Generate pixel
+;; Generate transparent pixel
+; Needed to make the overlay allow both mouse clicks and buttons
 ConsoleMsg "INFO: Generate transparent pixel"
 result := lib_GenerateTransparentPixel()
 if !result.ok {
-  ConsoleMsg "ERROR: Failed generating transparent image: {}".f(result.reason)
+  ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
   ExitApp
 }
 pixel := result.data
 result := unset
 
-; Create black background
+
+;; Create background overlay
+; Create overlay window
 ConsoleMsg "INFO: Create background overlay"
 bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
-bkgr.BackColor := "Black"
+bkgr.BackColor := "black"
+
+; Create internal window control element that covers the whole overlay
 WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
                               ; and have other elements placed on top of them.
 bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
-bkgr.clickArea.Move(0,0,fscr.screen.w,fscr.screen.h)
+bkgr.clickArea.Move(0, 0, fscr.screen.w, fscr.screen.h)
+
+; Make mouse clicks on overlay restore focus to game window
 bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
 bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+
+; Show overlay (it was hidden until now)
 bkgr.Show("x{} y{} w{} h{}".f(fscr.screen.x, fscr.screen.y, fscr.screen.w, fscr.screen.h))
+
+; Cut a hole in the overlay for the game window to be seen
+; NOTE: The coordinates are relative to the overlay, not the desktop area
 polygonStr := Format(
   "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
-  "{3}-{5} {4}-{5} {4}-{6} {3}-{6} {3}-{5}",
-  fscr.screen.w, fscr.screen.h,
-  fscr.window.x-fscr.screen.x, fscr.window.x-fscr.screen.x+fscr.window.w,
-  fscr.window.y-fscr.screen.y, fscr.window.y-fscr.screen.y+fscr.window.h
+  "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
+  fscr.screen.w,                                 ;{1} Allowed Screen Area: width
+  fscr.screen.h,                                 ;{2} Allowed Screen Area: height
+  fscr.window.x - fscr.screen.x,                 ;{3} Game Window: x coordinate (left)
+  fscr.window.y - fscr.screen.y,                 ;{4} Game Window: y coordinate (top)
+  fscr.window.x - fscr.screen.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
+  fscr.window.y - fscr.screen.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
 )
 WinSetRegion(polygonStr, bkgr.hwnd)
 
@@ -267,8 +281,8 @@ WinSetRegion(polygonStr, bkgr.hwnd)
 ;       getting and losing focus and toggle ALwaysOnTop accordingly (since
 ;       AlwaysOnTop will let the game window be drawn over the taskbar).
 ;         But as mentioned, this is racey and are prone to:
-;       1) show the taskbar even while the game is in focus,
-;       2) not show other windows when switching focus to them.
+;       1) showing the taskbar even while the game is in focus,
+;       2) not showing other windows when switching focus to them.
 ;         To fix this the code has basically been hacked and tested until
 ;       it seems to work good enough.
 
