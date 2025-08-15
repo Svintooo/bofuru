@@ -291,6 +291,12 @@ if fscr.needsAlwaysOnTop
   ;         To fix this the code has basically been hacked and tested until
   ;       it seems to work good enough.
 
+  ; Make game window always on top
+  ConsoleMsg("INFO: Set AlwaysOnTop on game window")
+  WinSetAlwaysOnTop(true, cnfg.hWnd)
+  if IsSet(bkgr)
+    WinSetAlwaysOnTop(true, bkgr.hWnd)
+
   ; Tell MS Windows to notify us of events for all windows
   ConsoleMsg("INFO: Bind focus change event to toggle AlwaysOnTop")
   if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
