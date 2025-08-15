@@ -50,6 +50,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
 
   ;NOTE: mon = monitor area
   ;      scr = allowed screen area for the window to reside in
+  ;      ovr = allowed screen area for the background overlay
   mon := {
     x: Min(monX1,monX2),
     y: Min(monY1,monY2),
@@ -57,6 +58,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
     h: Abs(monY1-monY2)
   }
   scr := mon.Clone()
+  ovr := mon.Clone()
   monX1 := monX2 := monY1 := monY2 := unset
 
 
@@ -67,7 +69,11 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   case "hide":
     ; DO NOTHING
     ; Taskbar is hidden by default
-  case "show":
+  case "show", "ghost":
+    ; Check if taskbar area should be excluded from both sides of the screen area
+    ; TODO: Find a better name for this option
+    ghost := taskbar = "ghost"
+
     ; AlwaysOnTop not needed since taskbar will be shown
     needsAlwaysOnTop := false
 
@@ -79,22 +85,38 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
 
       if (mon.x <= tray.x && tray.x <= mon.x+mon.w && mon.y <= tray.y && tray.y <= mon.y+mon.h) {
         if tray.w = mon.w {
+          ; Taskbar at the top or bottom
           if tray.y > mon.y {
             ; Taskbar at the bottom
-            scr.h -= tray.h
+            ovr.h -= tray.h
           } else {
             ; Taskbar at the top
+            ovr.y += tray.h
+            ovr.h -= tray.h
+          }
+
+          if ghost {
             scr.y += tray.h
-            scr.h -= tray.h
+            scr.h -= tray.h * 2
+          } else {
+            scr := ovr.Clone()
           }
         } else if tray.h = mon.h {
+          ; Taskbar at the left or right side
           if tray.x > mon.x {
-            ; Taskbar to the right
-            scr.w -= tray.w
+            ; Taskbar at the right side
+            ovr.w -= tray.w
           } else {
-            ; Taskbar to the left
+            ; Taskbar at the left side
+            ovr.x += tray.w
+            ovr.w -= tray.w
+          }
+
+          if ghost {
             scr.x += tray.w
-            scr.w -= tray.w
+            scr.w -= tray.w * 2
+          } else {
+            scr := ovr.Clone()
           }
         } else {
           ; THIS SHOULD NEVER HAPPEN
@@ -196,6 +218,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
     reason: reason,
     window:  win,
     screen:  scr,
+    overlay: ovr,
     monitor: mon,
     needsBackgroundOverlay: needsBackgroundOverlay,
     needsAlwaysOnTop:       needsAlwaysOnTop,

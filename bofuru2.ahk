@@ -247,26 +247,26 @@ if fscr.needsBackgroundOverlay
   WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
                                 ; and have other elements placed on top of them.
   bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
-  bkgr.clickArea.Move(0, 0, fscr.screen.w, fscr.screen.h)
+  bkgr.clickArea.Move(0, 0, fscr.overlay.w, fscr.overlay.h)
 
   ; Make mouse clicks on overlay restore focus to game window
   bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
   bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
 
   ; Show overlay (it was hidden until now)
-  bkgr.Show("x{} y{} w{} h{}".f(fscr.screen.x, fscr.screen.y, fscr.screen.w, fscr.screen.h))
+  bkgr.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
 
   ; Cut a hole in the overlay for the game window to be seen
   ; NOTE: The coordinates are relative to the overlay, not the desktop area
   polygonStr := Format(
     "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
     "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
-    fscr.screen.w,                                 ;{1} Allowed Screen Area: width
-    fscr.screen.h,                                 ;{2} Allowed Screen Area: height
-    fscr.window.x - fscr.screen.x,                 ;{3} Game Window: x coordinate (left)
-    fscr.window.y - fscr.screen.y,                 ;{4} Game Window: y coordinate (top)
-    fscr.window.x - fscr.screen.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
-    fscr.window.y - fscr.screen.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
+    fscr.overlay.w,                                 ;{1} Overlay Area: width
+    fscr.overlay.h,                                 ;{2} Overlay Area: height
+    fscr.window.x - fscr.overlay.x,                 ;{3} Game Window: x coordinate (left)
+    fscr.window.y - fscr.overlay.y,                 ;{4} Game Window: y coordinate (top)
+    fscr.window.x - fscr.overlay.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
+    fscr.window.y - fscr.overlay.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
   )
   WinSetRegion(polygonStr, bkgr.hwnd)
 }
