@@ -62,9 +62,11 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
 
   ;; (optional) Exclude taskbar area from monitor area
   ; Can be used in case there is a problem overlaying the Window taskbar
-  switch taskbar {
+  switch taskbar
+  {
   case "hide":
     ; DO NOTHING
+    ; Taskbar is hidden by default
   case "show":
     ; AlwaysOnTop not needed since taskbar will be shown
     needsAlwaysOnTop := false
@@ -109,23 +111,26 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
 
 
   ;; Calculate new window position and size
-  switch winSize {
+  ; size is calculated to fit inside scr (allowed screen area)
+  ; position is centered relative to mon (monitor area)
+  switch winSize
+  {
   case "original":
-    ; Center the window on the monitor (keeping window original size)
-    win.x := scr.x + ((scr.w - win.w) // 2)
-    win.y := scr.y + ((scr.h - win.h) // 2)
+    ; Center the window (keeping window original size)
+    win.x := mon.x + ((mon.w - win.w) // 2)
+    win.y := mon.y + ((mon.h - win.h) // 2)
   case "fit":
-    ; Maximum enlargement while keeping window aspect ratio
+    ; Maximum size while keeping window aspect ratio
     if (scr.w / scr.h) > (win.w / win.h) {
       win.w := Round((scr.h / win.h) * win.w)
       win.h := scr.h
-      win.x := Round(scr.x + (Abs(scr.w - win.w) / 2))
+      win.x := Round(mon.x + (Abs(mon.w - win.w) / 2))
       win.y := scr.y
     } else {
       win.w := scr.w
       win.h := Round((scr.w / win.w) * win.h)
       win.x := scr.x
-      win.y := Round(scr.y + (Abs(scr.h - win.h) / 2))
+      win.y := Round(mon.y + (Abs(mon.h - win.h) / 2))
     }
   case "stretch":
     ; Stretch the window over the whole screen area
@@ -134,7 +139,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
     win.w := scr.w
     win.h := scr.h
   case "pixel-perfect":
-    ; Only enlarge window by exact pixels
+    ; Only resize window so it fits exact pixels (no pixel distortions)
     mult := Min(scr.w // win.w, scr.h // win.h)
 
     if mult != 0 {
@@ -142,13 +147,29 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
       win.h *= mult
     }
 
-    ; Center the window on the monitor
-    win.x := scr.x + ((scr.w - win.w) // 2)
-    win.y := scr.y + ((scr.h - win.h) // 2)
+    ; Center the window
+    win.x := mon.x + ((mon.w - win.w) // 2)
+    win.y := mon.y + ((mon.h - win.h) // 2)
   default:
     ; ERROR
     ok     := false
     reason := "Invalid arg: winSize={}".f(winSize.Inspect())
+  }
+
+
+  ;; Make sure window is inside the allowed screen area
+  if win.w <= scr.w {
+    if win.x < scr.x
+      win.x := scr.x
+    else if win.x + win.w > scr.x + scr.w
+      win.x := scr.x + scr.w - win.w
+  }
+
+  if win.h <= scr.h {
+    if win.y < scr.y
+      win.y := scr.y
+    else if win.y + win.h > scr.y + scr.h
+      win.y := scr.y + scr.h - win.h
   }
 
 
@@ -169,8 +190,9 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   return {
     ok:     ok,
     reason: reason,
-    window: win,
-    screen: scr,
+    window:  win,
+    screen:  scr,
+    monitor: mon,
     needsBackgroundOverlay: needsBackgroundOverlay,
     needsAlwaysOnTop:       needsAlwaysOnTop,
   }
