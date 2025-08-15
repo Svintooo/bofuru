@@ -217,7 +217,7 @@ WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 ConsoleMsg "INFO: Resize window"
 fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false, _winSize := "fit", _taskbar := "hide")
 if ! fscr.ok {
-  ConsoleMsg "ERROR: {}".f(fscr.reason)
+  ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
   ExitApp
 }
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
