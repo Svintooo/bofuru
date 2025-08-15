@@ -40,7 +40,7 @@ lib_userWindowSelect(timeout := unset)
   WinSetTransparent(35, "ahk_id " mygui.Hwnd)
 
   ;; Wait until overlay has disappeared
-  if ! WinWaitClose(mygui.Hwnd, , IsSet(timeout) ? timeout : unset) {
+  if ! WinWaitClose(mygui.Hwnd, , timeout?) {
     overlayCloseFunc("timeout")
   }
 
