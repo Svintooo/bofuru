@@ -223,119 +223,131 @@ if ! fscr.ok {
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 
 
-;; Generate transparent pixel
-; Needed to make the overlay allow both mouse clicks and buttons
-ConsoleMsg "INFO: Generate transparent pixel"
-result := lib_GenerateTransparentPixel()
-if !result.ok {
-  ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
-  ExitApp
-}
-pixel := result.data
-result := unset
-
-
-;; Create background overlay
-; Create overlay window
-ConsoleMsg "INFO: Create background overlay"
-bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
-bkgr.BackColor := "black"
-
-; Create internal window control element that covers the whole overlay
-WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
-                              ; and have other elements placed on top of them.
-bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
-bkgr.clickArea.Move(0, 0, fscr.screen.w, fscr.screen.h)
-
-; Make mouse clicks on overlay restore focus to game window
-bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
-bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
-
-; Show overlay (it was hidden until now)
-bkgr.Show("x{} y{} w{} h{}".f(fscr.screen.x, fscr.screen.y, fscr.screen.w, fscr.screen.h))
-
-; Cut a hole in the overlay for the game window to be seen
-; NOTE: The coordinates are relative to the overlay, not the desktop area
-polygonStr := Format(
-  "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
-  "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
-  fscr.screen.w,                                 ;{1} Allowed Screen Area: width
-  fscr.screen.h,                                 ;{2} Allowed Screen Area: height
-  fscr.window.x - fscr.screen.x,                 ;{3} Game Window: x coordinate (left)
-  fscr.window.y - fscr.screen.y,                 ;{4} Game Window: y coordinate (top)
-  fscr.window.x - fscr.screen.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
-  fscr.window.y - fscr.screen.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
-)
-WinSetRegion(polygonStr, bkgr.hwnd)
-
-
-;; Toggle AlwaysOnTop on window focus switch
-; NOTE: This is probably the most bug prone, racey code in this codebase.
-;       MS Windows will automatically hide the taskbar if a single window is
-;       both in focus AND cover exactly a single monitor (this is, to my
-;       knowledge, how fullscreen in MS Windows actually works).
-;         This is usually not the case here. The game window is as big as
-;       possible while keeping its aspect ratio, and the rest of the monitor
-;       is covered by a black overlay that is not in focus.
-;         To mimic fullscreen the code here will react to the game window
-;       getting and losing focus and toggle ALwaysOnTop accordingly (since
-;       AlwaysOnTop will let the game window be drawn over the taskbar).
-;         But as mentioned, this is racey and are prone to:
-;       1) showing the taskbar even while the game is in focus,
-;       2) not showing other windows when switching focus to them.
-;         To fix this the code has basically been hacked and tested until
-;       it seems to work good enough.
-
-; Tell MS Windows to notify us of events for all windows
-ConsoleMsg("INFO: Bind focus change event to toggle AlwaysOnTop")
-if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+if fscr.needsBackgroundOverlay
 {
-  MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
-  OnMessage(MsgNum, ShellMessage)
+  ;; Generate transparent pixel
+  ; Needed to make the overlay allow both mouse clicks and buttons
+  ConsoleMsg "INFO: Generate transparent pixel"
+  result := lib_GenerateTransparentPixel()
+  if !result.ok {
+    ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
+    ExitApp
+  }
+  pixel := result.data
+  result := unset
+
+
+  ;; Create background overlay
+  ; Create overlay window
+  ConsoleMsg "INFO: Create background overlay"
+  bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
+  bkgr.BackColor := "black"
+
+  ; Create internal window control element that covers the whole overlay
+  WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
+                                ; and have other elements placed on top of them.
+  bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
+  bkgr.clickArea.Move(0, 0, fscr.screen.w, fscr.screen.h)
+
+  ; Make mouse clicks on overlay restore focus to game window
+  bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
+  bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+
+  ; Show overlay (it was hidden until now)
+  bkgr.Show("x{} y{} w{} h{}".f(fscr.screen.x, fscr.screen.y, fscr.screen.w, fscr.screen.h))
+
+  ; Cut a hole in the overlay for the game window to be seen
+  ; NOTE: The coordinates are relative to the overlay, not the desktop area
+  polygonStr := Format(
+    "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
+    "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
+    fscr.screen.w,                                 ;{1} Allowed Screen Area: width
+    fscr.screen.h,                                 ;{2} Allowed Screen Area: height
+    fscr.window.x - fscr.screen.x,                 ;{3} Game Window: x coordinate (left)
+    fscr.window.y - fscr.screen.y,                 ;{4} Game Window: y coordinate (top)
+    fscr.window.x - fscr.screen.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
+    fscr.window.y - fscr.screen.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
+  )
+  WinSetRegion(polygonStr, bkgr.hwnd)
 }
 
-; This is now run when any event happens in MS Windows on any window
-ShellMessage(wParam, lParam, msg, script_hwnd)
-{
-  static HSHELL_WINDOWACTIVATED  := 0x00000004
-       , HSHELL_HIGHBIT          := 0x00008000
-       , HSHELL_RUDEAPPACTIVATED := HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT
 
-  ; React on events about switching focus to another window
-  if wParam = HSHELL_WINDOWACTIVATED
-  || wParam = HSHELL_RUDEAPPACTIVATED {
-    if lParam = cnfg.hWnd {
-      ; Game Window got focus: Set AlwaysOnTop
-      ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-      WinSetAlwaysOnTop(true, cnfg.hWnd)
-      WinSetAlwaysOnTop(true, bkgr.hWnd)
-      ; RACE CONDITION HACK: Do everything again (ugly hack)
-      ;   MS Windows sometimes paints the taskbar above the Game Window even if
-      ;   we set AlwaysOnTop. Setting AlwaysOnTop again after a short sleep
-      ;   seems to fix the issue.
-      sleep 200  ; Milliseconds
-      WinSetAlwaysOnTop(true, cnfg.hWnd)
-      WinSetAlwaysOnTop(true, bkgr.hWnd)
-    } else if lParam = 0 {
-      ; DO NOTHING
-      ;   Focus was changed to the Windows taskbar, the overlay
-      ;   we created around the Game Window, or something unknown.
-      ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-    } else {
-      ; Another Window got focus: Turn off AlwaysOnTop
-      ;ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-      WinSetAlwaysOnTop(false, cnfg.hWnd)
-      WinSetAlwaysOnTop(false, bkgr.hWnd)
-      try {
-        ; RACE CONDITION FIX: Move focused window to the top
-        ;   MS Windows tried to to this already, but the Game Window probably
-        ;   was still in AlwaysOnTop mode.
-        WinMoveTop(lParam)
-      } catch {
-        ; RACE CONDITION FAIL
-        ;   This happens if focus is changed to a window we do not have
-        ;   permission to modify (windows with elevated permissions,
-        ;   running as administrator).
+if fscr.needsAlwaysOnTop
+{
+  ;; Toggle AlwaysOnTop on window focus switch
+  ; NOTE: This is probably the most bug prone, racey code in this codebase.
+  ;       MS Windows will automatically hide the taskbar if a single window is
+  ;       both in focus AND cover exactly a single monitor (this is, to my
+  ;       knowledge, how fullscreen in MS Windows actually works).
+  ;         This is usually not the case here. The game window is as big as
+  ;       possible while keeping its aspect ratio, and the rest of the monitor
+  ;       is covered by a black overlay that is not in focus.
+  ;         To mimic fullscreen the code here will react to the game window
+  ;       getting and losing focus and toggle ALwaysOnTop accordingly (since
+  ;       AlwaysOnTop will let the game window be drawn over the taskbar).
+  ;         But as mentioned, this is racey and are prone to:
+  ;       1) showing the taskbar even while the game is in focus,
+  ;       2) not showing other windows when switching focus to them.
+  ;         To fix this the code has basically been hacked and tested until
+  ;       it seems to work good enough.
+
+  ; Tell MS Windows to notify us of events for all windows
+  ConsoleMsg("INFO: Bind focus change event to toggle AlwaysOnTop")
+  if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+  {
+    MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
+    OnMessage(MsgNum, ShellMessage)
+  }
+
+  ; This is now run when any event happens in MS Windows on any window
+  ShellMessage(wParam, lParam, msg, script_hwnd)
+  {
+    global cnfg
+    global bkgr
+
+    static HSHELL_WINDOWACTIVATED  := 0x00000004
+         , HSHELL_HIGHBIT          := 0x00008000
+         , HSHELL_RUDEAPPACTIVATED := HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT
+
+    ; React on events about switching focus to another window
+    if wParam = HSHELL_WINDOWACTIVATED
+    || wParam = HSHELL_RUDEAPPACTIVATED {
+      if lParam = cnfg.hWnd {
+        ; Game Window got focus: Set AlwaysOnTop
+        ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        WinSetAlwaysOnTop(true, cnfg.hWnd)
+        if IsSet(bkgr)
+          WinSetAlwaysOnTop(true, bkgr.hWnd)
+        ; RACE CONDITION HACK: Do everything again (ugly hack)
+        ;   MS Windows sometimes paints the taskbar above the Game Window even if
+        ;   we set AlwaysOnTop. Setting AlwaysOnTop again after a short sleep
+        ;   seems to fix the issue.
+        sleep 200  ; Milliseconds
+        WinSetAlwaysOnTop(true, cnfg.hWnd)
+        if IsSet(bkgr)
+          WinSetAlwaysOnTop(true, bkgr.hWnd)
+      } else if lParam = 0 {
+        ; DO NOTHING
+        ;   Focus was changed to the Windows taskbar, the overlay
+        ;   we created around the Game Window, or something unknown.
+        ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+      } else {
+        ; Another Window got focus: Turn off AlwaysOnTop
+        ;ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        WinSetAlwaysOnTop(false, cnfg.hWnd)
+        if IsSet(bkgr)
+          WinSetAlwaysOnTop(false, bkgr.hWnd)
+        try {
+          ; RACE CONDITION FIX: Move focused window to the top
+          ;   MS Windows tried to to this already, but the Game Window probably
+          ;   was still in AlwaysOnTop mode.
+          WinMoveTop(lParam)
+        } catch {
+          ; RACE CONDITION FAIL
+          ;   This happens if focus is changed to a window we do not have
+          ;   permission to modify (windows with elevated permissions,
+          ;   running as administrator).
+        }
       }
     }
   }
