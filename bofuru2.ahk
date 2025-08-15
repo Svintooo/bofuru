@@ -123,15 +123,15 @@ cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
 cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
 cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
 cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
-cnfg.proc_name    := WinGetProcessName( "ahk_id" cnfg.hWnd )
-cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.proc_name)
+cnfg.procName     := WinGetProcessName( "ahk_id" cnfg.hWnd )
+cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
 
 
 ;; Print window info
 ConsoleMsg "INFO: Window found"
 ConsoleMsg "      PID           = {}".f(cnfg.pid)
 ConsoleMsg "      hWnd          = {}".f(cnfg.hWnd)
-ConsoleMsg "      Process Name  = {}".f(cnfg.proc_name)
+ConsoleMsg "      Process Name  = {}".f(cnfg.procName.Inspect())
 ConsoleMsg "      Title         = {}".f(cnfg.winTitle.Inspect())
 ConsoleMsg "      Class         = {}".f(cnfg.winClass.Inspect())
 ;ConsoleMsg "      Text          = {}".f(cnfg.winText.Inspect())
