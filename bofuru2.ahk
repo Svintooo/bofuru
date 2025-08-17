@@ -213,8 +213,7 @@ WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 sleep 1  ; Millisecond
 newWinState := CollectWindowState(cnfg.hWnd)
 
-; If window seem to block resizing, use original size when recalculating the
-; fullscreen arguments
+; If window seem to block resizing, use original size when recalculating the fullscreen arguments
 if cnfg.origState.width  != fscr.window.w && newWinState.width  = oldWinState.width
 || cnfg.origState.height != fscr.window.h && newWinState.height = oldWinState.height
 {
