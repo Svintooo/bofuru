@@ -180,37 +180,9 @@ OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
 ;; Remove window border
+ConsoleMsg "INFO: Remove window styles (border, menu, title bar, etc)"
 ; Remove window menu bar
-ConsoleMsg "INFO: Remove window menu bar (if one exists)"
-if cnfg.origState.winMenu
-  DllCall("SetMenu", "uint", cnfg.hWnd, "uint", 0)
-
-; Remove styles (border)
-ConsoleMsg "INFO: Remove window styles (border, title bar, etc)"
-newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
-             | 0x10000000  ; WS_VISIBLE
-try
-  WinSetStyle(newWinStyle, "ahk_id" cnfg.hWnd)
-catch as e
-  ConsolePrintException(e)
-
-; Remove extended styles (NOTE: may not be needed)
-ConsoleMsg "INFO: Remove window extended styles"
-removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
-                  | 0x00000100 ; WS_EX_WINDOWEDGE    (raised border edges)
-                  | 0x00000200 ; WS_EX_CLIENTEDGE    (sunken border edges)
-                  | 0x00020000 ; WS_EX_STATICEDGE    (three-dimensional border)
-                  | 0x00000400 ; WS_EX_CONTEXTHELP   (title bar question mark)
-                  | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
-try
-  WinSetExStyle("-" removeWinExStyle, "ahk_id" cnfg.hWnd)   ; The minus (-) removes the styles from the current window styles
-catch as e
-  ConsolePrintException(e)
-
-; Restore the correct window client area width/height
-; (these gets distorted when the border is removed)
-ConsoleMsg "INFO: Restore window aspect ratio that got distorted when removing styles"
-WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
+removeWindowBorder(cnfg.hWnd)
 
 
 ;; Resize and center window
@@ -501,6 +473,38 @@ CollectWindowState(hWnd)
   }
 
   return winState
+}
+
+
+;; Remove window border
+removeWindowBorder(hWnd)
+{
+  if cnfg.origState.winMenu
+    DllCall("SetMenu", "uint", cnfg.hWnd, "uint", 0)
+
+  ; Remove styles (border)
+  newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
+               | 0x10000000  ; WS_VISIBLE
+  try
+    WinSetStyle(newWinStyle, "ahk_id" cnfg.hWnd)
+  catch as e
+    ConsolePrintException(e)
+
+  ; Remove extended styles (NOTE: may not be needed)
+  removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
+                    | 0x00000100 ; WS_EX_WINDOWEDGE    (raised border edges)
+                    | 0x00000200 ; WS_EX_CLIENTEDGE    (sunken border edges)
+                    | 0x00020000 ; WS_EX_STATICEDGE    (three-dimensional border)
+                    | 0x00000400 ; WS_EX_CONTEXTHELP   (title bar question mark)
+                    | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
+  try
+    WinSetExStyle("-" removeWinExStyle, "ahk_id" cnfg.hWnd)   ; The minus (-) removes the styles from the current window styles
+  catch as e
+    ConsolePrintException(e)
+
+  ; Restore the correct window client area width/height
+  ; (these gets distorted when the border is removed)
+  WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
 }
 
 
