@@ -62,7 +62,7 @@ if cnfg.HasOwnProp("launch")
 
   cnfg.pid := result.pid
   result := unset
-  ConsoleMsg("INFO: Launch success, got PID: " cnfg.pid)
+  ConsoleMsg "INFO: Launch success, got PID: " cnfg.pid
 }
 
 
@@ -141,13 +141,13 @@ ConsoleMsg "      --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
 ;; Check if window is allowed
 if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
 {
-  ConsoleMsg("ERROR: Unsupported window selected", _wait_enter := true)
+  ConsoleMsg "ERROR: Unsupported window selected", _wait_enter := true
   ExitApp
 }
 
 
 ;; Exit BoFuRu if the game window is closed
-ConsoleMsg("INFO: Bind exit event to window close")
+ConsoleMsg "INFO: Bind exit event to window close"
 Event_AppExit() {
   if not WinExist("ahk_id" cnfg.hWnd)
     ExitApp(0)
@@ -298,7 +298,8 @@ if fscr.needsAlwaysOnTop
     WinSetAlwaysOnTop(true, bkgr.hWnd)
 
   ; Tell MS Windows to notify us of events for all windows
-  ConsoleMsg("INFO: Bind focus change event to toggle AlwaysOnTop")
+  ConsoleMsg "INFO: Bind focus change event to toggle AlwaysOnTop"
+
   if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
   {
     MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
