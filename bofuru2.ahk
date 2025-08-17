@@ -27,6 +27,9 @@ SetTitleMatchMode "RegEx"
 ; all AHK functions that sets/retrieves/uses mouse coordinates.
 CoordMode "Mouse", "Screen"
 
+; Print more debug info to console
+DEBUG := false
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -62,7 +65,8 @@ if cnfg.HasOwnProp("launch")
 
   cnfg.pid := result.pid
   result := unset
-  ConsoleMsg "INFO: Launch success, got PID: " cnfg.pid
+  if DEBUG
+    ConsoleMsg "DEBUG: Launch success, got PID: " cnfg.pid
 }
 
 
@@ -129,8 +133,10 @@ cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass
 
 ;; Print window info
 ConsoleMsg "INFO: Window found"
-ConsoleMsg "      PID           = {}".f(cnfg.pid)
-ConsoleMsg "      hWnd          = {}".f(cnfg.hWnd)
+if DEBUG {
+ConsoleMsg "      PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
+ConsoleMsg "      hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
+}
 ConsoleMsg "      Process Name  = {}".f(cnfg.procName.Inspect())
 ConsoleMsg "      Title         = {}".f(cnfg.winTitle.Inspect())
 ConsoleMsg "      Class         = {}".f(cnfg.winClass.Inspect())
@@ -147,7 +153,8 @@ if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
 
 
 ;; Exit BoFuRu if the game window is closed
-ConsoleMsg "INFO: Bind exit event to window close"
+if DEBUG
+  ConsoleMsg "DEBUG: Bind exit event to window close"
 Event_AppExit() {
   if not WinExist("ahk_id" cnfg.hWnd)
     ExitApp(0)
@@ -164,18 +171,22 @@ ConsoleMsg "=== Modify Window ==="
 
 
 ;; Focus the window
-ConsoleMsg "INFO: Put the game window in focus"
+if DEBUG
+  ConsoleMsg "DEBUG: Put the game window in focus"
 WinActivate(cnfg.hWnd)
 
 
 ;; Collect Window State
-ConsoleMsg "INFO: Collecting current window state"
+if DEBUG
+  ConsoleMsg "DEBUG: Collecting current window state"
 cnfg.origState := CollectWindowState(cnfg.hWnd)
-ConsolePrintWindowState(cnfg.origState, "Original window state")
+if DEBUG
+  ConsolePrintWindowState(cnfg.origState, "Original window state")
 
 
 ;; Restore window state on exit
-ConsoleMsg "INFO: Register OnExit callback to restore window state on exit"
+if DEBUG
+  ConsoleMsg "DEBUG: Register OnExit callback to restore window state on exit"
 OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
@@ -225,7 +236,8 @@ if fscr.needsBackgroundOverlay
 {
   ;; Generate transparent pixel
   ; Needed to make the overlay allow both mouse clicks and buttons
-  ConsoleMsg "INFO: Generate transparent pixel"
+  if DEBUG
+    ConsoleMsg "DEBUG: Generate transparent pixel"
   result := lib_GenerateTransparentPixel()
   if !result.ok {
     ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
@@ -296,7 +308,8 @@ if fscr.needsAlwaysOnTop
     WinSetAlwaysOnTop(true, bkgr.hWnd)
 
   ; Tell MS Windows to notify us of events for all windows
-  ConsoleMsg "INFO: Bind focus change event to toggle AlwaysOnTop"
+  if DEBUG
+    ConsoleMsg "DEBUG: Bind focus change event to toggle AlwaysOnTop"
 
   if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
   {
@@ -319,7 +332,8 @@ if fscr.needsAlwaysOnTop
     || wParam = HSHELL_RUDEAPPACTIVATED {
       if lParam = cnfg.hWnd {
         ; Game Window got focus: Set AlwaysOnTop
-        ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        if DEBUG
+          ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
         try
           WinSetAlwaysOnTop(true, cnfg.hWnd)
         catch {
@@ -349,10 +363,12 @@ if fscr.needsAlwaysOnTop
         ; DO NOTHING
         ;   Focus was changed to the Windows taskbar, the overlay
         ;   we created around the Game Window, or something unknown.
-        ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        if DEBUG
+          ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
       } else {
         ; Another Window got focus: Turn off AlwaysOnTop
-        ;ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        if DEBUG
+          ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
         try
           WinSetAlwaysOnTop(false, cnfg.hWnd)
         catch {
@@ -381,7 +397,8 @@ if fscr.needsAlwaysOnTop
 
 
 ;; Print new window state
-ConsolePrintWindowState(cnfg.hWnd, "New window state")
+if DEBUG
+  ConsolePrintWindowState(cnfg.hWnd, "New window state")
 
 
 
@@ -587,16 +604,16 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
   winMenuStr    := "0x{:08X}".f(winState.winMenu)
 
-  ConsoleMsg "INFO: {}".f(message)
-  ConsoleMsg "      x          = {}".f(winState.x)
-  ConsoleMsg "      y          = {}".f(winState.y)
-  ConsoleMsg "      winWidth   = {}".f(winState.winWidth)
-  ConsoleMsg "      winHeight  = {}".f(winState.winHeight)
-  ConsoleMsg "      width      = {}".f(winState.width)
-  ConsoleMsg "      height     = {}".f(winState.height)
-  ConsoleMsg "      winStyle   = {}".f(winStyleStr)
-  ConsoleMsg "      winExStyle = {}".f(winExStyleStr)
-  ConsoleMsg "      winMenu    = {}".f(winMenuStr)
+  ConsoleMsg "DEBUG: {}".f(message)
+  ConsoleMsg "       x          = {}".f(winState.x)
+  ConsoleMsg "       y          = {}".f(winState.y)
+  ConsoleMsg "       winWidth   = {}".f(winState.winWidth)
+  ConsoleMsg "       winHeight  = {}".f(winState.winHeight)
+  ConsoleMsg "       width      = {}".f(winState.width)
+  ConsoleMsg "       height     = {}".f(winState.height)
+  ConsoleMsg "       winStyle   = {}".f(winStyleStr)
+  ConsoleMsg "       winExStyle = {}".f(winExStyleStr)
+  ConsoleMsg "       winMenu    = {}".f(winMenuStr)
 }
 
 
