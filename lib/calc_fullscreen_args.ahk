@@ -32,6 +32,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   }
 
   if !monitorNumber {
+    ; Select first monitor that contains window x y coordinates
     Loop monitorCount {
       MonitorGet(A_Index, &monX1, &monY1, &monX2, &monY2)
 
@@ -39,6 +40,19 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
       || (monX2 <= win.x && win.x <= monX1 && monY2 <= win.y && win.y <= monY1) {
         monitorNumber := A_Index
         break
+      }
+    }
+
+    if !monitorNumber {
+      ; Select first monitor that overlaps with the window
+      Loop monitorCount {
+        MonitorGet(A_Index, &monX1, &monY1, &monX2, &monY2)
+
+        if (monX1 < win.x + win.w && win.x < monX2 && monY1 < win.y + win.h && win.y < monY2)
+        || (monX2 < win.x + win.w && win.x < monX1 && monY2 < win.y + win.h && win.y < monY1) {
+          monitorNumber := A_Index
+          break
+        }
       }
     }
   }
