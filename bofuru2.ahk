@@ -321,17 +321,31 @@ if fscr.needsAlwaysOnTop
       if lParam = cnfg.hWnd {
         ; Game Window got focus: Set AlwaysOnTop
         ;ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-        WinSetAlwaysOnTop(true, cnfg.hWnd)
-        if IsSet(bkgr)
+        try
+          WinSetAlwaysOnTop(true, cnfg.hWnd)
+        catch {
+          ;
+        }
+        try
           WinSetAlwaysOnTop(true, bkgr.hWnd)
+        catch {
+          ;
+        }
         ; RACE CONDITION HACK: Do everything again (ugly hack)
         ;   MS Windows sometimes paints the taskbar above the Game Window even if
         ;   we set AlwaysOnTop. Setting AlwaysOnTop again after a short sleep
         ;   seems to fix the issue.
         sleep 200  ; Milliseconds
-        WinSetAlwaysOnTop(true, cnfg.hWnd)
-        if IsSet(bkgr)
+        try
+          WinSetAlwaysOnTop(true, cnfg.hWnd)
+        catch {
+          ;
+        }
+        try
           WinSetAlwaysOnTop(true, bkgr.hWnd)
+        catch {
+          ;
+        }
       } else if lParam = 0 {
         ; DO NOTHING
         ;   Focus was changed to the Windows taskbar, the overlay
@@ -340,9 +354,16 @@ if fscr.needsAlwaysOnTop
       } else {
         ; Another Window got focus: Turn off AlwaysOnTop
         ;ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-        WinSetAlwaysOnTop(false, cnfg.hWnd)
-        if IsSet(bkgr)
+        try
+          WinSetAlwaysOnTop(false, cnfg.hWnd)
+        catch {
+          ;
+        }
+        try
           WinSetAlwaysOnTop(false, bkgr.hWnd)
+        catch {
+          ;
+        }
         try {
           ; RACE CONDITION FIX: Move focused window to the top
           ;   MS Windows tried to to this already, but the Game Window probably
@@ -486,26 +507,40 @@ CollectWindowState(hWnd)
 restoreWindowState(hWnd, winState)
 {
   ; Remove AlwaysOnTop
-  WinSetAlwaysOnTop(false, hWnd)
+  try
+    WinSetAlwaysOnTop(false, hWnd)
+  catch {
+    ;
+  }
 
   ; Set window menu bar
-  if winState.winMenu
-    winMenu := DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.winMenu)
+  try
+    if winState.winMenu
+      winMenu := DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.winMenu)
+  catch {
+    ;
+  }
 
   ; Set window style
   try
     WinSetStyle(winState.winStyle, "ahk_id" hWnd)
-  catch as e
-    ConsolePrintException(e)
+  catch {
+    ;
+  }
 
   ; Set window ex style
   try
     WinSetExStyle(winState.winExStyle, "ahk_id" hWnd)
-  catch as e
-    ConsolePrintException(e)
+  catch {
+    ;
+  }
 
   ; Get window size/position
-  WinMove(winState.x, winState.y, winState.winWidth, winState.winHeight, "ahk_id" hWnd)
+  try
+    WinMove(winState.x, winState.y, winState.winWidth, winState.winHeight, "ahk_id" hWnd)
+  catch {
+    ;
+  }
 }
 
 
