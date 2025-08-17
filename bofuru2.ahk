@@ -185,14 +185,40 @@ ConsoleMsg "INFO: Remove window styles (border, menu, title bar, etc)"
 removeWindowBorder(cnfg.hWnd)
 
 
-;; Resize and center window
-ConsoleMsg "INFO: Resize window"
-fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false, _winSize := "fit", _taskbar := "hide")
+;; Resize and reposition window
+ConsoleMsg "INFO: Resize and reposition window"
+fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false,  ;TODO: Make configurable
+                                          _winSize := "fit",  ;TODO: Make configurable
+                                          _taskbar := "hide") ;TODO: Make configurable
 if ! fscr.ok {
   ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
   ExitApp
 }
+
+; Resize and reposition
+oldWinState := CollectWindowState(cnfg.hWnd)
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
+sleep 1  ; Millisecond
+newWinState := CollectWindowState(cnfg.hWnd)
+
+; If window seem to block resizing, use original size when recalculating the
+; fullscreen arguments
+if cnfg.origState.width  != fscr.window.w && newWinState.width  = oldWinState.width
+|| cnfg.origState.height != fscr.window.h && newWinState.height = oldWinState.height
+{
+  ConsoleMsg "WARNING: Resizing window FAILED. Keeping original window size."
+  fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false,      ;TODO: Make configurable
+                                            _winSize := "original",
+                                            _taskbar := "hide")     ;TODO: Make configurable
+  if ! fscr.ok {
+    ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
+    ExitApp
+  }
+  WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
+}
+
+oldWinState := newWinState := unset
+
 
 
 if fscr.needsBackgroundOverlay
