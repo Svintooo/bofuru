@@ -49,13 +49,13 @@ ConsoleMsg "=== Find Window ==="
 
 ;; Parse args
 cnfg := parseArgs(A_Args)
-ConsoleMsg "INFO: parsed args: {}".f(cnfg.Inspect())
+ConsoleMsg "INFO : parsed args: {}".f(cnfg.Inspect())
 
 
 ;; Run an *.exe
 if cnfg.HasOwnProp("launch")
 {
-  ConsoleMsg("INFO: Launching: " cnfg.launch)
+  ConsoleMsg("INFO : Launching: " cnfg.launch)
   result := launchExe(cnfg.launch)
 
   if ! result.ok {
@@ -73,7 +73,7 @@ if cnfg.HasOwnProp("launch")
 ;; Wait for a window to show up
 if cnfg.HasOwnProp("ahk_wintitle")
 {
-  ConsoleMsg "INFO: Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
+  ConsoleMsg "INFO : Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
   cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
 }
 
@@ -81,7 +81,7 @@ if cnfg.HasOwnProp("ahk_wintitle")
 ;; Wait for a window to show up belonging to PID
 if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
 {
-  ConsoleMsg "INFO: Waiting for window beloning to PID"
+  ConsoleMsg "INFO : Waiting for window beloning to PID"
   cnfg.hWnd := false
 
   while !cnfg.hWnd && ProcessExist(cnfg.pid)
@@ -98,9 +98,9 @@ if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
 ;; Let user manually select a window
 if ! cnfg.HasOwnProp("hWnd")
 {
-  ConsoleMsg "INFO: Manual Window selection activated"
-  ConsoleMsg "      - Click on game window"
-  ConsoleMsg "      - Press Esc to cancel"
+  ConsoleMsg "INFO : Manual Window selection activated"
+  ConsoleMsg "       - Click on game window"
+  ConsoleMsg "       - Press Esc to cancel"
 
   result := lib_userWindowSelect()
   while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
@@ -132,16 +132,16 @@ cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass
 
 
 ;; Print window info
-ConsoleMsg "INFO: Window found"
+ConsoleMsg "INFO : Window found"
 if DEBUG {
-ConsoleMsg "      PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
-ConsoleMsg "      hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
+ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
+ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
 }
-ConsoleMsg "      Process Name  = {}".f(cnfg.procName.Inspect())
-ConsoleMsg "      Title         = {}".f(cnfg.winTitle.Inspect())
-ConsoleMsg "      Class         = {}".f(cnfg.winClass.Inspect())
-;ConsoleMsg "      Text          = {}".f(cnfg.winText.Inspect())
-ConsoleMsg "      --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
+ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
+ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
+ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
+;ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())
+ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
 
 
 ;; Check if window is allowed
@@ -191,13 +191,13 @@ OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
 ;; Remove window border
-ConsoleMsg "INFO: Remove window styles (border, menu, title bar, etc)"
+ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
 ; Remove window menu bar
 removeWindowBorder(cnfg.hWnd)
 
 
 ;; Resize and reposition window
-ConsoleMsg "INFO: Resize and reposition window"
+ConsoleMsg "INFO : Resize and reposition window"
 fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false,  ;TODO: Make configurable
                                           _winSize := "fit",  ;TODO: Make configurable
                                           _taskbar := "hide") ;TODO: Make configurable
@@ -249,7 +249,7 @@ if fscr.needsBackgroundOverlay
 
   ;; Create background overlay
   ; Create overlay window
-  ConsoleMsg "INFO: Create background overlay"
+  ConsoleMsg "INFO : Create background overlay"
   bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
   bkgr.BackColor := "black"
 
@@ -302,7 +302,7 @@ if fscr.needsAlwaysOnTop
   ;       it seems to work good enough.
 
   ; Make game window always on top
-  ConsoleMsg("INFO: Set AlwaysOnTop on game window")
+  ConsoleMsg("INFO : Set AlwaysOnTop on game window")
   WinSetAlwaysOnTop(true, cnfg.hWnd)
   if IsSet(bkgr)
     WinSetAlwaysOnTop(true, bkgr.hWnd)
