@@ -190,23 +190,23 @@ if DEBUG
 OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
-;; Remove window border
-ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
-; Remove window menu bar
-removeWindowBorder(cnfg.hWnd)
-
-
-;; Resize and reposition window
-ConsoleMsg "INFO : Resize and reposition window"
-fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false,  ;TODO: Make configurable
-                                          _winSize := "fit",  ;TODO: Make configurable
-                                          _taskbar := "hide") ;TODO: Make configurable
+;; Modify Window
+; Calculate window modification parameters
+fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
+                                          _winSize := cnfg.HasOwnProp("size")    ? cnfg.size    : "fit",
+                                          _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
 if ! fscr.ok {
   ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
   ExitApp
 }
 
-; Resize and reposition
+; Remove window styles
+ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
+removeWindowBorder(cnfg.hWnd)
+
+
+;; Resize and reposition window
+ConsoleMsg "INFO : Resize and reposition window"
 oldWinState := CollectWindowState(cnfg.hWnd)
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 sleep 1  ; Millisecond
@@ -218,9 +218,9 @@ if cnfg.origState.width  != fscr.window.w && newWinState.width  = oldWinState.wi
 || cnfg.origState.height != fscr.window.h && newWinState.height = oldWinState.height
 {
   ConsoleMsg "WARNING: Resizing window FAILED. Keeping original window size."
-  fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := false,      ;TODO: Make configurable
+  fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
                                             _winSize := "original",
-                                            _taskbar := "hide")     ;TODO: Make configurable
+                                            _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
   if ! fscr.ok {
     ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
     ExitApp
