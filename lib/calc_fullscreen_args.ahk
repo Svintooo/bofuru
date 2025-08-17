@@ -5,8 +5,13 @@
 ;            stretch          Stretch window to fit the whole screen area.
 ;            pixel-perfect    Enlarge window by exact multiple.
 ;
-; taskbar    show             Show the MS Windows taskbar.
-;            hide             Hide the MS Windows taskbar.
+; taskbar    hide             Hide the MS Windows taskbar.
+;            show             Show the MS Windows taskbar.
+;                             Window is centered related to monitor area.
+;            show2            Show the MS Windows taskbar.
+;                             Window is centered related to background overlay area.
+;            show3            Show the MS Windows taskbar.
+;                             Taskbar is removed twice from the allowed window area.
 lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
 {
   ;; Set default return values
@@ -73,6 +78,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   }
   scr := mon.Clone()
   ovr := mon.Clone()
+  cntr := "mon"  ; Window position is centered relative to mon (monitor area)
   monX1 := monX2 := monY1 := monY2 := unset
 
 
@@ -83,10 +89,13 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   case "hide":
     ; DO NOTHING
     ; Taskbar is hidden by default
-  case "show", "ghost":
+  case "show", "show2", "show3":
+    ; Let window position be centered relative to scr (allowed screen area)
+    if taskbar = "show2"
+      cntr := "scr"
+
     ; Check if taskbar area should be excluded from both sides of the screen area
-    ; TODO: Find a better name for this option
-    ghost := taskbar = "ghost"
+    opposite_taskbar_area := (taskbar = "show3")
 
     ; AlwaysOnTop not needed since taskbar will be shown
     needsAlwaysOnTop := false
@@ -109,7 +118,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
             ovr.h -= tray.h
           }
 
-          if ghost {
+          if opposite_taskbar_area {
             scr.y += tray.h
             scr.h -= tray.h * 2
           } else {
@@ -126,7 +135,7 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
             ovr.w -= tray.w
           }
 
-          if ghost {
+          if opposite_taskbar_area {
             scr.x += tray.w
             scr.w -= tray.w * 2
           } else {
@@ -153,20 +162,20 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   {
   case "original":
     ; Center the window (keeping window original size)
-    win.x := mon.x + ((mon.w - win.w) // 2)
-    win.y := mon.y + ((mon.h - win.h) // 2)
+    win.x := %cntr%.x + ((%cntr%.w - win.w) // 2)
+    win.y := %cntr%.y + ((%cntr%.h - win.h) // 2)
   case "fit":
     ; Maximum size while keeping window aspect ratio
     if (scr.w / scr.h) > (win.w / win.h) {
       win.w := Round((scr.h / win.h) * win.w)
       win.h := scr.h
-      win.x := Round(mon.x + (Abs(mon.w - win.w) / 2))
+      win.x := Round(%cntr%.x + (Abs(%cntr%.w - win.w) / 2))
       win.y := scr.y
     } else {
       win.w := scr.w
       win.h := Round((scr.w / win.w) * win.h)
       win.x := scr.x
-      win.y := Round(mon.y + (Abs(mon.h - win.h) / 2))
+      win.y := Round(%cntr%.y + (Abs(%cntr%.h - win.h) / 2))
     }
   case "stretch":
     ; Stretch the window over the whole screen area
@@ -184,8 +193,8 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
     }
 
     ; Center the window
-    win.x := mon.x + ((mon.w - win.w) // 2)
-    win.y := mon.y + ((mon.h - win.h) // 2)
+    win.x := %cntr%.x + ((%cntr%.w - win.w) // 2)
+    win.y := %cntr%.y + ((%cntr%.h - win.h) // 2)
   default:
     ; ERROR
     ok     := false
