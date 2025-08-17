@@ -49,7 +49,8 @@ ConsoleMsg "=== Find Window ==="
 
 ;; Parse args
 cnfg := parseArgs(A_Args)
-ConsoleMsg "INFO : parsed args: {}".f(cnfg.Inspect())
+if DEBUG
+  ConsoleMsg "DEBUG: parsed args: {}".f(cnfg.Inspect())
 
 
 ;; Run an *.exe
