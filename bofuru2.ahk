@@ -238,20 +238,29 @@ if DEBUG
 OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
-;; Modify Window
-; Calculate window modification parameters
-fscr := lib_calcFullscreenArgs(cnfg.origState,
+;; Remove Window Border
+ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
+removeWindowBorder(cnfg.hWnd)
+
+; Get new window state
+cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
+if DEBUG
+  ConsolePrintWindowState(cnfg.noBorderState, "No-border window state")
+
+
+;; Calculate window fullscreen properties
+if DEBUG
+  ConsoleMsg "DEBUG: Calculate window fullscreen properties"
+
+fscr := lib_calcFullscreenArgs(cnfg.noBorderState,
                               _monitor := cnfg.monitor,
                               _winSize := cnfg.winsize,
                               _taskbar := cnfg.taskbar)
+
 if ! fscr.ok {
   ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
   ExitApp
 }
-
-; Remove window styles
-ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
-removeWindowBorder(cnfg.hWnd)
 
 
 ;; Resize and reposition window
@@ -409,11 +418,11 @@ launchExe(launch_string)
 CollectWindowState(hWnd)
 {
   ; Get window size/position
-  WinGetPos(&x, &y, &winWidth, &winHeight, hWnd)
+  WinGetPos(&x, &y, &width, &height, hWnd)
 
   ; Get window client area width/height
   ; (this is the area without the window border)
-  WinGetClientPos(, , &width, &height, hWnd)
+  WinGetClientPos(, , &innerWidth, &innerHeight, hWnd)
 
   ; Get window style (border)
   winStyle   := WinGetStyle(hWnd)
@@ -424,8 +433,8 @@ CollectWindowState(hWnd)
 
   winState := {
     x:x, y:y,
-    winWidth:winWidth, winHeight:winHeight,
     width:width, height:height,
+    innerWidth:innerWidth, innerHeight:innerHeight,
     winStyle:winStyle, winExStyle:winExStyle,
     winMenu:winMenu,
   }
@@ -466,7 +475,7 @@ removeWindowBorder(hWnd)
 
   ; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
-  WinMove(, , cnfg.origState.width, cnfg.origState.height, cnfg.hWnd)
+  WinMove(, , cnfg.origState.innerWidth, cnfg.origState.innerHeight, cnfg.hWnd)
 }
 
 
@@ -504,7 +513,7 @@ restoreWindowState(hWnd, winState)
 
   ; Get window size/position
   try
-    WinMove(winState.x, winState.y, winState.winWidth, winState.winHeight, "ahk_id" hWnd)
+    WinMove(winState.x, winState.y, winState.width, winState.height, "ahk_id" hWnd)
   catch {
     ;
   }
@@ -524,15 +533,15 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   winMenuStr    := "0x{:08X}".f(winState.winMenu)
 
   ConsoleMsg "DEBUG: {}".f(message)
-  ConsoleMsg "       x          = {}".f(winState.x)
-  ConsoleMsg "       y          = {}".f(winState.y)
-  ConsoleMsg "       winWidth   = {}".f(winState.winWidth)
-  ConsoleMsg "       winHeight  = {}".f(winState.winHeight)
-  ConsoleMsg "       width      = {}".f(winState.width)
-  ConsoleMsg "       height     = {}".f(winState.height)
-  ConsoleMsg "       winStyle   = {}".f(winStyleStr)
-  ConsoleMsg "       winExStyle = {}".f(winExStyleStr)
-  ConsoleMsg "       winMenu    = {}".f(winMenuStr)
+  ConsoleMsg "       x           = {}".f(winState.x)
+  ConsoleMsg "       y           = {}".f(winState.y)
+  ConsoleMsg "       width       = {}".f(winState.width)
+  ConsoleMsg "       height      = {}".f(winState.height)
+  ConsoleMsg "       innerWidth  = {}".f(winState.innerWidth)
+  ConsoleMsg "       innerHeight = {}".f(winState.innerHeight)
+  ConsoleMsg "       winStyle    = {}".f(winStyleStr)
+  ConsoleMsg "       winExStyle  = {}".f(winExStyleStr)
+  ConsoleMsg "       winMenu     = {}".f(winMenuStr)
 }
 
 
