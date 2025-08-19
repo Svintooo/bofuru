@@ -195,7 +195,7 @@ OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 ; Calculate window modification parameters
 fscr := lib_calcFullscreenArgs(cnfg.origState,
                               _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
-                              _winSize := cnfg.HasOwnProp("size")    ? cnfg.size    : "fit",
+                              _winSize := cnfg.HasOwnProp("winsize") ? cnfg.winsize : "fit",
                               _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
 if ! fscr.ok {
   ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
