@@ -52,6 +52,7 @@ cnfg := parseArgs(A_Args)
 if DEBUG
   ConsoleMsg "DEBUG: parsed args: {}".f(cnfg.Inspect())
 
+DEBUG        := cnfg.HasOwnProp("debug")   ? cnfg.debug   : DEBUG,
 cnfg.monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
 cnfg.winsize := cnfg.HasOwnProp("winsize") ? cnfg.winsize : "fit",
 cnfg.taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide"
