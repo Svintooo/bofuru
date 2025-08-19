@@ -107,6 +107,7 @@ if ! cnfg.HasOwnProp("hWnd")
   ConsoleMsg "INFO : Manual Window selection activated"
   ConsoleMsg "       - Click on game window"
   ConsoleMsg "       - Press Esc to cancel"
+  ConsoleMsg ""
 
   result := lib_userWindowSelect()
   while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
@@ -148,6 +149,7 @@ ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
 ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
 ;ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())
 ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
+ConsoleMsg ""
 
 
 ;; Check if window is allowed
