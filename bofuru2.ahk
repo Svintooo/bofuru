@@ -271,7 +271,7 @@ if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
   WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 }
 
-oldWinState := newWinState := unset
+newWinState := unset
 
 
 
