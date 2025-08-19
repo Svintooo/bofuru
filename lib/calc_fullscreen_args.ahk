@@ -12,7 +12,7 @@
 ;                             Window is centered related to background overlay area.
 ;            show3            Show the MS Windows taskbar.
 ;                             Taskbar is removed twice from the allowed window area.
-lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
+lib_calcFullscreenArgs(window, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
 {
   ;; Set default return values
   ok                     := true  ; No errors
@@ -21,10 +21,14 @@ lib_calcFullscreenArgs(hWnd, selectedMonitorNumber := 0, winSize := "fit", taskb
   needsAlwaysOnTop       := true  ; Usually needed to hide MS Windows taskbar
 
 
-  ;; Get Window Position
-  WinGetPos(&winX, &winY, &winW, &winH, "ahk_id" hWnd)
-  win := { x:winX, y:winY, w:winW, h:winH }
-  winX := winY := winW := WinH := unset
+  ;; Get Window
+  if window is Number {
+    WinGetPos(&winX, &winY, &winW, &winH, "ahk_id" window)
+    win := { x:winX, y:winY, w:winW, h:winH }
+    winX := winY := winW := WinH := unset
+  } else {
+    win := { x:window.x, y:window.y, w:window.width, h:window.height }
+  }
 
 
   ;; Get Monitor Area

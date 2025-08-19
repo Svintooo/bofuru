@@ -193,9 +193,10 @@ OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 ;; Modify Window
 ; Calculate window modification parameters
-fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
-                                          _winSize := cnfg.HasOwnProp("size")    ? cnfg.size    : "fit",
-                                          _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
+fscr := lib_calcFullscreenArgs(cnfg.origState,
+                              _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
+                              _winSize := cnfg.HasOwnProp("size")    ? cnfg.size    : "fit",
+                              _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
 if ! fscr.ok {
   ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
   ExitApp
@@ -218,9 +219,10 @@ if cnfg.origState.width  != fscr.window.w && newWinState.width  = oldWinState.wi
 || cnfg.origState.height != fscr.window.h && newWinState.height = oldWinState.height
 {
   ConsoleMsg "WARNING: Resizing window FAILED. Keeping original window size."
-  fscr := lib_calcFullscreenArgs(cnfg.hWnd, _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
-                                            _winSize := "original",
-                                            _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
+  fscr := lib_calcFullscreenArgs(cnfg.origState,
+                                _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
+                                _winSize := "original",
+                                _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
   if ! fscr.ok {
     ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
     ExitApp
