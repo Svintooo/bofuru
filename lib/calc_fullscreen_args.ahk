@@ -164,7 +164,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := 0, winSize := "fit", tas
   ; position is centered relative to mon (monitor area)
   switch winSize
   {
-  case "original":
+  case "original", "keep":
     ; Center the window (keeping window original size)
     win.x := %cntr%.x + ((%cntr%.w - win.w) // 2)
     win.y := %cntr%.y + ((%cntr%.h - win.h) // 2)

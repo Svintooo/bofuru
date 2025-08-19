@@ -209,19 +209,16 @@ removeWindowBorder(cnfg.hWnd)
 
 ;; Resize and reposition window
 ConsoleMsg "INFO : Resize and reposition window"
-oldWinState := CollectWindowState(cnfg.hWnd)
 WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 sleep 1  ; Millisecond
 newWinState := CollectWindowState(cnfg.hWnd)
 
-; If window seem to block resizing, use original size when recalculating the fullscreen arguments
-if cnfg.origState.width  != fscr.window.w && newWinState.width  = oldWinState.width
-|| cnfg.origState.height != fscr.window.h && newWinState.height = oldWinState.height
+; If window did not get the intended size, reposition window using its current size
+if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
 {
-  ConsoleMsg "WARNING: Resizing window FAILED. Keeping original window size."
-  fscr := lib_calcFullscreenArgs(cnfg.origState,
+  fscr := lib_calcFullscreenArgs(newWinState,
                                 _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
-                                _winSize := "original",
+                                _winSize := "keep",
                                 _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
   if ! fscr.ok {
     ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
