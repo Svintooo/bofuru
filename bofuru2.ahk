@@ -86,7 +86,7 @@ if cnfg.HasOwnProp("ahk_wintitle")
 ;; Wait for a window to show up belonging to PID
 if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
 {
-  ConsoleMsg "INFO : Waiting for window beloning to PID"
+  ConsoleMsg "INFO : Waiting for window belonging to PID"
   cnfg.hWnd := false
 
   while !cnfg.hWnd && ProcessExist(cnfg.pid)
