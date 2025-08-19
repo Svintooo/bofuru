@@ -175,6 +175,19 @@ ConsoleMsg ""
 ConsoleMsg "=== Modify Window ==="
 
 
+;; Generate transparent pixel
+; Needed to make the overlay allow both mouse clicks and buttons
+if DEBUG
+  ConsoleMsg "DEBUG: Generate transparent pixel"
+result := lib_GenerateTransparentPixel()
+if !result.ok {
+  ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
+  ExitApp
+}
+pixel := result.data
+result := unset
+
+
 ;; Focus the window
 if DEBUG
   ConsoleMsg "DEBUG: Put the game window in focus"
@@ -237,19 +250,6 @@ oldWinState := newWinState := unset
 
 if fscr.needsBackgroundOverlay
 {
-  ;; Generate transparent pixel
-  ; Needed to make the overlay allow both mouse clicks and buttons
-  if DEBUG
-    ConsoleMsg "DEBUG: Generate transparent pixel"
-  result := lib_GenerateTransparentPixel()
-  if !result.ok {
-    ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
-    ExitApp
-  }
-  pixel := result.data
-  result := unset
-
-
   ;; Create background overlay
   ; Create overlay window
   ConsoleMsg "INFO : Create background overlay"
