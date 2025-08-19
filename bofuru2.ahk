@@ -444,6 +444,11 @@ parseArgs(args)
       name  := match[1].Trim().StrReplace("-", "_")
       value := true
 
+    } else if RegExMatch(A_Args[i], "^--no-(.+)", &match) {
+
+      name  := match[1].Trim().StrReplace("-", "_")
+      value := false
+
     } else {
 
       if A_Args[i] = "--"
@@ -460,13 +465,6 @@ parseArgs(args)
 
     ; Validate name and value
     ;TODO
-
-    ; Modify value
-    if value = "true"
-      value := true
-
-    if value = "false"
-      value := false
 
     ; Store name and value
     cnfg.%name% := value
