@@ -247,6 +247,16 @@ cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
 if DEBUG
   ConsolePrintWindowState(cnfg.noBorderState, "No-border window state")
 
+; Warn if window lost its aspect ratio
+if cnfg.noBorderState.width  != cnfg.origState.innerWidth
+|| cnfg.noBorderState.height != cnfg.origState.innerHeight
+{
+  ConsoleMsg ""
+  ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
+  ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
+  ConsoleMsg ""
+}
+
 
 ;; Calculate window fullscreen properties
 if DEBUG
@@ -477,6 +487,7 @@ removeWindowBorder(hWnd)
   ; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
   WinMove(, , cnfg.origState.innerWidth, cnfg.origState.innerHeight, cnfg.hWnd)
+  sleep 100  ; TODO: Wait for window resize to finish before continuing
 }
 
 
