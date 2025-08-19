@@ -297,7 +297,6 @@ if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
 newWinState := unset
 
 
-
 if fscr.needsBackgroundOverlay
 {
   ; Resize the click area
