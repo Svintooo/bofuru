@@ -12,7 +12,7 @@
 ;                             Window is centered related to background overlay area.
 ;            show3            Show the MS Windows taskbar.
 ;                             Taskbar is removed twice from the allowed window area.
-lib_calcFullscreenArgs(window, selectedMonitorNumber := 0, winSize := "fit", taskbar := "hide")
+lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit", taskbar := "hide")
 {
   ;; Set default return values
   ok                     := true  ; No errors
