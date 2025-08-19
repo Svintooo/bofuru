@@ -302,7 +302,9 @@ if fscr.needsBackgroundOverlay
 if fscr.needsAlwaysOnTop
 {
   ; Make game window always on top
-  ConsoleMsg "INFO : Set AlwaysOnTop on game window"
+  if DEBUG
+    ConsoleMsg "DEBUG: Set AlwaysOnTop on game window"
+
   WinSetAlwaysOnTop(true, cnfg.hWnd)
 
   if IsSet(bkgr)
@@ -434,6 +436,8 @@ CollectWindowState(hWnd)
 ;; Remove window border
 removeWindowBorder(hWnd)
 {
+  global DEBUG
+
   if cnfg.origState.winMenu
     DllCall("SetMenu", "uint", cnfg.hWnd, "uint", 0)
 
@@ -443,7 +447,8 @@ removeWindowBorder(hWnd)
   try
     WinSetStyle(newWinStyle, "ahk_id" cnfg.hWnd)
   catch as e
-    ConsolePrintException(e)
+    if DEBUG
+      ConsolePrintException(e)
 
   ; Remove extended styles (NOTE: may not be needed)
   removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
@@ -455,7 +460,8 @@ removeWindowBorder(hWnd)
   try
     WinSetExStyle("-" removeWinExStyle, "ahk_id" cnfg.hWnd)   ; The minus (-) removes the styles from the current window styles
   catch as e
-    ConsolePrintException(e)
+    if DEBUG
+      ConsolePrintException(e)
 
   ; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
