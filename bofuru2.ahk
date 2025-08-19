@@ -52,6 +52,10 @@ cnfg := parseArgs(A_Args)
 if DEBUG
   ConsoleMsg "DEBUG: parsed args: {}".f(cnfg.Inspect())
 
+cnfg.monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
+cnfg.winsize := cnfg.HasOwnProp("winsize") ? cnfg.winsize : "fit",
+cnfg.taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide"
+
 
 ;; Run an *.exe
 if cnfg.HasOwnProp("launch")
@@ -194,9 +198,9 @@ OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 ;; Modify Window
 ; Calculate window modification parameters
 fscr := lib_calcFullscreenArgs(cnfg.origState,
-                              _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
-                              _winSize := cnfg.HasOwnProp("winsize") ? cnfg.winsize : "fit",
-                              _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
+                              _monitor := cnfg.monitor,
+                              _winSize := cnfg.winsize,
+                              _taskbar := cnfg.taskbar)
 if ! fscr.ok {
   ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
   ExitApp
@@ -217,9 +221,9 @@ newWinState := CollectWindowState(cnfg.hWnd)
 if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
 {
   fscr := lib_calcFullscreenArgs(newWinState,
-                                _monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
+                                _monitor := cnfg.monitor,
                                 _winSize := "keep",
-                                _taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide")
+                                _taskbar := cnfg.taskbar)
   if ! fscr.ok {
     ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
     ExitApp
