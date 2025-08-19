@@ -306,9 +306,7 @@ if fscr.needsAlwaysOnTop
     ConsoleMsg "DEBUG: Set AlwaysOnTop on game window"
 
   WinSetAlwaysOnTop(true, cnfg.hWnd)
-
-  if IsSet(bkgr)
-    WinSetAlwaysOnTop(true, bkgr.hWnd)
+  WinSetAlwaysOnTop(true, bkgr.hWnd)
 }
 
 
