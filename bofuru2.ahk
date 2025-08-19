@@ -175,7 +175,7 @@ ConsoleMsg ""
 ConsoleMsg "=== Modify Window ==="
 
 
-;; Generate transparent pixel
+;; Create background overlay - Generate transparent pixel
 ; Needed to make the overlay allow both mouse clicks and buttons
 if DEBUG
   ConsoleMsg "DEBUG: Generate transparent pixel"
@@ -186,6 +186,21 @@ if !result.ok {
 }
 pixel := result.data
 result := unset
+
+
+;; Create background overlay - Create overlay window
+ConsoleMsg "INFO : Create background overlay"
+bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
+bkgr.BackColor := "black"
+
+; Create internal window control element that covers the whole overlay
+WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
+                              ; and have other elements placed on top of them.
+bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
+
+; Make mouse clicks on overlay restore focus to game window
+bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
+bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
 
 
 ;; Focus the window
@@ -250,21 +265,8 @@ oldWinState := newWinState := unset
 
 if fscr.needsBackgroundOverlay
 {
-  ;; Create background overlay
-  ; Create overlay window
-  ConsoleMsg "INFO : Create background overlay"
-  bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
-  bkgr.BackColor := "black"
-
-  ; Create internal window control element that covers the whole overlay
-  WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
-                                ; and have other elements placed on top of them.
-  bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
+  ; Resize the click area
   bkgr.clickArea.Move(0, 0, fscr.overlay.w, fscr.overlay.h)
-
-  ; Make mouse clicks on overlay restore focus to game window
-  bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
-  bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
 
   ; Show overlay (it was hidden until now)
   bkgr.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
