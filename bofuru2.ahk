@@ -565,6 +565,10 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
        , HSHELL_HIGHBIT          := 0x00008000
        , HSHELL_RUDEAPPACTIVATED := HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT
 
+  ; Do nothing if AlwaysOnTop is not needed
+  if !IsSet(fscr) || !fscr.needsAlwaysOnTop
+    return
+
   ; React on events about switching focus to another window
   if wParam = HSHELL_WINDOWACTIVATED
   || wParam = HSHELL_RUDEAPPACTIVATED {
