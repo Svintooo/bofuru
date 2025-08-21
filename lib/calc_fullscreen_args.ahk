@@ -35,12 +35,13 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
   monitorCount := MonitorGetCount()
   monitorNumber  := false
 
+  ; Use the selected monitor
   if selectedMonitorNumber && selectedMonitorNumber <= monitorCount {
     monitorNumber := selectedMonitorNumber
   }
 
+  ; Select the monitor that contains the biggest area of the window
   if !monitorNumber {
-    ; Select the monitor that contains the biggest area of the window
     monitorWinArea := 0
 
     Loop monitorCount {
@@ -69,6 +70,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
     monX1 := monX2 := monY1 := monY2 := unset
   }
 
+  ; Fallback to using the primary monitor
   if !monitorNumber {
     monitorNumber := MonitorGetPrimary()
   }
@@ -78,7 +80,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
 
   ;NOTE: mon = monitor area
   ;      scr = allowed screen area for the window to reside in
-  ;      ovr = allowed screen area for the background overlay
+  ;      ovr = screen area for the background overlay
   mon := {
     x: Min(monX1,monX2),
     y: Min(monY1,monY2),
@@ -166,7 +168,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
 
   ;; Calculate new window position and size
   ; size is calculated to fit inside scr (allowed screen area)
-  ; position is centered relative to mon (monitor area)
+  ; position is centered according to variable `cntr`
   switch winSize
   {
   case "original", "keep":
@@ -248,10 +250,12 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
   return {
     ok:     ok,
     reason: reason,
+
     window:  win,
     screen:  scr,
     overlay: ovr,
     monitor: mon,
+
     needsBackgroundOverlay: needsBackgroundOverlay,
     needsAlwaysOnTop:       needsAlwaysOnTop,
   }
