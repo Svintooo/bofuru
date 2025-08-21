@@ -196,9 +196,9 @@ ConsoleMsg "INFO : Create background overlay"
 bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
 bkgr.BackColor := "black"
 
-; Create internal window control element that covers the whole overlay
-WS_CLIPSIBLINGS := 0x4000000  ; This will let pictures be both clickable,
-                              ; and have other elements placed on top of them.
+; Create internal window control element (meant to covers the whole overlay)
+WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
+                               ; and have other elements placed on top of them.
 bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
 
 ; Make mouse clicks on overlay restore focus to game window
@@ -221,13 +221,16 @@ if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
 ;; Focus the window
 if DEBUG
   ConsoleMsg "DEBUG: Put the game window in focus"
+
 WinActivate(cnfg.hWnd)
 
 
 ;; Collect Window State
 if DEBUG
   ConsoleMsg "DEBUG: Collecting current window state"
+
 cnfg.origState := CollectWindowState(cnfg.hWnd)
+
 if DEBUG
   ConsolePrintWindowState(cnfg.origState, "Original window state")
 
@@ -235,6 +238,7 @@ if DEBUG
 ;; Restore window state on exit
 if DEBUG
   ConsoleMsg "DEBUG: Register OnExit callback to restore window state on exit"
+
 OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
@@ -287,10 +291,12 @@ if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
                                 _monitor := cnfg.monitor,
                                 _winSize := "keep",
                                 _taskbar := cnfg.taskbar)
+
   if ! fscr.ok {
     ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
     ExitApp
   }
+
   WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
 }
 
