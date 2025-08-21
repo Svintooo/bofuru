@@ -262,101 +262,110 @@ if cnfg.noBorderState.width  != cnfg.origState.innerWidth
 }
 
 
-;TODO: Make function of this code here
-;##############################################################################
-;; Calculate window fullscreen properties
-if DEBUG
-  ConsoleMsg "DEBUG: Calculate window fullscreen properties"
+;; Make Window Fullscreen
+ConsoleMsg "INFO : Activate Window Fullscreen"
+makeWindowFullscreen()
 
-fscr := lib_calcFullscreenArgs(cnfg.noBorderState,
-                              _monitor := cnfg.monitor,
-                              _winSize := cnfg.winsize,
-                              _taskbar := cnfg.taskbar)
-
-if ! fscr.ok {
-  restoreWindowState(cnfg.hWnd, cnfg.origState)
-  ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
-  ExitApp
-}
-
-
-;; Resize and reposition window
-ConsoleMsg "INFO : Resize and reposition window"
-WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
-sleep 1  ; Millisecond
-newWinState := CollectWindowState(cnfg.hWnd)
-
-; If window did not get the intended size, reposition window using its current size
-if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
+makeWindowFullscreen()
 {
-  fscr := lib_calcFullscreenArgs(newWinState,
+  global cnfg
+  global fscr
+
+  ;; Calculate window fullscreen properties
+  if DEBUG
+    ConsoleMsg "DEBUG: Calculate window fullscreen properties"
+
+  fscr := lib_calcFullscreenArgs(cnfg.noBorderState,
                                 _monitor := cnfg.monitor,
-                                _winSize := "keep",
+                                _winSize := cnfg.winsize,
                                 _taskbar := cnfg.taskbar)
 
   if ! fscr.ok {
+    restoreWindowState(cnfg.hWnd, cnfg.origState)
     ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
     ExitApp
   }
 
+
+  ;; Resize and reposition window
+  if DEBUG
+    ConsoleMsg "DEBUG: Resize and reposition window"
+
   WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
-}
+  sleep 1  ; Millisecond
+  newWinState := CollectWindowState(cnfg.hWnd)
 
-newWinState := unset
+  ; If window did not get the intended size, reposition window using its current size
+  if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
+  {
+    fscr := lib_calcFullscreenArgs(newWinState,
+                                  _monitor := cnfg.monitor,
+                                  _winSize := "keep",
+                                  _taskbar := cnfg.taskbar)
 
+    if ! fscr.ok {
+      ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
+      ExitApp
+    }
 
-if ! fscr.needsBackgroundOverlay
-{
-  bkgr.Hide()
-}
-else
-{
-  ; Resize the click area
-  bkgr.clickArea.Move(0, 0, fscr.overlay.w, fscr.overlay.h)
+    WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
+  }
 
-  ; Show overlay (it was hidden until now)
-  bkgr.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
-
-  ; Cut a hole in the overlay for the game window to be seen
-  ; NOTE: The coordinates are relative to the overlay, not the desktop area
-  polygonStr := Format(
-    "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
-    "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
-    fscr.overlay.w,                                 ;{1} Overlay Area: width
-    fscr.overlay.h,                                 ;{2} Overlay Area: height
-    fscr.window.x - fscr.overlay.x,                 ;{3} Game Window: x coordinate (left)
-    fscr.window.y - fscr.overlay.y,                 ;{4} Game Window: y coordinate (top)
-    fscr.window.x - fscr.overlay.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
-    fscr.window.y - fscr.overlay.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
-  )
-  WinSetRegion(polygonStr, bkgr.hwnd)
-}
+  newWinState := unset
 
 
-if ! fscr.needsAlwaysOnTop
-{
-  ; Disable game window always on top
+  if ! fscr.needsBackgroundOverlay
+  {
+    bkgr.Hide()
+  }
+  else
+  {
+    ; Resize the click area
+    bkgr.clickArea.Move(0, 0, fscr.overlay.w, fscr.overlay.h)
+
+    ; Show overlay (it was hidden until now)
+    bkgr.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
+
+    ; Cut a hole in the overlay for the game window to be seen
+    ; NOTE: The coordinates are relative to the overlay, not the desktop area
+    polygonStr := Format(
+      "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
+      "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
+      fscr.overlay.w,                                 ;{1} Overlay Area: width
+      fscr.overlay.h,                                 ;{2} Overlay Area: height
+      fscr.window.x - fscr.overlay.x,                 ;{3} Game Window: x coordinate (left)
+      fscr.window.y - fscr.overlay.y,                 ;{4} Game Window: y coordinate (top)
+      fscr.window.x - fscr.overlay.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
+      fscr.window.y - fscr.overlay.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
+    )
+    WinSetRegion(polygonStr, bkgr.hwnd)
+  }
+
+
+  if ! fscr.needsAlwaysOnTop
+  {
+    ; Disable game window always on top
+    if DEBUG
+      ConsoleMsg "DEBUG: Disable AlwaysOnTop on game window"
+
+    WinSetAlwaysOnTop(false, cnfg.hWnd)
+    WinSetAlwaysOnTop(false, bkgr.hWnd)
+  }
+  else
+  {
+    ; Make game window always on top
+    if DEBUG
+      ConsoleMsg "DEBUG: Set AlwaysOnTop on game window"
+
+    WinSetAlwaysOnTop(true, cnfg.hWnd)
+    WinSetAlwaysOnTop(true, bkgr.hWnd)
+  }
+
+
+  ;; Print new window state
   if DEBUG
-    ConsoleMsg "DEBUG: Disable AlwaysOnTop on game window"
-
-  WinSetAlwaysOnTop(false, cnfg.hWnd)
-  WinSetAlwaysOnTop(false, bkgr.hWnd)
+    ConsolePrintWindowState(cnfg.hWnd, "New window state")
 }
-else
-{
-  ; Make game window always on top
-  if DEBUG
-    ConsoleMsg "DEBUG: Set AlwaysOnTop on game window"
-
-  WinSetAlwaysOnTop(true, cnfg.hWnd)
-  WinSetAlwaysOnTop(true, bkgr.hWnd)
-}
-
-
-;; Print new window state
-if DEBUG
-  ConsolePrintWindowState(cnfg.hWnd, "New window state")
-;##############################################################################
 
 
 
