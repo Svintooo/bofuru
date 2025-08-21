@@ -262,6 +262,8 @@ if cnfg.noBorderState.width  != cnfg.origState.innerWidth
 }
 
 
+;TODO: Make function of this code here
+;##############################################################################
 ;; Calculate window fullscreen properties
 if DEBUG
   ConsoleMsg "DEBUG: Calculate window fullscreen properties"
@@ -303,7 +305,11 @@ if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
 newWinState := unset
 
 
-if fscr.needsBackgroundOverlay
+if ! fscr.needsBackgroundOverlay
+{
+  bkgr.Hide()
+}
+else
 {
   ; Resize the click area
   bkgr.clickArea.Move(0, 0, fscr.overlay.w, fscr.overlay.h)
@@ -327,7 +333,16 @@ if fscr.needsBackgroundOverlay
 }
 
 
-if fscr.needsAlwaysOnTop
+if ! fscr.needsAlwaysOnTop
+{
+  ; Disable game window always on top
+  if DEBUG
+    ConsoleMsg "DEBUG: Disable AlwaysOnTop on game window"
+
+  WinSetAlwaysOnTop(false, cnfg.hWnd)
+  WinSetAlwaysOnTop(false, bkgr.hWnd)
+}
+else
 {
   ; Make game window always on top
   if DEBUG
@@ -341,6 +356,7 @@ if fscr.needsAlwaysOnTop
 ;; Print new window state
 if DEBUG
   ConsolePrintWindowState(cnfg.hWnd, "New window state")
+;##############################################################################
 
 
 
