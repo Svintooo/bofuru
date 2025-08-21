@@ -37,39 +37,44 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
 
   if selectedMonitorNumber && selectedMonitorNumber <= monitorCount {
     monitorNumber := selectedMonitorNumber
-    MonitorGet(monitorNumber, &monX1, &monY1, &monX2, &monY2)
   }
 
   if !monitorNumber {
-    ; Select first monitor that contains window x y coordinates
+    ; Select the monitor that contains the biggest area of the window
+    monitorWinArea := 0
+
     Loop monitorCount {
       MonitorGet(A_Index, &monX1, &monY1, &monX2, &monY2)
 
-      if (monX1 <= win.x && win.x <= monX2 && monY1 <= win.y && win.y <= monY2)
-      || (monX2 <= win.x && win.x <= monX1 && monY2 <= win.y && win.y <= monY1) {
-        monitorNumber := A_Index
-        break
-      }
-    }
+      if (monX1 < win.x + win.w && win.x < monX2 && monY1 < win.y + win.h && win.y < monY2)
+      || (monX2 < win.x + win.w && win.x < monX1 && monY2 < win.y + win.h && win.y < monY1)
+      {
+        left   := (monX1 <= win.x       ? win.x : monX1)
+        right  := (monX2 <= win.x+win.w ? monX2 : win.x+win.w)
+        top    := (monY1 <= win.y       ? win.y : monY1)
+        bottom := (monY2 <= win.y+win.h ? monY2 : win.y+win.h)
+        width  := Abs(left - right)
+        height := Abs(top - bottom)
+        area   := width * height
 
-    if !monitorNumber {
-      ; Select first monitor that overlaps with the window
-      Loop monitorCount {
-        MonitorGet(A_Index, &monX1, &monY1, &monX2, &monY2)
-
-        if (monX1 < win.x + win.w && win.x < monX2 && monY1 < win.y + win.h && win.y < monY2)
-        || (monX2 < win.x + win.w && win.x < monX1 && monY2 < win.y + win.h && win.y < monY1) {
-          monitorNumber := A_Index
-          break
+        if area > monitorWinArea {
+          monitorNumber  := A_Index
+          monitorWinArea := area
         }
       }
     }
+
+    left := right := top := bottom := width := height := area := unset
+    monitorWinArea := unset
+    monX1 := monX2 := monY1 := monY2 := unset
   }
 
   if !monitorNumber {
     monitorNumber := MonitorGetPrimary()
-    MonitorGet(monitorNumber, &monX1, &monY1, &monX2, &monY2)
   }
+
+  ; Fetch monitor corner coordinates
+  MonitorGet(monitorNumber, &monX1, &monY1, &monX2, &monY2)
 
   ;NOTE: mon = monitor area
   ;      scr = allowed screen area for the window to reside in
