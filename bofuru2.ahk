@@ -12,7 +12,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #Include %A_ScriptDir%\lib\stdlib.ahk
-#Include %A_ScriptDir%\lib\console_msg.ahk
 #Include %A_ScriptDir%\lib\user_window_select.ahk
 #Include %A_ScriptDir%\lib\can_window_be_fullscreened.ahk
 #Include %A_ScriptDir%\lib\generate_transparent_pixel.ahk
@@ -33,12 +32,37 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Program Gui Window
+{
+  ; Window
+  mainGui := Gui("+Border +Caption +MinimizeBox -MaximizeBox +MinSize +MaxSize -Resize +SysMenu +Theme"
+                , _winTitle := "BoFuRu")
+  mainGui.SetFont("S12")  ; Font Size
+  mainGui.OnEvent("Close", (*) => ExitApp())  ; Stop script on window close
+
+  ; Console
+  mainGui.console := mainGui.AddEdit("w1000 h300 +vConsole +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
+  mainGui.console.setFont(, "Consolas")
+
+  ; Quit Button
+  mainGui.Button_Quit := mainGui.AddButton("", "Quit")
+  mainGui.Button_Quit.OnEvent("Click", (*) => WinClose(mainGui.hWnd))
+
+  ; Render the window on screen
+  mainGui.Show()
+  DllCall("User32.dll\HideCaret", "Ptr", mainGui.console.Hwnd)
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Intro
 {
   ConsoleMsg "##################################"
   ConsoleMsg "#       ===== BoFuRu =====       #"
   ConsoleMsg "# Windowed Borderless Fullscreen #"
   ConsoleMsg "##################################"
+  ConsoleMsg , , _postSpacing := 1
 }
 
 
@@ -46,8 +70,7 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Start - Find a Window to make Fullscreen
 {
-  ConsoleMsg ""
-  ConsoleMsg "=== Find Window ==="
+  ConsoleMsg "=== Find Window ===", _preSPacing:= 1
 
 
   ;; Parse args
@@ -68,8 +91,8 @@ DEBUG := false
     result := launchExe(cnfg.launch)
 
     if ! result.ok {
-      ConsoleMsg("ERROR: Launch failed", _wait_enter := true)
-      ExitApp
+      ConsoleMsg "ERROR: Launch failed"
+      return
     }
 
     cnfg.pid := result.pid
@@ -98,8 +121,8 @@ DEBUG := false
 
     if !cnfg.hWnd
     {
-      ConsoleMsg "ERROR: PID disappeared before window was found", _wait_enter := true
-      ExitApp
+      ConsoleMsg "ERROR: PID disappeared before window was found"
+      return
     }
   }
 
@@ -110,7 +133,7 @@ DEBUG := false
     ConsoleMsg "INFO : Manual Window selection activated"
     ConsoleMsg "       - Click on game window"
     ConsoleMsg "       - Press Esc to cancel"
-    ConsoleMsg ""
+    ConsoleMsg , , _postSpacing := 1
 
     result := lib_userWindowSelect()
     while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
@@ -123,8 +146,8 @@ DEBUG := false
       ; User cancelled the operation
       ExitApp
     } else if ! result.ok {
-      ConsoleMsg "ERROR: {}".f(result.reason), _wait_enter := true
-      ExitApp
+      ConsoleMsg "ERROR: {}".f(result.reason)
+      return
     }
 
     cnfg.hWnd := result.hWnd
@@ -142,7 +165,7 @@ DEBUG := false
 
 
   ;; Print window info
-  ConsoleMsg "INFO : Window found"
+  ConsoleMsg "INFO : Window found", _preSpacing := 1
   if DEBUG {
   ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
   ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
@@ -152,14 +175,14 @@ DEBUG := false
   ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
   ;ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())
   ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
-  ConsoleMsg ""
+  ConsoleMsg , , _postSpacing := 1
 
 
   ;; Check if window is allowed
   if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
   {
-    ConsoleMsg "ERROR: Unsupported window selected", _wait_enter := true
-    ExitApp
+    ConsoleMsg "ERROR: Unsupported window selected"
+    return
   }
 
 
@@ -179,8 +202,7 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Main - Make Window Fullscreen
 {
-  ConsoleMsg ""
-  ConsoleMsg "=== Modify Window ==="
+  ConsoleMsg "=== Modify Window ===", _preSpacing := 2
 
 
   ;; Create background overlay - Generate transparent pixel
@@ -260,10 +282,10 @@ DEBUG := false
   if cnfg.noBorderState.width  != cnfg.origState.innerWidth
   || cnfg.noBorderState.height != cnfg.origState.innerHeight
   {
-    ConsoleMsg ""
+    ConsoleMsg , _preSpacing := 1
     ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
     ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
-    ConsoleMsg ""
+    ConsoleMsg , , _postSpacing := 1
   }
 
 
@@ -277,9 +299,7 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program End - Wait until window or script exits
 {
-  ConsoleMsg ""
-  ConsoleMsg "=== DONE ==="
-
+  ConsoleMsg "=== DONE ===", _preSpacing := 2
   ConsoleMsg "Your game should now be in fullscreen."
 }
 
@@ -288,9 +308,37 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Functions and Classes
 
-ConsoleMsg(msg, wait_enter := false)
+ConsoleMsg(msg?, preSpacing := 0, postSpacing := 0)
 {
-  return lib_consoleMsg(msg, wait_enter)
+  global mainGui
+  static firstTime := true
+  static spacing := 0
+
+  ; Pre Spacing
+  loop Max(spacing, preSpacing)
+    mainGui.console.Value .= "`n"
+  spacing := 0
+
+  ; Post Spacing
+  spacing += postSpacing
+
+  ; Print message
+  if IsSet(msg) {
+    if ! firstTime
+      mainGui.console.Value .= "`n"
+    mainGui.console.Value .= msg
+  }
+
+  ; Set firstTime
+  if firstTime {
+    firstTime := false
+  }
+
+  ; Scroll to bottom
+  DllCall("User32.dll\SendMessage", "Ptr", mainGui.console.hWnd
+                                  , "UInt",0x115  ; WM_VSCROLL
+                                  , "Ptr", 7      ; SB_BOTTOM
+                                  , "Ptr", 0)
 }
 
 
@@ -479,6 +527,7 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
   winMenuStr    := "0x{:08X}".f(winState.winMenu)
 
+  ConsoleMsg , _preSpacing := 1
   ConsoleMsg "DEBUG: {}".f(message)
   ConsoleMsg "       x           = {}".f(winState.x)
   ConsoleMsg "       y           = {}".f(winState.y)
@@ -489,15 +538,18 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   ConsoleMsg "       winStyle    = {}".f(winStyleStr)
   ConsoleMsg "       winExStyle  = {}".f(winExStyleStr)
   ConsoleMsg "       winMenu     = {}".f(winMenuStr)
+  ConsoleMsg , , _postSpacing := 1
 }
 
 
 ;; Print exception to console
 ConsolePrintException(e)
 {
+  ConsoleMsg , _preSpacing := 1
   ConsoleMsg "UNKNOWN: {} threw error of type {}".f(e.What.Inspect(), Type(e))
   ConsoleMsg "         msg: {}".f(e.Message.Inspect())
   ConsoleMsg "         xtra: {}".f(e.Extra.Inspect())
+  ConsoleMsg , , _postSpacing := 1
 }
 
 
@@ -618,8 +670,8 @@ makeWindowFullscreen()
 
   if ! fscr.ok {
     restoreWindowState(cnfg.hWnd, cnfg.origState)
-    ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
-    ExitApp
+    ConsoleMsg "ERROR: {}".f(fscr.reason)
+    return
   }
 
 
@@ -641,8 +693,8 @@ makeWindowFullscreen()
 
     if ! fscr.ok {
       restoreWindowState(cnfg.hWnd, cnfg.origState)
-      ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
-      ExitApp
+      ConsoleMsg "ERROR: {}".f(fscr.reason)
+      return
     }
 
     WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
