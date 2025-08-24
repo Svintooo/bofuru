@@ -281,8 +281,6 @@ DEBUG := false
   ConsoleMsg "=== DONE ==="
 
   ConsoleMsg "Your game should now be in fullscreen."
-  ;; ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", _wait_enter := true)
-  ;; ExitApp
 }
 
 
