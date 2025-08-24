@@ -34,10 +34,10 @@ DEBUG := false
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Intro
-ConsoleMsg "#########################"
-ConsoleMsg "#     === BoFuRu ===    #"
-ConsoleMsg "# Borderless Fullscreen #"
-ConsoleMsg "#########################"
+ConsoleMsg "##################################"
+ConsoleMsg "#       ===== BoFuRu =====       #"
+ConsoleMsg "# Windowed Borderless Fullscreen #"
+ConsoleMsg "##################################"
 
 
 
