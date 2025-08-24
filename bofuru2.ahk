@@ -34,248 +34,256 @@ DEBUG := false
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Intro
-ConsoleMsg "##################################"
-ConsoleMsg "#       ===== BoFuRu =====       #"
-ConsoleMsg "# Windowed Borderless Fullscreen #"
-ConsoleMsg "##################################"
+{
+  ConsoleMsg "##################################"
+  ConsoleMsg "#       ===== BoFuRu =====       #"
+  ConsoleMsg "# Windowed Borderless Fullscreen #"
+  ConsoleMsg "##################################"
+}
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Start - Find a Window to make Fullscreen
-ConsoleMsg ""
-ConsoleMsg "=== Find Window ==="
-
-
-;; Parse args
-cnfg := parseArgs(A_Args)
-if DEBUG
-  ConsoleMsg "DEBUG: parsed args: {}".f(cnfg.Inspect())
-
-DEBUG        := cnfg.HasOwnProp("debug")   ? cnfg.debug   : DEBUG,
-cnfg.monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
-cnfg.winsize := cnfg.HasOwnProp("winsize") ? cnfg.winsize : "fit",
-cnfg.taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide"
-
-
-;; Run an *.exe
-if cnfg.HasOwnProp("launch")
 {
-  ConsoleMsg("INFO : Launching: " cnfg.launch)
-  result := launchExe(cnfg.launch)
+  ConsoleMsg ""
+  ConsoleMsg "=== Find Window ==="
 
-  if ! result.ok {
-    ConsoleMsg("ERROR: Launch failed", _wait_enter := true)
-    ExitApp
-  }
 
-  cnfg.pid := result.pid
-  result := unset
+  ;; Parse args
+  cnfg := parseArgs(A_Args)
   if DEBUG
-    ConsoleMsg "DEBUG: Launch success, got PID: " cnfg.pid
-}
+    ConsoleMsg "DEBUG: parsed args: {}".f(cnfg.Inspect())
+
+  DEBUG        := cnfg.HasOwnProp("debug")   ? cnfg.debug   : DEBUG,
+  cnfg.monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
+  cnfg.winsize := cnfg.HasOwnProp("winsize") ? cnfg.winsize : "fit",
+  cnfg.taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide"
 
 
-;; Wait for a window to show up
-if cnfg.HasOwnProp("ahk_wintitle")
-{
-  ConsoleMsg "INFO : Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
-  cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
-}
-
-
-;; Wait for a window to show up belonging to PID
-if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
-{
-  ConsoleMsg "INFO : Waiting for window belonging to PID"
-  cnfg.hWnd := false
-
-  while !cnfg.hWnd && ProcessExist(cnfg.pid)
-    cnfg.hWnd := WinWait("ahk_pid" cnfg.pid, , _timeout := 1)
-
-  if !cnfg.hWnd
+  ;; Run an *.exe
+  if cnfg.HasOwnProp("launch")
   {
-    ConsoleMsg "ERROR: PID disappeared before window was found", _wait_enter := true
-    ExitApp
+    ConsoleMsg("INFO : Launching: " cnfg.launch)
+    result := launchExe(cnfg.launch)
+
+    if ! result.ok {
+      ConsoleMsg("ERROR: Launch failed", _wait_enter := true)
+      ExitApp
+    }
+
+    cnfg.pid := result.pid
+    result := unset
+    if DEBUG
+      ConsoleMsg "DEBUG: Launch success, got PID: " cnfg.pid
   }
-}
 
 
-;; Let user manually select a window
-if ! cnfg.HasOwnProp("hWnd")
-{
-  ConsoleMsg "INFO : Manual Window selection activated"
-  ConsoleMsg "       - Click on game window"
-  ConsoleMsg "       - Press Esc to cancel"
+  ;; Wait for a window to show up
+  if cnfg.HasOwnProp("ahk_wintitle")
+  {
+    ConsoleMsg "INFO : Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
+    cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
+  }
+
+
+  ;; Wait for a window to show up belonging to PID
+  if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
+  {
+    ConsoleMsg "INFO : Waiting for window belonging to PID"
+    cnfg.hWnd := false
+
+    while !cnfg.hWnd && ProcessExist(cnfg.pid)
+      cnfg.hWnd := WinWait("ahk_pid" cnfg.pid, , _timeout := 1)
+
+    if !cnfg.hWnd
+    {
+      ConsoleMsg "ERROR: PID disappeared before window was found", _wait_enter := true
+      ExitApp
+    }
+  }
+
+
+  ;; Let user manually select a window
+  if ! cnfg.HasOwnProp("hWnd")
+  {
+    ConsoleMsg "INFO : Manual Window selection activated"
+    ConsoleMsg "       - Click on game window"
+    ConsoleMsg "       - Press Esc to cancel"
+    ConsoleMsg ""
+
+    result := lib_userWindowSelect()
+    while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
+    {
+      ConsoleMsg "ERROR: This window is unsupported: Try again"
+      result := lib_userWindowSelect()
+    }
+
+    if ! result.ok && result.reason = "user cancel" {
+      ; User cancelled the operation
+      ExitApp
+    } else if ! result.ok {
+      ConsoleMsg "ERROR: {}".f(result.reason), _wait_enter := true
+      ExitApp
+    }
+
+    cnfg.hWnd := result.hWnd
+    result := unset
+  }
+
+
+  ;; Fetch window info
+  cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
+  cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
+  cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
+  cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
+  cnfg.procName     := WinGetProcessName( "ahk_id" cnfg.hWnd )
+  cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
+
+
+  ;; Print window info
+  ConsoleMsg "INFO : Window found"
+  if DEBUG {
+  ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
+  ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
+  }
+  ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
+  ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
+  ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
+  ;ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())
+  ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
   ConsoleMsg ""
 
-  result := lib_userWindowSelect()
-  while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
+
+  ;; Check if window is allowed
+  if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
   {
-    ConsoleMsg "ERROR: This window is unsupported: Try again"
-    result := lib_userWindowSelect()
-  }
-
-  if ! result.ok && result.reason = "user cancel" {
-    ; User cancelled the operation
-    ExitApp
-  } else if ! result.ok {
-    ConsoleMsg "ERROR: {}".f(result.reason), _wait_enter := true
+    ConsoleMsg "ERROR: Unsupported window selected", _wait_enter := true
     ExitApp
   }
 
-  cnfg.hWnd := result.hWnd
-  result := unset
+
+  ;; Exit BoFuRu if the game window is closed
+  if DEBUG
+    ConsoleMsg "DEBUG: Bind exit event to window close"
+  Event_AppExit() {
+    if not WinExist("ahk_id" cnfg.hWnd)
+      ExitApp(0)
+  }
+  MAX_PRIORITY := 2147483647
+  SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 }
-
-
-;; Fetch window info
-cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
-cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
-cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
-cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
-cnfg.procName     := WinGetProcessName( "ahk_id" cnfg.hWnd )
-cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
-
-
-;; Print window info
-ConsoleMsg "INFO : Window found"
-if DEBUG {
-ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
-ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
-}
-ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
-ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
-ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
-;ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())
-ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
-ConsoleMsg ""
-
-
-;; Check if window is allowed
-if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
-{
-  ConsoleMsg "ERROR: Unsupported window selected", _wait_enter := true
-  ExitApp
-}
-
-
-;; Exit BoFuRu if the game window is closed
-if DEBUG
-  ConsoleMsg "DEBUG: Bind exit event to window close"
-Event_AppExit() {
-  if not WinExist("ahk_id" cnfg.hWnd)
-    ExitApp(0)
-}
-MAX_PRIORITY := 2147483647
-SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Main - Make Window Fullscreen
-ConsoleMsg ""
-ConsoleMsg "=== Modify Window ==="
-
-
-;; Create background overlay - Generate transparent pixel
-; Needed to make the overlay allow both mouse clicks and buttons
-if DEBUG
-  ConsoleMsg "DEBUG: Generate transparent pixel"
-result := lib_GenerateTransparentPixel()
-if !result.ok {
-  ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
-  ExitApp
-}
-pixel := result.data
-result := unset
-
-
-;; Create background overlay - Create overlay window
-ConsoleMsg "INFO : Create background overlay (hidden for now)"
-bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
-bkgr.BackColor := "black"
-
-; Create internal window control element (meant to covers the whole overlay)
-WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
-                               ; and have other elements placed on top of them.
-bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
-
-; Make mouse clicks on overlay restore focus to game window
-bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
-bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
-
-
-;; Detect focus change to any window
-; Tell MS Windows to notify us of events for all windows
-if DEBUG
-  ConsoleMsg "DEBUG: Bind focus change event to toggle AlwaysOnTop"
-
-if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
-{
-  MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
-  OnMessage(MsgNum, ShellMessage)
-}
-
-
-;; Focus the window
-if DEBUG
-  ConsoleMsg "DEBUG: Put the game window in focus"
-
-WinActivate(cnfg.hWnd)
-
-
-;; Collect Window State
-if DEBUG
-  ConsoleMsg "DEBUG: Collecting current window state"
-
-cnfg.origState := CollectWindowState(cnfg.hWnd)
-
-if DEBUG
-  ConsolePrintWindowState(cnfg.origState, "Original window state")
-
-
-;; Restore window state on exit
-if DEBUG
-  ConsoleMsg "DEBUG: Register OnExit callback to restore window state on exit"
-
-OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
-
-
-;; Remove Window Border
-ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
-removeWindowBorder(cnfg.hWnd)
-
-; Get new window state
-cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
-if DEBUG
-  ConsolePrintWindowState(cnfg.noBorderState, "No-border window state")
-
-; Warn if window lost its aspect ratio
-if cnfg.noBorderState.width  != cnfg.origState.innerWidth
-|| cnfg.noBorderState.height != cnfg.origState.innerHeight
 {
   ConsoleMsg ""
-  ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
-  ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
-  ConsoleMsg ""
+  ConsoleMsg "=== Modify Window ==="
+
+
+  ;; Create background overlay - Generate transparent pixel
+  ; Needed to make the overlay allow both mouse clicks and buttons
+  if DEBUG
+    ConsoleMsg "DEBUG: Generate transparent pixel"
+  result := lib_GenerateTransparentPixel()
+  if !result.ok {
+    ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
+    ExitApp
+  }
+  pixel := result.data
+  result := unset
+
+
+  ;; Create background overlay - Create overlay window
+  ConsoleMsg "INFO : Create background overlay (hidden for now)"
+  bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
+  bkgr.BackColor := "black"
+
+  ; Create internal window control element (meant to covers the whole overlay)
+  WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
+                                 ; and have other elements placed on top of them.
+  bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
+
+  ; Make mouse clicks on overlay restore focus to game window
+  bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
+  bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+
+
+  ;; Detect focus change to any window
+  ; Tell MS Windows to notify us of events for all windows
+  if DEBUG
+    ConsoleMsg "DEBUG: Bind focus change event to toggle AlwaysOnTop"
+
+  if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+  {
+    MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
+    OnMessage(MsgNum, ShellMessage)
+  }
+
+
+  ;; Focus the window
+  if DEBUG
+    ConsoleMsg "DEBUG: Put the game window in focus"
+
+  WinActivate(cnfg.hWnd)
+
+
+  ;; Collect Window State
+  if DEBUG
+    ConsoleMsg "DEBUG: Collecting current window state"
+
+  cnfg.origState := CollectWindowState(cnfg.hWnd)
+
+  if DEBUG
+    ConsolePrintWindowState(cnfg.origState, "Original window state")
+
+
+  ;; Restore window state on exit
+  if DEBUG
+    ConsoleMsg "DEBUG: Register OnExit callback to restore window state on exit"
+
+  OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
+
+
+  ;; Remove Window Border
+  ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
+  removeWindowBorder(cnfg.hWnd)
+
+  ; Get new window state
+  cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
+  if DEBUG
+    ConsolePrintWindowState(cnfg.noBorderState, "No-border window state")
+
+  ; Warn if window lost its aspect ratio
+  if cnfg.noBorderState.width  != cnfg.origState.innerWidth
+  || cnfg.noBorderState.height != cnfg.origState.innerHeight
+  {
+    ConsoleMsg ""
+    ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
+    ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
+    ConsoleMsg ""
+  }
+
+
+  ;; Make Window Fullscreen
+  ConsoleMsg "INFO : Activate Window Fullscreen"
+  makeWindowFullscreen()
 }
-
-
-;; Make Window Fullscreen
-ConsoleMsg "INFO : Activate Window Fullscreen"
-makeWindowFullscreen()
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program End - Wait until window or script exits
-ConsoleMsg ""
-ConsoleMsg "=== DONE ==="
+{
+  ConsoleMsg ""
+  ConsoleMsg "=== DONE ==="
 
-ConsoleMsg "Your game should now be in fullscreen."
-;; ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", _wait_enter := true)
-;; ExitApp
+  ConsoleMsg "Your game should now be in fullscreen."
+  ;; ConsoleMsg("Press enter to quit fullscreen and exit BoFuRu.", _wait_enter := true)
+  ;; ExitApp
+}
 
 
 
