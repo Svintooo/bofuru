@@ -640,6 +640,7 @@ makeWindowFullscreen()
                                   _taskbar := cnfg.taskbar)
 
     if ! fscr.ok {
+      restoreWindowState(cnfg.hWnd, cnfg.origState)
       ConsoleMsg "ERROR: {}".f(fscr.reason), _wait_enter := true
       ExitApp
     }
