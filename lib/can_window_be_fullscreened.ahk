@@ -49,7 +49,7 @@ lib_isWindowClassAllowed(className) {
     "CabinetWClass",true,                 ; Win11 FileExplorer
     "Shell_TrayWnd",true,                 ; Win11 Taskbar
     "Shell_SecondaryTrayWnd",true,        ; Win11 Taskbar
-    "AutoHotkeyGUI",true,                 ; AutoHotKey create Gui Window
+    "AutoHotkeyGUI",true,                 ; AutoHotKey created Gui Window
   )
 
   return ! BLOCKED_CLASSES.Has(className)
