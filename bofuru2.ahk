@@ -44,7 +44,7 @@ DEBUG := false
 
   ; Console
   mainGui.console := mainGui.AddEdit("w1000 h300 +vConsole +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
-  mainGui.console.setFont(, "Consolas")
+  mainGui.console.setFont(, "Consolas")  ; Monospace font
 
   ; Buttons
   mainGui.Button_WinSelect  := mainGui.AddButton("",     "Select Window")
@@ -74,7 +74,7 @@ DEBUG := false
   mainGui.Button_Quit := mainGui.AddButton("", "Quit")
   mainGui.Button_Quit.OnEvent("Click", (*) => WinClose(mainGui.hWnd))
 
-  ; Render the window on screen
+  ; Show the window
   mainGui.Show()
   DllCall("User32.dll\HideCaret", "Ptr", mainGui.console.Hwnd)
 }
