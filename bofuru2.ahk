@@ -52,41 +52,37 @@ DEBUG := false
 
   ; Settings - Monitors
   mainGui.texts.Push mainGui.AddText("", "Monitor")
-  mainGui.Radios_Monitors := Map()
-  mainGui.Radios_Monitors.Selected := 0  ; hWnd of the selected radio button
+  mainGui.MonitorSelected := 0  ; hWnd of the selected monitor radio button
   loop MonitorGetCount()
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     newRadio := mainGui.AddRadio("Y+{} vMonitor{} {}".f(spacing,A_Index,groupOpt), String(A_Index))
     ; When clicking on an already selected radio button: deselect it (make it so no radio button is selected)
-    newRadio.OnEvent("Click", (radio, args*) => (radio.hWnd = mainGui.Radios_Monitors.Selected ? (radio.Value := 0, mainGui.Radios_Monitors.Selected := 0) : mainGui.Radios_Monitors.Selected := radio.hWnd))
-    mainGui.Radios_Monitors[String(A_Index)] := newRadio
+    newRadio.OnEvent("Click", (radio, args*) => (radio.hWnd = mainGui.MonitorSelected ? (radio.Value := 0, mainGui.MonitorSelected := 0) : mainGui.MonitorSelected := radio.hWnd))
   }
   groupOpt := newRadio := unset
 
   ; Settings - Window Size
   mainGui.texts.Push mainGui.AddText("", "Window Size")
-  mainGui.Radios_WinSize := Map()
   for WinSizeOpt in ["original", "fit", "stretch", "pixel-perfect"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
                                           .StrReplace("-"," ")
-    mainGui.Radios_WinSize[WinSizeOpt] := mainGui.AddRadio("Y+{} vWinSize{} {}".f(spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
+    mainGui.AddRadio("Y+{} vWinSize{} {}".f(spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
   }
-  mainGui.Radios_WinSize["fit"].Value := true
+  mainGui["WinSize" "fit"].Value := true
   groupOpt := WinSizeOpt_HumanReadable := unset
 
   ; Settings - Taskbar
   mainGui.texts.Push mainGui.AddText("", "Taskbar")
-  mainGui.Radios_Taskbar := Map()
   for TaskbarOpt in ["hide", "show", "show2", "show3"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-    mainGui.Radios_Taskbar[TaskbarOpt] := mainGui.AddRadio("Y+{} vTaskBar{}".f(spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
+    mainGui.AddRadio("Y+{} vTaskBar{}".f(spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
   }
-  mainGui.Radios_Taskbar["hide"].Value := true
+  mainGui["TaskBar" "hide"].Value := true
   groupOpt := TaskbarOpt_HumanReadable := unset
 
   ; Quit Button
