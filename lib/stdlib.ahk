@@ -59,10 +59,10 @@ __FuncHandler(this, func)
 ; How else are you gonna debug your variables?
 Inspect(SomeObj)
 {
-  TypeString := Type(SomeObj)
+  TypeString := Type(SomeObj).StrReplace(".", "_")
   InspectFunc := "__" TypeString "_Inspect"
 
-  if IsSet(InspectFunc)
+  if IsSet(%InspectFunc%)
     StringObj := %InspectFunc%(SomeObj)
   else
     StringObj := TypeString "()"
