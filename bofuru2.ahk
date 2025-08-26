@@ -50,25 +50,44 @@ DEBUG := false
   mainGui.Button_WinSelect  := mainGui.AddButton("",                "Select Window")
   mainGui.Button_Fullscreen := mainGui.AddButton("Y+{}".f(spacing), "Toggle Fullscreen")
 
-  ; Monitors
+  ; Settings - Monitors
   mainGui.texts.Push mainGui.AddText("", "Monitor")
-  mainGui.monitorRadios := []
-  mainGui.monitorRadios.Selected := 0  ; hWnd of the selected radio button
+  mainGui.Radios_Monitors := Map()
+  mainGui.Radios_Monitors.Selected := 0  ; hWnd of the selected radio button
   loop MonitorGetCount()
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
-    newRadio := mainGui.AddRadio("Y+{} vRadio{} {}".f(spacing,A_Index,groupOpt), "{}".f(A_Index))
+    newRadio := mainGui.AddRadio("Y+{} vMonitor{} {}".f(spacing,A_Index,groupOpt), String(A_Index))
     ; When clicking on an already selected radio button: deselect it (make it so no radio button is selected)
-    newRadio.OnEvent("Click", (radio, args*) => (radio.hWnd = mainGui.monitorRadios.Selected ? (radio.Value := 0, mainGui.monitorRadios.Selected := 0) : mainGui.monitorRadios.Selected := radio.hWnd))
-    mainGui.monitorRadios.Push(newRadio)
+    newRadio.OnEvent("Click", (radio, args*) => (radio.hWnd = mainGui.Radios_Monitors.Selected ? (radio.Value := 0, mainGui.Radios_Monitors.Selected := 0) : mainGui.Radios_Monitors.Selected := radio.hWnd))
+    mainGui.Radios_Monitors[String(A_Index)] := newRadio
   }
   groupOpt := newRadio := unset
 
-  ; DropDowns
+  ; Settings - Window Size
   mainGui.texts.Push mainGui.AddText("", "Window Size")
-  mainGui.dropDown_WinSize := mainGui.AddDropDownList("Y+{} vWinSize Choose2".f(spacing), ["Original", "Fit", "Stretch", "Pixel Perfect"])
+  mainGui.Radios_WinSize := Map()
+  for WinSizeOpt in ["original", "fit", "stretch", "pixel-perfect"]
+  {
+    groupOpt := ((A_Index = 1) ? "Group" : "")
+    WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
+                                          .StrReplace("-"," ")
+    mainGui.Radios_WinSize[WinSizeOpt] := mainGui.AddRadio("Y+{} vWinSize{} {}".f(spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
+  }
+  mainGui.Radios_WinSize["fit"].Value := true
+  groupOpt := WinSizeOpt_HumanReadable := unset
+
+  ; Settings - Taskbar
   mainGui.texts.Push mainGui.AddText("", "Taskbar")
-  mainGui.dropDown_TaskBar := mainGui.AddDropDownList("Y+{} vTaskbar Choose1".f(spacing), ["Hide", "Show", "Show2", "Show3"])
+  mainGui.Radios_Taskbar := Map()
+  for TaskbarOpt in ["hide", "show", "show2", "show3"]
+  {
+    groupOpt := ((A_Index = 1) ? "Group" : "")
+    TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
+    mainGui.Radios_Taskbar[TaskbarOpt] := mainGui.AddRadio("Y+{} vTaskBar{}".f(spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
+  }
+  mainGui.Radios_Taskbar["hide"].Value := true
+  groupOpt := TaskbarOpt_HumanReadable := unset
 
   ; Quit Button
   mainGui.Button_Quit := mainGui.AddButton("", "Quit")
