@@ -47,7 +47,7 @@ DEBUG := false
   mainGui.console.setFont(, "Consolas")  ; Monospace font
 
   ; Buttons
-  mainGui.Button_WinSelect  := mainGui.AddButton("",     "Select Window")
+  mainGui.Button_WinSelect  := mainGui.AddButton("",                "Select Window")
   mainGui.Button_Fullscreen := mainGui.AddButton("Y+{}".f(spacing), "Toggle Fullscreen")
 
   ; Monitors
@@ -56,13 +56,13 @@ DEBUG := false
   mainGui.monitorRadios.Selected := 0  ; hWnd of the selected radio button
   loop MonitorGetCount()
   {
-    groupOpt   := ((A_Index = 1)              ? "Group"   : "")
+    groupOpt := ((A_Index = 1) ? "Group" : "")
     newRadio := mainGui.AddRadio("Y+{} vRadio{} {}".f(spacing,A_Index,groupOpt), "{}".f(A_Index))
     ; When clicking on an already selected radio button: deselect it (make it so no radio button is selected)
     newRadio.OnEvent("Click", (radio, args*) => (radio.hWnd = mainGui.monitorRadios.Selected ? (radio.Value := 0, mainGui.monitorRadios.Selected := 0) : mainGui.monitorRadios.Selected := radio.hWnd))
     mainGui.monitorRadios.Push(newRadio)
   }
-  groupOpt := defaultOpt := unset
+  groupOpt := newRadio := unset
 
   ; DropDowns
   mainGui.texts.Push mainGui.AddText("", "Window Size")
