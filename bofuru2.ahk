@@ -182,7 +182,7 @@ DEBUG := false
 
     if ! result.ok && result.reason = "user cancel" {
       ; User cancelled the operation
-      ExitApp
+      return
     } else if ! result.ok {
       ConsoleMsg "ERROR: {}".f(result.reason)
       return
