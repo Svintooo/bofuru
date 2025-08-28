@@ -214,7 +214,8 @@ DEBUG := false
 
 
   ;; Create background overlay - Create overlay window
-  ConsoleMsg "INFO : Create background overlay (hidden for now)"
+  if DEBUG
+    ConsoleMsg "DEBUG: Create background overlay (hidden for now)"
   bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
   bkgr.BackColor := "black"
 
