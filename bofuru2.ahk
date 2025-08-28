@@ -52,15 +52,13 @@ DEBUG := false
 
   ; Settings - Monitors
   mainGui.texts.Push mainGui.AddText("", "Monitor")
-  mainGui.MonitorSelected := 0  ; hWnd of the selected monitor radio button
+  mainGui.AddRadio("Y+{} vMonitor{} Group".f(spacing,"auto"), String("Auto"))
   loop MonitorGetCount()
   {
-    groupOpt := ((A_Index = 1) ? "Group" : "")
-    newRadio := mainGui.AddRadio("Y+{} vMonitor{} {}".f(spacing,A_Index,groupOpt), String(A_Index))
-    ; When clicking on an already selected radio button: deselect it (make it so no radio button is selected)
-    newRadio.OnEvent("Click", (radio, args*) => (radio.hWnd = mainGui.MonitorSelected ? (radio.Value := 0, mainGui.MonitorSelected := 0) : mainGui.MonitorSelected := radio.hWnd))
+    mainGui.AddRadio("Y+{} vMonitor{}".f(spacing,A_Index), String(A_Index))
   }
-  groupOpt := newRadio := unset
+  mainGui["Monitor" "auto"].Value := true
+  groupOpt := unset
 
   ; Settings - Window Size
   mainGui.texts.Push mainGui.AddText("", "Window Size")
