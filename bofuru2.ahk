@@ -97,7 +97,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program Intro
+;; Intro
 {
   ConsoleMsg "##################################"
   ConsoleMsg "#       ===== BoFuRu =====       #"
@@ -109,7 +109,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program Start - Find a Window to make Fullscreen
+;; Start
 {
   ConsoleMsg "=== Find Window ===", _preSPacing:= 1
 
@@ -203,7 +203,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program Main - Make Window Fullscreen
+;; Main - Make Window Fullscreen
 {
   ConsoleMsg "=== Modify Window ===", _preSpacing := 2
 
@@ -300,7 +300,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program End - Wait until window or script exits
+;; End - Wait until window or script exits
 {
   ConsoleMsg "=== DONE ===", _preSpacing := 2
   ConsoleMsg "Your game should now be in fullscreen."
@@ -514,14 +514,14 @@ restoreWindowState(hWnd, winState)
     ;
   }
 
-  ; Set window ex style
+  ; Set window extended style
   try
     WinSetExStyle(winState.winExStyle, "ahk_id" hWnd)
   catch {
     ;
   }
 
-  ; Get window size/position
+  ; Set window size/position
   try
     WinMove(winState.x, winState.y, winState.width, winState.height, "ahk_id" hWnd)
   catch {
@@ -694,23 +694,20 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
 ; Creates a hook that quits the script if the game window closes
 synchronizeWithWindow(hWnd, &cnfg)
 {
-  ;; Collect window info
+  ; Collect window info
   CollectWindowInfo(hWnd, &cnfg)
 
-
-  ;; Print window info
+  ; Print window info
   ConsolePrintWindowInfo(cnfg)
 
-
-  ;; Check if window is allowed
+  ; Check if window is allowed
   if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
   {
     ConsoleMsg "ERROR: Unsupported window selected"
     return
   }
 
-
-  ;; Exit BoFuRu if the game window is closed
+  ; Exit BoFuRu if the game window is closed
   if DEBUG
     ConsoleMsg "DEBUG: Bind exit event to window close"
   Event_AppExit() {
