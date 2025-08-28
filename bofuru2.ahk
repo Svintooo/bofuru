@@ -62,7 +62,7 @@ DEBUG := false
 
   ; Settings - Window Size
   mainGui.texts.Push mainGui.AddText("", "Window Size")
-  for WinSizeOpt in ["original", "fit", "stretch", "pixel-perfect"]
+  for WinSizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
