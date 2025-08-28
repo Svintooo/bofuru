@@ -196,69 +196,8 @@ DEBUG := false
   }
 
 
-  ;;
+  ;; Synchronize script with the game window
   synchronizeWithWindow(cnfg.hWnd, &cnfg)
-}
-
-
-;; Collect window info
-CollectWindowInfo(hWnd, &cnfg)
-{
-  cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
-  cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
-  cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
-  cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
-  cnfg.procName     := WinGetProcessName( "ahk_id" cnfg.hWnd )
-  cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
-}
-
-
-;; Print window info
-ConsolePrintWindowInfo(cnfg)
-{
-  ConsoleMsg , _preSpacing := 1
-  ConsoleMsg "INFO : Window info"
-  if DEBUG {
-  ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
-  ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
-  }
-  ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
-  ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
-  ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
-  ;ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())
-  ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
-  ConsoleMsg , , _postSpacing := 1
-}
-
-
-;;
-synchronizeWithWindow(hWnd, &cnfg)
-{
-  ;; Collect window info
-  CollectWindowInfo(hWnd, &cnfg)
-
-
-  ;; Print window info
-  ConsolePrintWindowInfo(cnfg)
-
-
-  ;; Check if window is allowed
-  if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
-  {
-    ConsoleMsg "ERROR: Unsupported window selected"
-    return
-  }
-
-
-  ;; Exit BoFuRu if the game window is closed
-  if DEBUG
-    ConsoleMsg "DEBUG: Bind exit event to window close"
-  Event_AppExit() {
-    if not WinExist("ahk_id" cnfg.hWnd)
-      ExitApp(0)
-  }
-  MAX_PRIORITY := 2147483647
-  SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 }
 
 
@@ -501,6 +440,18 @@ CollectWindowState(hWnd)
 }
 
 
+;; Collect window info
+CollectWindowInfo(hWnd, &cnfg)
+{
+  cnfg.winTitle     := WinGetTitle(       "ahk_id" hWnd )
+  cnfg.winClass     := WinGetClass(       "ahk_id" hWnd )
+  cnfg.winText      := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
+  cnfg.pid          := WinGetPID(         "ahk_id" hWnd )
+  cnfg.procName     := WinGetProcessName( "ahk_id" hWnd )
+  cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
+}
+
+
 ;; Remove window border
 removeWindowBorder(hWnd)
 {
@@ -602,6 +553,26 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   ConsoleMsg "       winStyle    = {}".f(winStyleStr)
   ConsoleMsg "       winExStyle  = {}".f(winExStyleStr)
   ConsoleMsg "       winMenu     = {}".f(winMenuStr)
+  ConsoleMsg , , _postSpacing := 1
+}
+
+
+;; Print window info
+ConsolePrintWindowInfo(cnfg)
+{
+  ConsoleMsg , _preSpacing := 1
+  ConsoleMsg "INFO : Window info"
+  if DEBUG {
+  ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
+  ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
+  }
+  ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
+  ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
+  ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
+  if DEBUG {
+  ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())  ;Note: Indent cheating ;)
+  }
+  ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
   ConsoleMsg , , _postSpacing := 1
 }
 
@@ -713,6 +684,41 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
       }
     }
   }
+}
+
+
+
+;; Synchronize the script with the game window
+; Collects necessary information
+; Makes sure the window can be made fullscreen
+; Creates a hook that quits the script if the game window closes
+synchronizeWithWindow(hWnd, &cnfg)
+{
+  ;; Collect window info
+  CollectWindowInfo(hWnd, &cnfg)
+
+
+  ;; Print window info
+  ConsolePrintWindowInfo(cnfg)
+
+
+  ;; Check if window is allowed
+  if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
+  {
+    ConsoleMsg "ERROR: Unsupported window selected"
+    return
+  }
+
+
+  ;; Exit BoFuRu if the game window is closed
+  if DEBUG
+    ConsoleMsg "DEBUG: Bind exit event to window close"
+  Event_AppExit() {
+    if not WinExist("ahk_id" cnfg.hWnd)
+      ExitApp(0)
+  }
+  MAX_PRIORITY := 2147483647
+  SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 }
 
 
