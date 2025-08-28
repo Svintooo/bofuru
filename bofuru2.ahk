@@ -111,13 +111,10 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start
 {
-  ConsoleMsg "=== Find Window ===", _preSPacing:= 1
-
-
   ;; Parse args
   cnfg := parseArgs(A_Args)
   if DEBUG
-    ConsoleMsg "DEBUG: parsed args: {}".f(cnfg.Inspect())
+    ConsoleMsg "DEBUG: args: {}".f(cnfg.Inspect())
 
   DEBUG        := cnfg.HasOwnProp("debug")   ? cnfg.debug   : DEBUG,
   cnfg.monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
@@ -205,9 +202,6 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main - Make Window Fullscreen
 {
-  ConsoleMsg "=== Modify Window ===", _preSpacing := 2
-
-
   ;; Create background overlay - Generate transparent pixel
   ; Needed to make the overlay allow both mouse clicks and buttons
   if DEBUG
@@ -302,8 +296,7 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; End - Wait until window or script exits
 {
-  ConsoleMsg "=== DONE ===", _preSpacing := 2
-  ConsoleMsg "Your game should now be in fullscreen."
+  ConsoleMsg "DONE : Your game should now be in fullscreen."
 }
 
 
