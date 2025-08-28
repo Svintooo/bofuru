@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2.0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; BoFuru2 - Borderless Fullscreen                                           ;;
+;; BoFuru2 - Windowed Borderless Fullscreen                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Run games in fullscreen without changing screen resolution.
