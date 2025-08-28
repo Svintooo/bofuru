@@ -196,17 +196,28 @@ DEBUG := false
   }
 
 
-  ;; Fetch window info
+  ;;
+  synchronizeWithWindow(cnfg.hWnd, &cnfg)
+}
+
+
+;; Collect window info
+CollectWindowInfo(hWnd, &cnfg)
+{
   cnfg.winTitle     := WinGetTitle(       "ahk_id" cnfg.hWnd )
   cnfg.winClass     := WinGetClass(       "ahk_id" cnfg.hWnd )
   cnfg.winText      := WinGetText(        "ahk_id" cnfg.hWnd ).Trim("`r`n ")
   cnfg.pid          := WinGetPID(         "ahk_id" cnfg.hWnd )
   cnfg.procName     := WinGetProcessName( "ahk_id" cnfg.hWnd )
   cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
+}
 
 
-  ;; Print window info
-  ConsoleMsg "INFO : Window found", _preSpacing := 1
+;; Print window info
+ConsolePrintWindowInfo(cnfg)
+{
+  ConsoleMsg , _preSpacing := 1
+  ConsoleMsg "INFO : Window info"
   if DEBUG {
   ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
   ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
@@ -217,6 +228,18 @@ DEBUG := false
   ;ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())
   ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
   ConsoleMsg , , _postSpacing := 1
+}
+
+
+;;
+synchronizeWithWindow(hWnd, &cnfg)
+{
+  ;; Collect window info
+  CollectWindowInfo(hWnd, &cnfg)
+
+
+  ;; Print window info
+  ConsolePrintWindowInfo(cnfg)
 
 
   ;; Check if window is allowed
