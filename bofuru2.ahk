@@ -47,8 +47,8 @@ DEBUG := false
   mainGui.console.setFont(, "Consolas")  ; Monospace font
 
   ; Buttons
-  mainGui.Button_WinSelect  := mainGui.AddButton("",                "Select Window")
-  mainGui.Button_Fullscreen := mainGui.AddButton("Y+{}".f(spacing), "Toggle Fullscreen")
+  mainGui.Button_WinSelect  := mainGui.AddButton("",                         "Select Window")
+  mainGui.Button_Fullscreen := mainGui.AddButton("Y+{} Disabled".f(spacing), "Toggle Fullscreen")
 
   ; Settings - Monitors
   mainGui.texts.Push mainGui.AddText("", "Monitor")
