@@ -387,7 +387,7 @@ parseArgs(args)
       if args[i] = "--"
         i += 1
 
-      name := "launch"
+      name  := "launch"
       value := args.Slice(i)
                    .Collect(arg => (arg ~= "\s" ? '"' arg '"' : arg))
                    .Join(" ")
