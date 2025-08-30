@@ -216,11 +216,11 @@ DEBUG := false
   ; Create internal window control element (meant to covers the whole overlay)
   WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
                                  ; and have other elements placed on top of them.
-  bkgr.clickArea := bkgr.Add("Picture", WS_CLIPSIBLINGS, pixel)
+  bkgr.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
 
   ; Make mouse clicks on overlay restore focus to game window
-  bkgr.clickArea.OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
-  bkgr.clickArea.OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+  bkgr["ClickArea"].OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
+  bkgr["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
 
 
   ;; Detect focus change to any window
@@ -714,7 +714,7 @@ activateFullscreen()
   else
   {
     ; Resize the click area
-    bkgr.clickArea.Move(0, 0, fscr.overlay.w, fscr.overlay.h)
+    bkgr["ClickArea"].Move(0, 0, fscr.overlay.w, fscr.overlay.h)
 
     ; Resize overlay (also make it visible if it was hidden before)
     bkgr.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
