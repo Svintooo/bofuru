@@ -32,7 +32,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program Gui Window
+;; Setup - Main Gui Window
 {
   ; NOTE: Each GuiControl can be given a NAME.
   ;       NAME is set with option: "vNAME"
@@ -104,7 +104,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Intro
+;; Setup - Console Welcome Message
 {
   ConsoleMsg "##################################"
   ConsoleMsg "#       ===== BoFuRu =====       #"
@@ -116,20 +116,71 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Start
+;; Setup
 {
-  ;; Create script config
-  ; Settings in this object will control everything.
-  ; Any code modifying config should trigger a redraw of fullscreen (if fullscreen is active)
-  cnfg := {}
+  ;; Create background overlay - Generate transparent pixel
+  ; Needed to make the overlay allow both mouse clicks and buttons
+  if DEBUG
+    ConsoleMsg "DEBUG: Generate transparent pixel"
+
+  result := lib_GenerateTransparentPixel()
+
+  if !result.ok {
+    ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
+    ExitApp
+  }
+
+  pixel := result.data
+  result := unset
 
 
-  ;; Parse args
+  ;; Create background overlay - Create overlay window
+  if DEBUG
+    ConsoleMsg "DEBUG: Create background overlay (hidden for now)"
+
+  bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
+  bkgr.BackColor := "black"
+
+  ; Create internal window control element (meant to covers the whole overlay)
+  WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
+                                 ; and have other elements placed on top of them.
+  bkgr.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
+
+  ; Make mouse clicks on overlay restore focus to game window
+  bkgr["ClickArea"].OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
+  bkgr["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+
+
+  ;; Detect focus change to any window
+  ; Tell MS Windows to notify us of events for all windows.
+  ; - ShellMessage(): Function which receives the events.
+  if DEBUG
+    ConsoleMsg "DEBUG: Bind focus change event to toggle AlwaysOnTop"
+
+  if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+  {
+    MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
+    OnMessage(MsgNum, ShellMessage)
+  }
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Start - Global Config and Argument Parsing
+{
+  ;; Fetch command line arguments
   args := parseArgs(A_Args)
   if DEBUG
     ConsoleMsg "DEBUG: Parsed args: {}".f(args.Inspect())
 
-  ; Known args
+
+  ;; Create global config
+  ; Settings in this object will control everything.
+  ; Any code modifying config should trigger a redraw of fullscreen (if fullscreen is active).
+  cnfg := {}
+
+  ; Set config parameters
   DEBUG        := args.HasOwnProp("debug")   ? args.DeleteProp("debug"  ).value : DEBUG,
   cnfg.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false,
   cnfg.winsize := args.HasOwnProp("winsize") ? args.DeleteProp("winsize").value : "fit",
@@ -138,7 +189,8 @@ DEBUG := false
   cnfg.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
   cnfg.hWnd    := 0
 
-  ; Unknown args
+
+  ;; Handle unknown args
   if !args.IsEmpty()
   {
     for , argObj in args.OwnProps()
@@ -194,91 +246,6 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main - Make Window Fullscreen
 {
-  ;; Create background overlay - Generate transparent pixel
-  ; Needed to make the overlay allow both mouse clicks and buttons
-  if DEBUG
-    ConsoleMsg "DEBUG: Generate transparent pixel"
-  result := lib_GenerateTransparentPixel()
-  if !result.ok {
-    ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
-    ExitApp
-  }
-  pixel := result.data
-  result := unset
-
-
-  ;; Create background overlay - Create overlay window
-  if DEBUG
-    ConsoleMsg "DEBUG: Create background overlay (hidden for now)"
-  bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
-  bkgr.BackColor := "black"
-
-  ; Create internal window control element (meant to covers the whole overlay)
-  WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
-                                 ; and have other elements placed on top of them.
-  bkgr.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
-
-  ; Make mouse clicks on overlay restore focus to game window
-  bkgr["ClickArea"].OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
-  bkgr["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
-
-
-  ;; Detect focus change to any window
-  ; Tell MS Windows to notify us of events for all windows
-  if DEBUG
-    ConsoleMsg "DEBUG: Bind focus change event to toggle AlwaysOnTop"
-
-  if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
-  {
-    MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
-    OnMessage(MsgNum, ShellMessage)
-  }
-
-
-  ;; Focus the window
-  if DEBUG
-    ConsoleMsg "DEBUG: Put the game window in focus"
-
-  WinActivate(cnfg.hWnd)
-
-
-  ;; Collect Window State
-  if DEBUG
-    ConsoleMsg "DEBUG: Collecting current window state"
-
-  cnfg.origState := CollectWindowState(cnfg.hWnd)
-
-  if DEBUG
-    ConsolePrintWindowState(cnfg.origState, "Original window state")
-
-
-  ;; Restore window state on exit
-  if DEBUG
-    ConsoleMsg "DEBUG: Register OnExit callback to restore window state on exit"
-
-  OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
-
-
-  ;; Remove Window Border
-  ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
-  removeWindowBorder(cnfg.hWnd)
-
-  ; Get new window state
-  cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
-  if DEBUG
-    ConsolePrintWindowState(cnfg.noBorderState, "No-border window state")
-
-  ; Warn if window lost its aspect ratio
-  if cnfg.noBorderState.width  != cnfg.origState.innerWidth
-  || cnfg.noBorderState.height != cnfg.origState.innerHeight
-  {
-    ConsoleMsg , _options := "BeforeSpacing1"
-    ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
-    ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
-    ConsoleMsg , _options := "AfterSpacing1"
-  }
-
-
   ;; Make Window Fullscreen
   ConsoleMsg "INFO : Activate Window Fullscreen"
   activateFullscreen()
@@ -591,20 +558,23 @@ restoreWindowState(hWnd, winState)
 ; - Creates a hook that quits the script if the game window closes
 synchronizeWithWindow(hWnd, &cnfg)
 {
-  ; Collect window info
+  ;; Collect window info
   CollectWindowInfo(hWnd, &cnfg)
 
-  ; Print window info
+
+  ;; Print window info
   ConsolePrintWindowInfo(cnfg)
 
-  ; Check if window is allowed
+
+  ;; Check if window is allowed
   if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
   {
     ConsoleMsg "ERROR: Unsupported window selected"
     return
   }
 
-  ; Exit BoFuRu if the game window is closed
+
+  ;; Exit BoFuRu if the game window is closed
   if DEBUG
     ConsoleMsg "DEBUG: Bind exit event to window close"
   Event_AppExit() {
@@ -613,6 +583,52 @@ synchronizeWithWindow(hWnd, &cnfg)
   }
   MAX_PRIORITY := 2147483647
   SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
+
+
+  ;; Focus the window
+  if DEBUG
+    ConsoleMsg "DEBUG: Put the game window in focus"
+
+  WinActivate(cnfg.hWnd)
+
+
+  ;; Collect Window State
+  if DEBUG
+    ConsoleMsg "DEBUG: Collecting current window state"
+
+  cnfg.origState := CollectWindowState(cnfg.hWnd)
+
+  if DEBUG
+    ConsolePrintWindowState(cnfg.origState, "Original window state")
+
+
+  ;; Restore window state on exit
+  if DEBUG
+    ConsoleMsg "DEBUG: Register OnExit callback to restore window state on exit"
+
+  OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
+
+
+  ;; Remove Window Border
+  ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
+  removeWindowBorder(cnfg.hWnd)
+
+
+  ;; Get new window state
+  cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
+  if DEBUG
+    ConsolePrintWindowState(cnfg.noBorderState, "No-border window state")
+
+
+  ;; Warn if window lost its aspect ratio
+  if cnfg.noBorderState.width  != cnfg.origState.innerWidth
+  || cnfg.noBorderState.height != cnfg.origState.innerHeight
+  {
+    ConsoleMsg , _options := "BeforeSpacing1"
+    ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
+    ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
+    ConsoleMsg , _options := "AfterSpacing1"
+  }
 }
 
 
