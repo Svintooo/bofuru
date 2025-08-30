@@ -574,7 +574,7 @@ synchronizeWithWindow(hWnd, &cnfg)
   }
 
 
-  ;; Exit BoFuRu if the game window is closed
+  ;; Exit script if the game window is closed
   if DEBUG
     ConsoleMsg "DEBUG: Bind exit event to window close"
   Event_AppExit() {
@@ -599,7 +599,7 @@ synchronizeWithWindow(hWnd, &cnfg)
   cnfg.origState := CollectWindowState(cnfg.hWnd)
 
   if DEBUG
-    ConsolePrintWindowState(cnfg.origState, "Original window state")
+    ConsolePrintWindowState(cnfg.origState, "Window state (original)")
 
 
   ;; Restore window state on exit
@@ -617,7 +617,7 @@ synchronizeWithWindow(hWnd, &cnfg)
   ;; Get new window state
   cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
   if DEBUG
-    ConsolePrintWindowState(cnfg.noBorderState, "No-border window state")
+    ConsolePrintWindowState(cnfg.noBorderState, "Window state (no border)")
 
 
   ;; Warn if window lost its aspect ratio
@@ -773,7 +773,7 @@ activateFullscreen()
 
   ;; Print new window state
   if DEBUG
-    ConsolePrintWindowState(cnfg.hWnd, "New window state")
+    ConsolePrintWindowState(cnfg.hWnd, "Window state (fullscreen)")
 }
 
 
