@@ -188,6 +188,7 @@ DEBUG := false
   cnfg.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
   cnfg.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
   cnfg.hWnd    := 0
+  cnfg.pid     := 0
 
 
   ;; Handle unknown args
@@ -196,7 +197,13 @@ DEBUG := false
     for , argObj in args.OwnProps()
       ConsoleMsg "WARN : Unknown arg: {}".f(argObj.argStr)
   }
+}
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Start - Launch game and Find game window
+{
 
   ;; Run an *.exe
   if cnfg.launch
@@ -216,47 +223,27 @@ DEBUG := false
   }
 
 
-  ;; Wait for a window to show up
+  ;; Find Window
   if cnfg.ahk_wintitle
   {
     ConsoleMsg "INFO : Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
     cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
   }
-
-
-  ;; Let user manually select a window
-  if ! cnfg.hWnd
+  else if cnfg.pid
   {
     manualWindowSelection()
   }
 
 
-  if ! cnfg.hWnd
+  ;; Make game window fullscreen
+  ; If a game window has been found.
+  if cnfg.hWnd
   {
-    return
+    synchronizeWithWindow(cnfg.hWnd, &cnfg)
+
+    ConsoleMsg "INFO : Activate Window Fullscreen"
+    activateFullscreen()
   }
-
-
-  ;; Synchronize script with the game window
-  synchronizeWithWindow(cnfg.hWnd, &cnfg)
-}
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Main - Make Window Fullscreen
-{
-  ;; Make Window Fullscreen
-  ConsoleMsg "INFO : Activate Window Fullscreen"
-  activateFullscreen()
-}
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; End - Wait until window or script exits
-{
-  ConsoleMsg "DONE : Your game should now be in fullscreen."
 }
 
 
@@ -751,6 +738,7 @@ activateFullscreen()
   }
 
 
+  ;; AlwaysOnTop
   if ! fscr.needsAlwaysOnTop
   {
     ; Disable game window always on top
@@ -774,6 +762,10 @@ activateFullscreen()
   ;; Print new window state
   if DEBUG
     ConsolePrintWindowState(cnfg.hWnd, "Window state (fullscreen)")
+
+
+  ;; End message
+  ConsoleMsg "INFO : Your game should now be in fullscreen"
 }
 
 
