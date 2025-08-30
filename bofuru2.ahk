@@ -303,34 +303,34 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Functions and Classes
 
-ConsoleMsg(msg?, options := "")
+ConsoleMsg(message?, options := "")
 {
   global mainGui
   static firstTime := true
   static spacing := 0
-  preSpacing  := 0
-  postSpacing   := 0
+  beforeSpacing  := 0
+  afterSpacing   := 0
 
   ; Get new spacing (read: empty lines)
   if RegExMatch(options, "i)(?:^| )b(?:efore)?s(?:pacing)? *(\w+)", &match)
-    preSpacing := Integer(match[1])
+    beforeSpacing := Integer(match[1])
 
   if RegExMatch(options, "i)(?:^| )a(?:fter)?s(?:pacing)? *(\w+)", &match)
-    postSpacing := Integer(match[1])
+    afterSpacing := Integer(match[1])
 
   ; Print spacing to console
-  loop Max(spacing, preSpacing)
+  loop Max(spacing, beforeSpacing)
     mainGui.console.Value .= "`n"
   spacing := 0
 
   ; Store spacing to next invocation
-  spacing += postSpacing
+  spacing += afterSpacing
 
   ; Print message
-  if IsSet(msg) {
+  if IsSet(message) {
     if ! firstTime
       mainGui.console.Value .= "`n"
-    mainGui.console.Value .= msg
+    mainGui.console.Value .= message
   }
 
   ; Set firstTime
