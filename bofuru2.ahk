@@ -40,22 +40,22 @@ DEBUG := false
   mainGui.SetFont("S12")  ; Font Size
   mainGui.OnEvent("Close", (*) => ExitApp())  ; Stop script on window close
   mainGui.texts  := []
-  spacing := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
+  mainGui.spacing := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
 
   ; Console
   mainGui.console := mainGui.AddEdit("w1000 h300 +vConsole +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
   mainGui.console.setFont(, "Consolas")  ; Monospace font
 
   ; Buttons
-  mainGui.Button_WinSelect  := mainGui.AddButton("",                         "Select Window")
-  mainGui.Button_Fullscreen := mainGui.AddButton("Y+{} Disabled".f(spacing), "Toggle Fullscreen")
+  mainGui.Button_WinSelect  := mainGui.AddButton("",                                 "Select Window")
+  mainGui.Button_Fullscreen := mainGui.AddButton("Y+{} Disabled".f(mainGui.spacing), "Toggle Fullscreen")
 
   ; Settings - Monitors
   mainGui.texts.Push mainGui.AddText("", "Monitor")
-  mainGui.AddRadio("Y+{} vMonitor{} Group".f(spacing,"auto"), String("Auto"))
+  mainGui.AddRadio("Y+{} vMonitor{} Group".f(mainGui.spacing,"auto"), String("Auto"))
   loop MonitorGetCount()
   {
-    mainGui.AddRadio("Y+{} vMonitor{}".f(spacing,A_Index), String(A_Index))
+    mainGui.AddRadio("Y+{} vMonitor{}".f(mainGui.spacing,A_Index), String(A_Index))
   }
   mainGui["Monitor" "auto"].Value := true  ; Radio button is checked by default
   groupOpt := unset
@@ -67,7 +67,7 @@ DEBUG := false
     groupOpt := ((A_Index = 1) ? "Group" : "")
     WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
                                           .StrReplace("-"," ")
-    mainGui.AddRadio("Y+{} vWinSize{} {}".f(spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
+    mainGui.AddRadio("Y+{} vWinSize{} {}".f(mainGui.spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
   }
   mainGui["WinSize" "fit"].Value := true  ; Radio button is checked by default
   groupOpt := WinSizeOpt_HumanReadable := unset
@@ -78,7 +78,7 @@ DEBUG := false
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-    mainGui.AddRadio("Y+{} vTaskBar{}".f(spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
+    mainGui.AddRadio("Y+{} vTaskBar{}".f(mainGui.spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
   }
   mainGui["TaskBar" "hide"].Value := true  ; Radio button is checked by default
   groupOpt := TaskbarOpt_HumanReadable := unset
