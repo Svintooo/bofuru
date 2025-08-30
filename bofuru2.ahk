@@ -57,7 +57,7 @@ DEBUG := false
   {
     mainGui.AddRadio("Y+{} vMonitor{}".f(spacing,A_Index), String(A_Index))
   }
-  mainGui["Monitor" "auto"].Value := true
+  mainGui["Monitor" "auto"].Value := true  ; Radio button is checked by default
   groupOpt := unset
 
   ; Settings - Window Size
@@ -69,7 +69,7 @@ DEBUG := false
                                           .StrReplace("-"," ")
     mainGui.AddRadio("Y+{} vWinSize{} {}".f(spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
   }
-  mainGui["WinSize" "fit"].Value := true
+  mainGui["WinSize" "fit"].Value := true  ; Radio button is checked by default
   groupOpt := WinSizeOpt_HumanReadable := unset
 
   ; Settings - Taskbar
@@ -80,7 +80,7 @@ DEBUG := false
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
     mainGui.AddRadio("Y+{} vTaskBar{}".f(spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
   }
-  mainGui["TaskBar" "hide"].Value := true
+  mainGui["TaskBar" "hide"].Value := true  ; Radio button is checked by default
   groupOpt := TaskbarOpt_HumanReadable := unset
 
   ; Quit Button
@@ -303,6 +303,7 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Functions and Classes
 
+;; Print to console
 ConsoleMsg(message?, options := "")
 {
   global mainGui
@@ -473,7 +474,7 @@ ConsolePrintWindowInfo(cnfg)
 }
 
 
-;; Print window state to console
+;; Print window state
 ConsolePrintWindowState(hWnd_or_winState, message)
 {
   if hWnd_or_winState is Number
@@ -500,7 +501,7 @@ ConsolePrintWindowState(hWnd_or_winState, message)
 }
 
 
-;; Print exception to console
+;; Print exception
 ConsolePrintException(e)
 {
   ConsoleMsg , "BeforeSpacing1"
@@ -590,9 +591,9 @@ restoreWindowState(hWnd, winState)
 
 
 ;; Synchronize the script with the game window
-; Collects necessary information
-; Makes sure the window can be made fullscreen
-; Creates a hook that quits the script if the game window closes
+; - Collects necessary information
+; - Makes sure the window can be made fullscreen
+; - Creates a hook that quits the script if the game window closes
 synchronizeWithWindow(hWnd, &cnfg)
 {
   ; Collect window info
