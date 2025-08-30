@@ -216,7 +216,7 @@ __Map_IsEmpty(MapObj)
 Object.DefineFunc("IsEmpty", __Object_IsEmpty)
 __Object_IsEmpty(obj)
 {
-  return obj.ObjOwnPropCount = 0
+  return !obj.OwnProps().Call()
 }
 
 ;; IsBlank
