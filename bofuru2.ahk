@@ -136,6 +136,7 @@ DEBUG := false
   cnfg.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
   cnfg.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
   cnfg.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
+  cnfg.hWnd    := 0
 
   ; Unknown args
   if !args.IsEmpty()
@@ -171,26 +172,16 @@ DEBUG := false
   }
 
 
-  ;; Wait for a window to show up belonging to PID
-  if ! cnfg.HasOwnProp("hWnd") && cnfg.HasOwnProp("pid")
-  {
-    ConsoleMsg "INFO : Waiting for window belonging to PID"
-    cnfg.hWnd := false
-
-    while !cnfg.hWnd && ProcessExist(cnfg.pid)
-      cnfg.hWnd := WinWait("ahk_pid" cnfg.pid, , _timeout := 1)
-
-    if !cnfg.hWnd
-    {
-      ConsoleMsg "ERROR: PID disappeared before window was found"
-      return
-    }
-  }
-
-
   ;; Let user manually select a window
-  if ! cnfg.HasOwnProp("hWnd")
+  if ! cnfg.hWnd
   {
+    manualWindowSelection()
+  }
+  manualWindowSelection()
+  {
+    global mainGui
+    global cnfg  ; Global config
+
     ConsoleMsg , _options := "BeforeSpacing1"
     ConsoleMsg "INFO : Manual Window selection ACTIVATED"
     ConsoleMsg "       - Click on game window"
@@ -204,19 +195,23 @@ DEBUG := false
       result := lib_userWindowSelect()
     }
 
-    if ! result.ok && result.reason = "user cancel" {
-      ; User cancelled the operation
-      WinActivate(mainGui.hWnd)  ; Focus the Gui
-      ConsoleMsg "INFO : Manual Window selection CANCELLED", _options := "AfterSpacing1"
-      return
-    } else if ! result.ok {
-      ConsoleMsg "ERROR: {}".f(result.reason)
-      return
-    }
+    if ! result.ok {
+      if result.reason = "user cancel"
+        ConsoleMsg "INFO : Manual Window selection CANCELLED", _options := "AfterSpacing1"
+      else
+        ConsoleMsg "ERROR: {}".f(result.reason)
 
-    ConsoleMsg "INFO : Manual Window selection SUCCEEDED", _options := "AfterSpacing1"
-    cnfg.hWnd := result.hWnd
-    result := unset
+      WinActivate(mainGui.hWnd)  ; Focus the Gui
+    } else {
+      ConsoleMsg "INFO : Manual Window selection SUCCEEDED", _options := "AfterSpacing1"
+      cnfg.hWnd := result.hWnd
+    }
+  }
+
+
+  if ! cnfg.hWnd
+  {
+    return
   }
 
 
