@@ -649,21 +649,26 @@ synchronizeWithWindow(hWnd, &cnfg)
 }
 
 
-; Change window size and position to make it fullscreen
-;   global var `cnfg` decides how the fullscreen will be made.
+;; Activate FULLSCREEN
+; All other code only exist to help use this function.
+; - Changes window size and position to make it fullscreen.
+; - global var `cnfg` decides how the fullscreen will be made.
+; - global var `fscr` will be created.
+; - global var `bkgr` will be modified.
 makeWindowFullscreen()
 {
-  global cnfg
-  global fscr
+  global cnfg  ; Global config
+  global fscr  ; Fullscreen config
+  global bkgr  ; Background overlay window
 
   ;; Calculate window fullscreen properties
   if DEBUG
     ConsoleMsg "DEBUG: Calculate window fullscreen properties"
 
   fscr := lib_calcFullscreenArgs(cnfg.noBorderState,
-                                _monitor := cnfg.monitor,
-                                _winSize := cnfg.winsize,
-                                _taskbar := cnfg.taskbar)
+                                 _monitor := cnfg.monitor,
+                                 _winSize := cnfg.winsize,
+                                 _taskbar := cnfg.taskbar)
 
   if ! fscr.ok {
     restoreWindowState(cnfg.hWnd, cnfg.origState)
@@ -700,6 +705,7 @@ makeWindowFullscreen()
   newWinState := unset
 
 
+  ;; Modify background overlay
   if ! fscr.needsBackgroundOverlay
   {
     bkgr.Hide()
@@ -709,11 +715,11 @@ makeWindowFullscreen()
     ; Resize the click area
     bkgr.clickArea.Move(0, 0, fscr.overlay.w, fscr.overlay.h)
 
-    ; Show overlay (it was hidden until now)
+    ; Resize overlay (also make it visible if it was hidden before)
     bkgr.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
 
     ; Cut a hole in the overlay for the game window to be seen
-    ; NOTE: The coordinates are relative to the overlay, not the desktop area
+    ; NOTE: Coordinates are relative to the overlay, not the desktop area
     polygonStr := Format(
       "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
       "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
