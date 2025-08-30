@@ -412,6 +412,18 @@ launchExe(launch_string)
 }
 
 
+;; Collect window info
+CollectWindowInfo(hWnd, &cnfg)
+{
+  cnfg.winTitle     := WinGetTitle(       "ahk_id" hWnd )
+  cnfg.winClass     := WinGetClass(       "ahk_id" hWnd )
+  cnfg.winText      := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
+  cnfg.pid          := WinGetPID(         "ahk_id" hWnd )
+  cnfg.procName     := WinGetProcessName( "ahk_id" hWnd )
+  cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
+}
+
+
 ;; Collect Window state
 CollectWindowState(hWnd)
 {
@@ -441,15 +453,61 @@ CollectWindowState(hWnd)
 }
 
 
-;; Collect window info
-CollectWindowInfo(hWnd, &cnfg)
+;; Print window info
+ConsolePrintWindowInfo(cnfg)
 {
-  cnfg.winTitle     := WinGetTitle(       "ahk_id" hWnd )
-  cnfg.winClass     := WinGetClass(       "ahk_id" hWnd )
-  cnfg.winText      := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
-  cnfg.pid          := WinGetPID(         "ahk_id" hWnd )
-  cnfg.procName     := WinGetProcessName( "ahk_id" hWnd )
-  cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
+  ConsoleMsg , "BeforeSpacing1"
+  ConsoleMsg "INFO : Window info"
+  if DEBUG {
+  ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
+  ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
+  }
+  ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
+  ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
+  ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
+  if DEBUG {
+  ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())  ;Note: Indent cheating ;)
+  }
+  ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
+  ConsoleMsg , "AfterSpacing1"
+}
+
+
+;; Print window state to console
+ConsolePrintWindowState(hWnd_or_winState, message)
+{
+  if hWnd_or_winState is Number
+    winState := CollectWindowState(hWnd_or_winState)
+  else
+    winState := hWnd_or_winState
+
+  winStyleStr   := "0x{:08X} ({})".f(winState.winStyle,   lib_parseWindowStyle(winState.winStyle)    .Join(" | "))
+  winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
+  winMenuStr    := "0x{:08X}".f(winState.winMenu)
+
+  ConsoleMsg , "BeforeSpacing1"
+  ConsoleMsg "DEBUG: {}".f(message)
+  ConsoleMsg "       x           = {}".f(winState.x)
+  ConsoleMsg "       y           = {}".f(winState.y)
+  ConsoleMsg "       width       = {}".f(winState.width)
+  ConsoleMsg "       height      = {}".f(winState.height)
+  ConsoleMsg "       innerWidth  = {}".f(winState.innerWidth)
+  ConsoleMsg "       innerHeight = {}".f(winState.innerHeight)
+  ConsoleMsg "       winStyle    = {}".f(winStyleStr)
+  ConsoleMsg "       winExStyle  = {}".f(winExStyleStr)
+  ConsoleMsg "       winMenu     = {}".f(winMenuStr)
+  ConsoleMsg , "AfterSpacing1"
+}
+
+
+;; Print exception to console
+ConsolePrintException(e)
+{
+  ConsoleMsg , "BeforeSpacing1"
+  ConsoleMsg "UNKNOWN: {} threw error of type {}".f(e.What.Inspect(), Type(e))
+  ConsoleMsg "         msg: {}".f(e.Message.Inspect())
+  ConsoleMsg "         xtra: {}".f(e.Extra.Inspect())
+  ConsoleMsg , "AfterSpacing1"
 }
 
 
@@ -529,164 +587,6 @@ restoreWindowState(hWnd, winState)
     ;
   }
 }
-
-
-;; Print window state to console
-ConsolePrintWindowState(hWnd_or_winState, message)
-{
-  if hWnd_or_winState is Number
-    winState := CollectWindowState(hWnd_or_winState)
-  else
-    winState := hWnd_or_winState
-
-  winStyleStr   := "0x{:08X} ({})".f(winState.winStyle,   lib_parseWindowStyle(winState.winStyle)    .Join(" | "))
-  winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
-  winMenuStr    := "0x{:08X}".f(winState.winMenu)
-
-  ConsoleMsg , "BeforeSpacing1"
-  ConsoleMsg "DEBUG: {}".f(message)
-  ConsoleMsg "       x           = {}".f(winState.x)
-  ConsoleMsg "       y           = {}".f(winState.y)
-  ConsoleMsg "       width       = {}".f(winState.width)
-  ConsoleMsg "       height      = {}".f(winState.height)
-  ConsoleMsg "       innerWidth  = {}".f(winState.innerWidth)
-  ConsoleMsg "       innerHeight = {}".f(winState.innerHeight)
-  ConsoleMsg "       winStyle    = {}".f(winStyleStr)
-  ConsoleMsg "       winExStyle  = {}".f(winExStyleStr)
-  ConsoleMsg "       winMenu     = {}".f(winMenuStr)
-  ConsoleMsg , "AfterSpacing1"
-}
-
-
-;; Print window info
-ConsolePrintWindowInfo(cnfg)
-{
-  ConsoleMsg , "BeforeSpacing1"
-  ConsoleMsg "INFO : Window info"
-  if DEBUG {
-  ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
-  ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
-  }
-  ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
-  ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
-  ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
-  if DEBUG {
-  ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())  ;Note: Indent cheating ;)
-  }
-  ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
-  ConsoleMsg , "AfterSpacing1"
-}
-
-
-;; Print exception to console
-ConsolePrintException(e)
-{
-  ConsoleMsg , "BeforeSpacing1"
-  ConsoleMsg "UNKNOWN: {} threw error of type {}".f(e.What.Inspect(), Type(e))
-  ConsoleMsg "         msg: {}".f(e.Message.Inspect())
-  ConsoleMsg "         xtra: {}".f(e.Extra.Inspect())
-  ConsoleMsg , "AfterSpacing1"
-}
-
-
-;; Toggle AlwaysOnTop on window focus switch
-; NOTE: This is probably the most bug prone, racey code in this codebase.
-;       MS Windows will automatically hide the taskbar if a single window is
-;       both in focus AND cover exactly a single monitor (this is, to my
-;       knowledge, how fullscreen in MS Windows actually works).
-;         This is usually not the case here. The game window is as big as
-;       possible while keeping its aspect ratio, and the rest of the monitor
-;       is covered by a black overlay that is not in focus.
-;         To mimic fullscreen the code here will react to the game window
-;       getting and losing focus and toggle ALwaysOnTop accordingly (since
-;       AlwaysOnTop will let the game window be drawn over the taskbar).
-;         But as mentioned, this is racey and are prone to:
-;       1) showing the taskbar even while the game is in focus,
-;       2) not showing other windows when switching focus to them.
-;         To fix this the code has basically been hacked and tested until
-;       it seems to work good enough.
-
-; Function is run when any event happens in MS Windows on any window
-ShellMessage(wParam, lParam, msg, script_hwnd)
-{
-  global cnfg
-  global bkgr
-
-  static HSHELL_WINDOWACTIVATED  := 0x00000004
-       , HSHELL_HIGHBIT          := 0x00008000
-       , HSHELL_RUDEAPPACTIVATED := HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT
-
-  ; Do nothing if AlwaysOnTop is not needed
-  if !IsSet(fscr) || !fscr.needsAlwaysOnTop
-    return
-
-  ; React on events about switching focus to another window
-  if wParam = HSHELL_WINDOWACTIVATED
-  || wParam = HSHELL_RUDEAPPACTIVATED {
-    if lParam = cnfg.hWnd {
-      ; Game Window got focus: Set AlwaysOnTop
-      if DEBUG
-        ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-      try
-        WinSetAlwaysOnTop(true, cnfg.hWnd)
-      catch {
-        ;
-      }
-      try
-        WinSetAlwaysOnTop(true, bkgr.hWnd)
-      catch {
-        ;
-      }
-      ; RACE CONDITION HACK: Do everything again (ugly hack)
-      ;   MS Windows sometimes paints the taskbar above the Game Window even if
-      ;   we set AlwaysOnTop. Setting AlwaysOnTop again after a short sleep
-      ;   seems to fix the issue.
-      sleep 200  ; Milliseconds
-      try
-        WinSetAlwaysOnTop(true, cnfg.hWnd)
-      catch {
-        ;
-      }
-      try
-        WinSetAlwaysOnTop(true, bkgr.hWnd)
-      catch {
-        ;
-      }
-    } else if lParam = 0 {
-      ; DO NOTHING
-      ;   Focus was changed to the Windows taskbar, the overlay
-      ;   we created around the Game Window, or something unknown.
-      if DEBUG
-        ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-    } else {
-      ; Another Window got focus: Turn off AlwaysOnTop
-      if DEBUG
-        ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
-      try
-        WinSetAlwaysOnTop(false, cnfg.hWnd)
-      catch {
-        ;
-      }
-      try
-        WinSetAlwaysOnTop(false, bkgr.hWnd)
-      catch {
-        ;
-      }
-      try {
-        ; RACE CONDITION FIX: Move focused window to the top
-        ;   MS Windows tried to to this already, but the Game Window probably
-        ;   was still in AlwaysOnTop mode.
-        WinMoveTop(lParam)
-      } catch {
-        ; RACE CONDITION FAIL
-        ;   This happens if focus is changed to a window we do not have
-        ;   permission to modify (windows with elevated permissions,
-        ;   running as administrator).
-      }
-    }
-  }
-}
-
 
 
 ;; Synchronize the script with the game window
@@ -822,4 +722,103 @@ makeWindowFullscreen()
   ;; Print new window state
   if DEBUG
     ConsolePrintWindowState(cnfg.hWnd, "New window state")
+}
+
+
+;; Toggle AlwaysOnTop on window focus switch
+; NOTE: This is probably the most bug prone, racey code in this codebase.
+;       MS Windows will automatically hide the taskbar if a single window is
+;       both in focus AND cover exactly a single monitor (this is, to my
+;       knowledge, how fullscreen in MS Windows actually works).
+;         This is usually not the case here. The game window is as big as
+;       possible while keeping its aspect ratio, and the rest of the monitor
+;       is covered by a black overlay that is not in focus.
+;         To mimic fullscreen the code here will react to the game window
+;       getting and losing focus and toggle ALwaysOnTop accordingly (since
+;       AlwaysOnTop will let the game window be drawn over the taskbar).
+;         But as mentioned, this is racey and are prone to:
+;       1) showing the taskbar even while the game is in focus,
+;       2) not showing other windows when switching focus to them.
+;         To fix this the code has basically been hacked and tested until
+;       it seems to work good enough.
+
+; Function is run when any event happens in MS Windows on any window
+ShellMessage(wParam, lParam, msg, script_hwnd)
+{
+  global cnfg
+  global bkgr
+
+  static HSHELL_WINDOWACTIVATED  := 0x00000004
+       , HSHELL_HIGHBIT          := 0x00008000
+       , HSHELL_RUDEAPPACTIVATED := HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT
+
+  ; Do nothing if AlwaysOnTop is not needed
+  if !IsSet(fscr) || !fscr.needsAlwaysOnTop
+    return
+
+  ; React on events about switching focus to another window
+  if wParam = HSHELL_WINDOWACTIVATED
+  || wParam = HSHELL_RUDEAPPACTIVATED {
+    if lParam = cnfg.hWnd {
+      ; Game Window got focus: Set AlwaysOnTop
+      if DEBUG
+        ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+      try
+        WinSetAlwaysOnTop(true, cnfg.hWnd)
+      catch {
+        ;
+      }
+      try
+        WinSetAlwaysOnTop(true, bkgr.hWnd)
+      catch {
+        ;
+      }
+      ; RACE CONDITION HACK: Do everything again (ugly hack)
+      ;   MS Windows sometimes paints the taskbar above the Game Window even if
+      ;   we set AlwaysOnTop. Setting AlwaysOnTop again after a short sleep
+      ;   seems to fix the issue.
+      sleep 200  ; Milliseconds
+      try
+        WinSetAlwaysOnTop(true, cnfg.hWnd)
+      catch {
+        ;
+      }
+      try
+        WinSetAlwaysOnTop(true, bkgr.hWnd)
+      catch {
+        ;
+      }
+    } else if lParam = 0 {
+      ; DO NOTHING
+      ;   Focus was changed to the Windows taskbar, the overlay
+      ;   we created around the Game Window, or something unknown.
+      if DEBUG
+        ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+    } else {
+      ; Another Window got focus: Turn off AlwaysOnTop
+      if DEBUG
+        ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+      try
+        WinSetAlwaysOnTop(false, cnfg.hWnd)
+      catch {
+        ;
+      }
+      try
+        WinSetAlwaysOnTop(false, bkgr.hWnd)
+      catch {
+        ;
+      }
+      try {
+        ; RACE CONDITION FIX: Move focused window to the top
+        ;   MS Windows tried to to this already, but the Game Window probably
+        ;   was still in AlwaysOnTop mode.
+        WinMoveTop(lParam)
+      } catch {
+        ; RACE CONDITION FAIL
+        ;   This happens if focus is changed to a window we do not have
+        ;   permission to modify (windows with elevated permissions,
+        ;   running as administrator).
+      }
+    }
+  }
 }
