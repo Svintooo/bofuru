@@ -118,19 +118,35 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start
 {
-  ;; Parse args
-  cnfg := parseArgs(A_Args)
-  if DEBUG
-    ConsoleMsg "DEBUG: args: {}".f(cnfg.Inspect())
+  ;; Create script config
+  ; Settings in this object will control everything.
+  ; Any code modifying config should trigger a redraw of fullscreen (if fullscreen is active)
+  cnfg := {}
 
-  DEBUG        := cnfg.HasOwnProp("debug")   ? cnfg.debug   : DEBUG,
-  cnfg.monitor := cnfg.HasOwnProp("monitor") ? cnfg.monitor : false,
-  cnfg.winsize := cnfg.HasOwnProp("winsize") ? cnfg.winsize : "fit",
-  cnfg.taskbar := cnfg.HasOwnProp("taskbar") ? cnfg.taskbar : "hide"
+
+  ;; Parse args
+  args := parseArgs(A_Args)
+  if DEBUG
+    ConsoleMsg "DEBUG: Parsed args: {}".f(args.Inspect())
+
+  ; Known args
+  DEBUG        := args.HasOwnProp("debug")   ? args.DeleteProp("debug"  ).value : DEBUG,
+  cnfg.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false,
+  cnfg.winsize := args.HasOwnProp("winsize") ? args.DeleteProp("winsize").value : "fit",
+  cnfg.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
+  cnfg.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
+  cnfg.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
+
+  ; Unknown args
+  if !args.IsEmpty()
+  {
+    for , argObj in args.OwnProps()
+      ConsoleMsg "WARN : Unknown arg: {}".f(argObj.argStr)
+  }
 
 
   ;; Run an *.exe
-  if cnfg.HasOwnProp("launch")
+  if cnfg.launch
   {
     ConsoleMsg("INFO : Launching: " cnfg.launch)
     result := launchExe(cnfg.launch)
@@ -148,7 +164,7 @@ DEBUG := false
 
 
   ;; Wait for a window to show up
-  if cnfg.HasOwnProp("ahk_wintitle")
+  if cnfg.ahk_wintitle
   {
     ConsoleMsg "INFO : Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
     cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
@@ -361,25 +377,28 @@ ConsoleMsg(message?, options := "")
 ;; Parse args
 parseArgs(args)
 {
-  cnfg := {}
+  parsedArgs := {}
   i := 0
 
   while (i += 1, i <= args.Length)
   {
     ; Get name and value
-    if RegExMatch(args[i], "^--(.+?)=(.+)", &match) {
+    if RegExMatch(args[i], "^(--(.+?)=(.+))", &match) {
 
-      name  := match[1].Trim().StrReplace("-", "_")
-      value := match[2].Trim()
+      arg   := match[1].Trim()
+      name  := match[2].Trim().StrReplace("-", "_")
+      value := match[3].Trim()
 
-    } else if RegExMatch(args[i], "^--(.+)", &match) {
+    } else if RegExMatch(args[i], "^(--(.+))", &match) {
 
-      name  := match[1].Trim().StrReplace("-", "_")
+      arg   := match[1].Trim()
+      name  := match[2].Trim().StrReplace("-", "_")
       value := true
 
-    } else if RegExMatch(args[i], "^--no-(.+)", &match) {
+    } else if RegExMatch(args[i], "^(--no-(.+))", &match) {
 
-      name  := match[1].Trim().StrReplace("-", "_")
+      arg   := match[1].Trim()
+      name  := match[2].Trim().StrReplace("-", "_")
       value := false
 
     } else {
@@ -387,24 +406,22 @@ parseArgs(args)
       if args[i] = "--"
         i += 1
 
+      arg   := ""
       name  := "launch"
       value := args.Slice(i)
-                   .Collect(arg => (arg ~= "\s" ? '"' arg '"' : arg))
+                   .Collect(str => (str ~= "\s" ? '"' str '"' : str))
                    .Join(" ")
 
       i := args.Length  ; Make this loop iteration the last one
 
     }
 
-    ; Validate name and value
-    ;TODO
-
     ; Store name and value
-    cnfg.%name% := value
+    parsedArgs.%name% := { argStr:arg, value:value }
   }
 
   ; Return
-  return cnfg
+  return parsedArgs
 }
 
 
