@@ -192,7 +192,7 @@ DEBUG := false
   if ! cnfg.HasOwnProp("hWnd")
   {
     ConsoleMsg , _options := "BeforeSpacing1"
-    ConsoleMsg "INFO : Manual Window selection activated"
+    ConsoleMsg "INFO : Manual Window selection ACTIVATED"
     ConsoleMsg "       - Click on game window"
     ConsoleMsg "       - Press Esc to cancel"
     ConsoleMsg , _options := "AfterSpacing1"
@@ -207,12 +207,14 @@ DEBUG := false
     if ! result.ok && result.reason = "user cancel" {
       ; User cancelled the operation
       WinActivate(mainGui.hWnd)  ; Focus the Gui
+      ConsoleMsg "INFO : Manual Window selection CANCELLED", _options := "AfterSpacing1"
       return
     } else if ! result.ok {
       ConsoleMsg "ERROR: {}".f(result.reason)
       return
     }
 
+    ConsoleMsg "INFO : Manual Window selection SUCCEEDED", _options := "AfterSpacing1"
     cnfg.hWnd := result.hWnd
     result := unset
   }
