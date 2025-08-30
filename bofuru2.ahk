@@ -774,8 +774,9 @@ makeWindowFullscreen()
 ; Function is run when any event happens in MS Windows on any window
 ShellMessage(wParam, lParam, msg, script_hwnd)
 {
-  global cnfg
-  global bkgr
+  global cnfg  ; Global config
+  global fscr  ; Fullscreen config
+  global bkgr  ; Background overlay window
 
   static HSHELL_WINDOWACTIVATED  := 0x00000004
        , HSHELL_HIGHBIT          := 0x00008000
@@ -788,7 +789,9 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
   ; React on events about switching focus to another window
   if wParam = HSHELL_WINDOWACTIVATED
   || wParam = HSHELL_RUDEAPPACTIVATED {
+
     if lParam = cnfg.hWnd {
+
       ; Game Window got focus: Set AlwaysOnTop
       if DEBUG
         ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
@@ -817,13 +820,17 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
       catch {
         ;
       }
+
     } else if lParam = 0 {
+
       ; DO NOTHING
       ;   Focus was changed to the Windows taskbar, the overlay
       ;   we created around the Game Window, or something unknown.
       if DEBUG
         ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+
     } else {
+
       ; Another Window got focus: Turn off AlwaysOnTop
       if DEBUG
         ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
@@ -848,6 +855,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
         ;   permission to modify (windows with elevated permissions,
         ;   running as administrator).
       }
+
     }
   }
 }
