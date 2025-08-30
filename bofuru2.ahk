@@ -367,32 +367,32 @@ parseArgs(args)
   while (i += 1, i <= args.Length)
   {
     ; Get name and value
-    if RegExMatch(A_Args[i], "^--(.+?)=(.+)", &match) {
+    if RegExMatch(args[i], "^--(.+?)=(.+)", &match) {
 
       name  := match[1].Trim().StrReplace("-", "_")
       value := match[2].Trim()
 
-    } else if RegExMatch(A_Args[i], "^--(.+)", &match) {
+    } else if RegExMatch(args[i], "^--(.+)", &match) {
 
       name  := match[1].Trim().StrReplace("-", "_")
       value := true
 
-    } else if RegExMatch(A_Args[i], "^--no-(.+)", &match) {
+    } else if RegExMatch(args[i], "^--no-(.+)", &match) {
 
       name  := match[1].Trim().StrReplace("-", "_")
       value := false
 
     } else {
 
-      if A_Args[i] = "--"
+      if args[i] = "--"
         i += 1
 
       name := "launch"
-      value := A_Args.Slice(i)
-                     .Collect(arg => (arg ~= "\s" ? '"' arg '"' : arg))
-                     .Join(" ")
+      value := args.Slice(i)
+                   .Collect(arg => (arg ~= "\s" ? '"' arg '"' : arg))
+                   .Join(" ")
 
-      i := A_Args.Length  ; Make this loop iteration the last one
+      i := args.Length  ; Make this loop iteration the last one
 
     }
 
