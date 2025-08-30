@@ -314,7 +314,7 @@ DEBUG := false
 
   ;; Make Window Fullscreen
   ConsoleMsg "INFO : Activate Window Fullscreen"
-  makeWindowFullscreen()
+  activateFullscreen()
 }
 
 
@@ -655,7 +655,7 @@ synchronizeWithWindow(hWnd, &cnfg)
 ; - global var `cnfg` decides how the fullscreen will be made.
 ; - global var `fscr` will be created.
 ; - global var `bkgr` will be modified.
-makeWindowFullscreen()
+activateFullscreen()
 {
   global cnfg  ; Global config
   global fscr  ; Fullscreen config
@@ -758,6 +758,19 @@ makeWindowFullscreen()
   if DEBUG
     ConsolePrintWindowState(cnfg.hWnd, "New window state")
 }
+
+
+;; Deactivate FULLSCREEN
+deactivateFullscreen()
+{
+  global cnfg  ; Global config
+  global fscr  ; Fullscreen config
+  global bkgr  ; Background overlay window
+
+  bkgr.Hide()
+  restoreWindowState(cnfg.hWnd, cnfg.origState)
+}
+
 
 
 ;; Toggle AlwaysOnTop on window focus switch
