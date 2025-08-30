@@ -490,7 +490,7 @@ removeWindowBorder(hWnd)
 }
 
 
-;; Restore window state
+;; Restore window state (this includes the border)
 restoreWindowState(hWnd, winState)
 {
   ; Remove AlwaysOnTop
