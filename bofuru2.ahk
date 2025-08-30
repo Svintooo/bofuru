@@ -38,6 +38,9 @@ DEBUG := false
   ;       NAME is set with option: "vNAME"
   ;       A GuiControl can then be accessed with code: mainGui["NAME"]
 
+  ; NOTE: A radio button with option "Group" starts a new group of radio buttons.
+  ;       Each radio button created afterwards belong to the same group.
+
   ; Window
   mainGui := Gui("+Border +Caption +MinimizeBox -MaximizeBox +MinSize +MaxSize -Resize +SysMenu +Theme"
                 , _winTitle := "BoFuRu")
@@ -104,7 +107,7 @@ DEBUG := false
   ConsoleMsg "#       ===== BoFuRu =====       #"
   ConsoleMsg "# Windowed Borderless Fullscreen #"
   ConsoleMsg "##################################"
-  ConsoleMsg , "AfterSpacing1"
+  ConsoleMsg , _options := "AfterSpacing1"
 }
 
 
@@ -172,7 +175,7 @@ DEBUG := false
     ConsoleMsg "INFO : Manual Window selection activated"
     ConsoleMsg "       - Click on game window"
     ConsoleMsg "       - Press Esc to cancel"
-    ConsoleMsg , "AfterSpacing1"
+    ConsoleMsg , _options := "AfterSpacing1"
 
     result := lib_userWindowSelect()
     while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
@@ -281,10 +284,10 @@ DEBUG := false
   if cnfg.noBorderState.width  != cnfg.origState.innerWidth
   || cnfg.noBorderState.height != cnfg.origState.innerHeight
   {
-    ConsoleMsg , "BeforeSpacing1"
+    ConsoleMsg , _options := "BeforeSpacing1"
     ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
     ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
-    ConsoleMsg , "AfterSpacing1"
+    ConsoleMsg , _options := "AfterSpacing1"
   }
 
 
@@ -460,7 +463,7 @@ CollectWindowState(hWnd)
 ;; Print window info
 ConsolePrintWindowInfo(cnfg)
 {
-  ConsoleMsg , "BeforeSpacing1"
+  ConsoleMsg , _options := "BeforeSpacing1"
   ConsoleMsg "INFO : Window info"
   if DEBUG {
   ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
@@ -473,7 +476,7 @@ ConsolePrintWindowInfo(cnfg)
   ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())  ;Note: Indent cheating ;)
   }
   ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
-  ConsoleMsg , "AfterSpacing1"
+  ConsoleMsg , _options := "AfterSpacing1"
 }
 
 
@@ -489,7 +492,7 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
   winMenuStr    := "0x{:08X}".f(winState.winMenu)
 
-  ConsoleMsg , "BeforeSpacing1"
+  ConsoleMsg , _options := "BeforeSpacing1"
   ConsoleMsg "DEBUG: {}".f(message)
   ConsoleMsg "       x           = {}".f(winState.x)
   ConsoleMsg "       y           = {}".f(winState.y)
@@ -500,18 +503,18 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   ConsoleMsg "       winStyle    = {}".f(winStyleStr)
   ConsoleMsg "       winExStyle  = {}".f(winExStyleStr)
   ConsoleMsg "       winMenu     = {}".f(winMenuStr)
-  ConsoleMsg , "AfterSpacing1"
+  ConsoleMsg , _options := "AfterSpacing1"
 }
 
 
 ;; Print exception
 ConsolePrintException(e)
 {
-  ConsoleMsg , "BeforeSpacing1"
+  ConsoleMsg , _options := "BeforeSpacing1"
   ConsoleMsg "UNKNOWN: {} threw error of type {}".f(e.What.Inspect(), Type(e))
   ConsoleMsg "         msg: {}".f(e.Message.Inspect())
   ConsoleMsg "         xtra: {}".f(e.Extra.Inspect())
-  ConsoleMsg , "AfterSpacing1"
+  ConsoleMsg , _options := "AfterSpacing1"
 }
 
 
