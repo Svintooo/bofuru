@@ -175,6 +175,7 @@ DEBUG := false
   ;; Let user manually select a window
   if ! cnfg.HasOwnProp("hWnd")
   {
+    ConsoleMsg , _options := "BeforeSpacing1"
     ConsoleMsg "INFO : Manual Window selection activated"
     ConsoleMsg "       - Click on game window"
     ConsoleMsg "       - Press Esc to cancel"
