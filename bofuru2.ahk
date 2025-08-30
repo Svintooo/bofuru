@@ -189,6 +189,7 @@ DEBUG := false
 
     if ! result.ok && result.reason = "user cancel" {
       ; User cancelled the operation
+      WinActivate(mainGui.hWnd)  ; Focus the Gui
       return
     } else if ! result.ok {
       ConsoleMsg "ERROR: {}".f(result.reason)
