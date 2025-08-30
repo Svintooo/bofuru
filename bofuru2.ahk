@@ -56,6 +56,8 @@ DEBUG := false
   ; Buttons
   mainGui.AddButton(mainGui.defaultOpts "vButtonWinSelect",           "Select Window")
   mainGui.AddButton(mainGui.defaultOpts "vButtonFullscreen Disabled", "Toggle Fullscreen")
+  mainGui.AddButton(mainGui.defaultOpts "VButtonExe        Disabled", "Select Exe")
+  mainGui.AddButton(mainGui.defaultOpts "VButtonRun        Disabled", "Run Exe")
 
   ; Settings - Monitors
   mainGui.AddText("vTextMonitor", "Monitor")
