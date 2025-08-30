@@ -55,10 +55,10 @@ DEBUG := false
 
   ; Settings - Monitors
   mainGui.AddText("vTextMonitor", "Monitor")
-  mainGui.AddRadio("Y+{} vRadioMonitor{} Group".f(mainGui.spacing,"auto"), String("Auto"))
+  mainGui.AddRadio("vRadioMonitor{} Y+{} Group".f("auto",mainGui.spacing), String("Auto"))
   loop MonitorGetCount()
   {
-    mainGui.AddRadio("Y+{} vRadioMonitor{}".f(mainGui.spacing,A_Index), String(A_Index))
+    mainGui.AddRadio("vRadioMonitor{} Y+{}".f(A_Index,mainGui.spacing), String(A_Index))
   }
   mainGui["RadioMonitor" "auto"].Value := true  ; Radio button is checked by default
   groupOpt := unset
@@ -70,7 +70,7 @@ DEBUG := false
     groupOpt := ((A_Index = 1) ? "Group" : "")
     WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
                                           .StrReplace("-"," ")
-    mainGui.AddRadio("Y+{} vRadioWinSize{} {}".f(mainGui.spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
+    mainGui.AddRadio("vRadioWinSize{} Y+{} {}".f(WinSizeOpt.StrReplace("-","_"),mainGui.spacing,groupOpt), WinSizeOpt_HumanReadable)
   }
   mainGui["RadioWinSize" "fit"].Value := true  ; Radio button is checked by default
   groupOpt := WinSizeOpt_HumanReadable := unset
@@ -81,7 +81,7 @@ DEBUG := false
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-    mainGui.AddRadio("Y+{} vRadioTaskBar{}".f(mainGui.spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
+    mainGui.AddRadio("vRadioTaskBar{} Y+{}".f(TaskbarOpt,mainGui.spacing), TaskbarOpt_HumanReadable)
   }
   mainGui["RadioTaskBar" "hide"].Value := true  ; Radio button is checked by default
   groupOpt := TaskbarOpt_HumanReadable := unset
