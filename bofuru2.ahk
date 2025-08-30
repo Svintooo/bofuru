@@ -177,36 +177,6 @@ DEBUG := false
   {
     manualWindowSelection()
   }
-  manualWindowSelection()
-  {
-    global mainGui
-    global cnfg  ; Global config
-
-    ConsoleMsg , _options := "BeforeSpacing1"
-    ConsoleMsg "INFO : Manual Window selection ACTIVATED"
-    ConsoleMsg "       - Click on game window"
-    ConsoleMsg "       - Press Esc to cancel"
-    ConsoleMsg , _options := "AfterSpacing1"
-
-    result := lib_userWindowSelect()
-    while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
-    {
-      ConsoleMsg "ERROR: This window is unsupported: Try again"
-      result := lib_userWindowSelect()
-    }
-
-    if ! result.ok {
-      if result.reason = "user cancel"
-        ConsoleMsg "INFO : Manual Window selection CANCELLED", _options := "AfterSpacing1"
-      else
-        ConsoleMsg "ERROR: {}".f(result.reason)
-
-      WinActivate(mainGui.hWnd)  ; Focus the Gui
-    } else {
-      ConsoleMsg "INFO : Manual Window selection SUCCEEDED", _options := "AfterSpacing1"
-      cnfg.hWnd := result.hWnd
-    }
-  }
 
 
   if ! cnfg.hWnd
@@ -643,6 +613,40 @@ synchronizeWithWindow(hWnd, &cnfg)
   }
   MAX_PRIORITY := 2147483647
   SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
+}
+
+
+;; Manual window selection
+; Let user click on the window that shall be made fullscreen.
+manualWindowSelection()
+{
+  global mainGui
+  global cnfg  ; Global config
+
+  ConsoleMsg , _options := "BeforeSpacing1"
+  ConsoleMsg "INFO : Manual Window selection ACTIVATED"
+  ConsoleMsg "       - Click on game window"
+  ConsoleMsg "       - Press Esc to cancel"
+  ConsoleMsg , _options := "AfterSpacing1"
+
+  result := lib_userWindowSelect()
+  while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
+  {
+    ConsoleMsg "ERROR: This window is unsupported: Try again"
+    result := lib_userWindowSelect()
+  }
+
+  if ! result.ok {
+    if result.reason = "user cancel"
+      ConsoleMsg "INFO : Manual Window selection CANCELLED", _options := "AfterSpacing1"
+    else
+      ConsoleMsg "ERROR: {}".f(result.reason)
+
+    WinActivate(mainGui.hWnd)  ; Focus the Gui
+  } else {
+    ConsoleMsg "INFO : Manual Window selection SUCCEEDED", _options := "AfterSpacing1"
+    cnfg.hWnd := result.hWnd
+  }
 }
 
 
