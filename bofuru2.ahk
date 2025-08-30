@@ -34,62 +34,65 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Program Gui Window
 {
+  ; NOTE: Each GuiControl can be given a NAME.
+  ;       NAME is set with option: "vNAME"
+  ;       A GuiControl can then be accessed with code: mainGui["NAME"]
+
   ; Window
   mainGui := Gui("+Border +Caption +MinimizeBox -MaximizeBox +MinSize +MaxSize -Resize +SysMenu +Theme"
                 , _winTitle := "BoFuRu")
   mainGui.SetFont("S12")  ; Font Size
   mainGui.OnEvent("Close", (*) => ExitApp())  ; Stop script on window close
-  mainGui.texts  := []
   mainGui.spacing := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
 
   ; Console
-  mainGui.console := mainGui.AddEdit("w1000 h300 +vConsole +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
-  mainGui.console.setFont(, "Consolas")  ; Monospace font
+  mainGui.AddEdit("vConsole w1000 h300 +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
+  mainGui["Console"].setFont(, "Consolas")  ; Monospace font
 
   ; Buttons
-  mainGui.Button_WinSelect  := mainGui.AddButton("",                                 "Select Window")
-  mainGui.Button_Fullscreen := mainGui.AddButton("Y+{} Disabled".f(mainGui.spacing), "Toggle Fullscreen")
+  mainGui.AddButton("vButtonWinSelect",                                   "Select Window")
+  mainGui.AddButton("vButtonFullscreen Y+{} Disabled".f(mainGui.spacing), "Toggle Fullscreen")
 
   ; Settings - Monitors
-  mainGui.texts.Push mainGui.AddText("", "Monitor")
-  mainGui.AddRadio("Y+{} vMonitor{} Group".f(mainGui.spacing,"auto"), String("Auto"))
+  mainGui.AddText("vTextMonitor", "Monitor")
+  mainGui.AddRadio("Y+{} vRadioMonitor{} Group".f(mainGui.spacing,"auto"), String("Auto"))
   loop MonitorGetCount()
   {
-    mainGui.AddRadio("Y+{} vMonitor{}".f(mainGui.spacing,A_Index), String(A_Index))
+    mainGui.AddRadio("Y+{} vRadioMonitor{}".f(mainGui.spacing,A_Index), String(A_Index))
   }
-  mainGui["Monitor" "auto"].Value := true  ; Radio button is checked by default
+  mainGui["RadioMonitor" "auto"].Value := true  ; Radio button is checked by default
   groupOpt := unset
 
   ; Settings - Window Size
-  mainGui.texts.Push mainGui.AddText("", "Window Size")
+  mainGui.AddText("vTextWindowSize", "Window Size")
   for WinSizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
                                           .StrReplace("-"," ")
-    mainGui.AddRadio("Y+{} vWinSize{} {}".f(mainGui.spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
+    mainGui.AddRadio("Y+{} vRadioWinSize{} {}".f(mainGui.spacing,WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
   }
-  mainGui["WinSize" "fit"].Value := true  ; Radio button is checked by default
+  mainGui["RadioWinSize" "fit"].Value := true  ; Radio button is checked by default
   groupOpt := WinSizeOpt_HumanReadable := unset
 
   ; Settings - Taskbar
-  mainGui.texts.Push mainGui.AddText("", "Taskbar")
+  mainGui.AddText("vTextTaskbar", "Taskbar")
   for TaskbarOpt in ["hide", "show", "show2", "show3"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-    mainGui.AddRadio("Y+{} vTaskBar{}".f(mainGui.spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
+    mainGui.AddRadio("Y+{} vRadioTaskBar{}".f(mainGui.spacing,TaskbarOpt), TaskbarOpt_HumanReadable)
   }
-  mainGui["TaskBar" "hide"].Value := true  ; Radio button is checked by default
+  mainGui["RadioTaskBar" "hide"].Value := true  ; Radio button is checked by default
   groupOpt := TaskbarOpt_HumanReadable := unset
 
   ; Quit Button
-  mainGui.Button_Quit := mainGui.AddButton("", "Quit")
-  mainGui.Button_Quit.OnEvent("Click", (*) => WinClose(mainGui.hWnd))
+  mainGui.AddButton("vButtonQuit", "Quit")
+  mainGui["ButtonQuit"].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
 
   ; Show the window
   mainGui.Show()
-  DllCall("User32.dll\HideCaret", "Ptr", mainGui.console.Hwnd)
+  DllCall("User32.dll\HideCaret", "Ptr", mainGui["Console"].Hwnd)
 }
 
 
@@ -321,7 +324,7 @@ ConsoleMsg(message?, options := "")
 
   ; Print spacing to console
   loop Max(spacing, beforeSpacing)
-    mainGui.console.Value .= "`n"
+    mainGui["Console"].Value .= "`n"
   spacing := 0
 
   ; Store spacing to next invocation
@@ -330,8 +333,8 @@ ConsoleMsg(message?, options := "")
   ; Print message
   if IsSet(message) {
     if ! firstTime
-      mainGui.console.Value .= "`n"
-    mainGui.console.Value .= message
+      mainGui["Console"].Value .= "`n"
+    mainGui["Console"].Value .= message
   }
 
   ; Set firstTime
@@ -340,7 +343,7 @@ ConsoleMsg(message?, options := "")
   }
 
   ; Scroll to bottom
-  DllCall("User32.dll\SendMessage", "Ptr", mainGui.console.hWnd
+  DllCall("User32.dll\SendMessage", "Ptr", mainGui["Console"].hWnd
                                   , "UInt",0x115  ; WM_VSCROLL
                                   , "Ptr", 7      ; SB_BOTTOM
                                   , "Ptr", 0)
