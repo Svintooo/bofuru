@@ -1,6 +1,6 @@
 #Include %A_ScriptDir%\lib\change_cursor.ahk
 
-lib_userWindowSelect(timeout := unset)
+lib_userWindowSelect(timeout?)
 {
   ;; Get desktop bounds
   SM_XVIRTUALSCREEN  := 76  ; x coord
@@ -23,33 +23,44 @@ lib_userWindowSelect(timeout := unset)
                        , "Ptr")
   origCursor := lib_changeCursor(ctl.Hwnd, newCursor)
 
-  ;; Restore overlay mouse cursor
-  ; Otherwise other windows we create will have their default cursor changed for some reason
-  restoreCursorFunc := () => lib_changeCursor(ctl.Hwnd, origCursor)
-
-  ;; Create overlay exit function
-  exitReason := "(none)"
-  overlayCloseFunc := (reason) => (exitReason := reason, restoreCursorFunc(), mygui.Destroy())
+  ;; Prepare user input variable
+  userInput := ""
 
   ;; Create overlay exit actions
-  ctl.OnEvent(  "Click",  (*) => overlayCloseFunc("click") )
-  mygui.OnEvent("Escape", (*) => overlayCloseFunc("escape"))
+  ctl.OnEvent("Click",  (*) => (userInput := "Click", ih.Stop()) )
+  ih := InputHook("M", "{Esc}")
 
-  ;; Enable overlay and make it transparent
+  ;; Show overlay, Wait for user input
   mygui.Show("x{} y{} w{} h{}".f(x, y, w, h))
   WinSetTransparent(35, "ahk_id " mygui.Hwnd)
+  ih.Start()
+  ih.Wait(timeout?)
 
-  ;; Wait until overlay has disappeared
-  if ! WinWaitClose(mygui.Hwnd, , timeout?) {
-    overlayCloseFunc("timeout")
+  ;; Stop inputhook
+  ih.Stop()
+
+  ;; Fetch the user input
+  if !userInput {
+    if ih.EndReason = "EndKey" {
+      userInput := ih.EndKey
+    } else if ih.EndReason = "Stopped" {
+      userInput := "Timeout"
+    }
   }
 
+  ;; Restore overlay mouse cursor
+  ; Otherwise other windows we create will have their default cursor changed for some reason
+  lib_changeCursor(ctl.Hwnd, origCursor)
+
+  ;; Destroy desktop overlay
+  mygui.Destroy()
+
   ;; Return window that mouse points at
-  if exitReason = "timeout" {
+  if userInput = "Timeout" {
     return { ok: false, reason: "timeout" }
-  } else if exitReason = "escape" {
+  } else if userInput = "Escape" {
     return { ok: false, reason: "user cancel" }
-  } else if exitReason = "click" {
+  } else if userInput = "Click" {
     MouseGetPos(, , &hWnd)
     pid       := WinGetPID("ahk_id " hWnd)
     className := WinGetClass("ahk_id " hWnd)
