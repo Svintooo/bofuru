@@ -249,7 +249,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Program Functions and Classes
+;; Functions
 
 ;; Print to console
 ConsoleMsg(message?, options := "")
