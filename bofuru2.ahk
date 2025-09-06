@@ -400,16 +400,16 @@ logWindowInfo(cnfg, &logg)
   logg.info , _options := "MinimumEmptyLinesBefore 1"
   logg.info   "Window info"
   if DEBUG {
-    logg.info "PID           = {}".f(cnfg.pid)
-    logg.info "hWnd          = {}".f(cnfg.hWnd)
+    logg.info "- PID           = {}".f(cnfg.pid)
+    logg.info "- hWnd          = {}".f(cnfg.hWnd)
   }
-  logg.info   "Process Name  = {}".f(cnfg.procName.Inspect())
-  logg.info   "Title         = {}".f(cnfg.winTitle.Inspect())
-  logg.info   "Class         = {}".f(cnfg.winClass.Inspect())
+  logg.info   "- Process Name  = {}".f(cnfg.procName.Inspect())
+  logg.info   "- Title         = {}".f(cnfg.winTitle.Inspect())
+  logg.info   "- Class         = {}".f(cnfg.winClass.Inspect())
   if DEBUG {
-    logg.info "Text          = {}".f(cnfg.winText.Inspect())
+    logg.info "- Text          = {}".f(cnfg.winText.Inspect())
   }
-  logg.info   "--ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
+  logg.info   "- --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
   logg.info , _options := "MinimumEmptyLinesAfter 1"
 }
 
@@ -428,15 +428,15 @@ logWindowState(hWnd_or_winState, message, &logg)
 
   logg.debug , _options := "MinimumEmptyLinesBefore 1"
   logg.debug "{}".f(message)
-  logg.debug "x           = {}".f(winState.x)
-  logg.debug "y           = {}".f(winState.y)
-  logg.debug "width       = {}".f(winState.width)
-  logg.debug "height      = {}".f(winState.height)
-  logg.debug "innerWidth  = {}".f(winState.innerWidth)
-  logg.debug "innerHeight = {}".f(winState.innerHeight)
-  logg.debug "winStyle    = {}".f(winStyleStr)
-  logg.debug "winExStyle  = {}".f(winExStyleStr)
-  logg.debug "winMenu     = {}".f(winMenuStr)
+  logg.debug "- x           = {}".f(winState.x)
+  logg.debug "- y           = {}".f(winState.y)
+  logg.debug "- width       = {}".f(winState.width)
+  logg.debug "- height      = {}".f(winState.height)
+  logg.debug "- innerWidth  = {}".f(winState.innerWidth)
+  logg.debug "- innerHeight = {}".f(winState.innerHeight)
+  logg.debug "- winStyle    = {}".f(winStyleStr)
+  logg.debug "- winExStyle  = {}".f(winExStyleStr)
+  logg.debug "- winMenu     = {}".f(winMenuStr)
   logg.debug , _options := "MinimumEmptyLinesAfter 1"
 }
 
@@ -446,8 +446,8 @@ logException(e, &logg)
 {
   logg.unknown , _options := "MinimumEmptyLinesBefore 1"
   logg.unknown "{} threw error of type {}".f(e.What.Inspect(), Type(e))
-  logg.unknown "msg: {}".f(e.Message.Inspect())
-  logg.unknown "xtra: {}".f(e.Extra.Inspect())
+  logg.unknown "- msg: {}".f(e.Message.Inspect())
+  logg.unknown "- xtra: {}".f(e.Extra.Inspect())
   logg.unknown , _options := "MinimumEmptyLinesAfter 1"
 }
 
