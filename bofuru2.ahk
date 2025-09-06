@@ -119,17 +119,17 @@ DEBUG := false
   mainGui["Radio_Monitor_" "auto"].Value := true  ; Radio button is checked by default
   groupOpt := unset
 
-  ; Settings - Window Size
-  mainGui.AddText("vText_WindowSize", "Window Size")
-  for WinSizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
+  ; Settings - Window Resize
+  mainGui.AddText("vText_WindowResize", "Window Reize")
+  for WinResizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
-    WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-                                          .StrReplace("-"," ")
-    mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinSize_{} {}".f(WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
+    WinResizeOpt_HumanReadable := WinResizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
+                                              .StrReplace("-"," ")
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinResize_{} {}".f(WinResizeOpt.StrReplace("-","_"),groupOpt), WinResizeOpt_HumanReadable)
   }
-  mainGui["Radio_WinSize_" "fit"].Value := true  ; Radio button is checked by default
-  groupOpt := WinSizeOpt_HumanReadable := unset
+  mainGui["Radio_WinResize_" "fit"].Value := true  ; Radio button is checked by default
+  groupOpt := WinResizeOpt_HumanReadable := unset
 
   ; Settings - Taskbar
   mainGui.AddText("vText_Taskbar", "Taskbar")
@@ -277,7 +277,7 @@ DEBUG := false
   ; Set config parameters
   DEBUG        := args.HasOwnProp("debug")   ? args.DeleteProp("debug"  ).value : DEBUG,
   settings.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false,
-  settings.winsize := args.HasOwnProp("winsize") ? args.DeleteProp("winsize").value : "fit",
+  settings.resize  := args.HasOwnProp("resize")  ? args.DeleteProp("resize" ).value : "fit",
   settings.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
   settings.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
   settings.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
@@ -723,7 +723,7 @@ activateFullscreen(gameWindow, &logg)
 
   fscr := lib_calcFullscreenArgs(settings.noBorderState,
                                  _monitor := settings.monitor,
-                                 _winSize := settings.winsize,
+                                 _winSize := settings.resize,
                                  _taskbar := settings.taskbar)
 
   if ! fscr.ok {

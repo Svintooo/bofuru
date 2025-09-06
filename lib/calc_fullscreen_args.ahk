@@ -1,6 +1,6 @@
 ;; Calculate coordinate, size, and screen area to make window fullscreen
 ;
-; winSize    original         Keep original window size (no enlargement).
+; winResize  original         Keep original window size (no enlargement).
 ;            fit              Enlarge window as much as possible while keeping its aspect ratio.
 ;            stretch          Stretch window to fit the whole screen area.
 ;            pixel-perfect    Enlarge window by exact multiple.
@@ -12,7 +12,7 @@
 ;                             Window is centered related to background overlay area.
 ;            show3            Show the MS Windows taskbar.
 ;                             Taskbar is removed twice from the allowed window area.
-lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit", taskbar := "hide")
+lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit", taskbar := "hide")
 {
   ;; Set default return values
   ok                     := true  ; No errors
@@ -169,7 +169,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
   ;; Calculate new window position and size
   ; size is calculated to fit inside scr (allowed screen area)
   ; position is centered according to variable `cntr`
-  switch winSize
+  switch winResize
   {
   case "original", "keep":
     ; Center the window (keeping window original size)
@@ -209,7 +209,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winSize := "fit",
   default:
     ; ERROR
     ok     := false
-    reason := "Invalid arg: winSize={}".f(winSize.Inspect())
+    reason := "Invalid arg: winResize={}".f(winResize.Inspect())
   }
 
 
