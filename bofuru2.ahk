@@ -318,7 +318,7 @@ parseArgs(args)
       if args[i] = "--"
         i += 1
 
-      arg   := ""
+      arg   := args.Slice(i).Inspect()
       name  := "launch"
       value := args.Slice(i)
                    .Collect(str => (str ~= "\s" ? '"' str '"' : str))
