@@ -54,8 +54,8 @@ DEBUG := false
             win_text:  ""}  ; Window Text
 
   ;; Window Mode
-  window_mode := { window:     {x:0, y:0, w:0, h:0},  ; Position/dimention of window
-                   ;clientArea: {x:0, y:0, w:0, h:0},  ; Position/dimention of window client area
+  window_mode := { windowArea: {x:0, y:0, w:0, h:0},  ; Position/dimention of window area
+                   clientArea: {x:0, y:0, w:0, h:0},  ; Position/dimention of window client area
                    menu:       0x00000000,            ; Window menu
                    style:      0x00000000,            ; Window style
                    exStyle:    0x00000000, }          ; Window extended style
@@ -447,7 +447,7 @@ collectWindowState(hWnd)
   winMenu := DllCall("User32.dll\GetMenu", "Ptr", hWnd, "Ptr")
 
   winState := {
-    window:     { x:x,       y:y,       w:width,       h:height       },
+    windowArea: { x:x,       y:y,       w:width,       h:height       },
     clientArea: { x:clientX, y:clientY, w:clientWidth, h:clientHeight },
     menu:       winMenu,
     style:      winStyle,
@@ -492,7 +492,7 @@ logWindowState(hWnd_or_winState, message, &logg)
 
   logg.debug , _options := "MinimumEmptyLinesBefore 1"
   logg.debug "{}".f(message)
-  logg.debug "- window     = {}".f(winState.window.Inspect())
+  logg.debug "- window     = {}".f(winState.windowArea.Inspect())
   logg.debug "- clientArea = {}".f(winState.clientArea.Inspect())
   logg.debug "- menu       = {}".f(winMenuStr)
   logg.debug "- style      = {}".f(winStyleStr)
@@ -595,7 +595,7 @@ restoreWindowState(hWnd, winState, &logg)
 
   ; Set window size/position
   try
-    WinMove(winState.window.x, winState.window.y, winState.window.w, winState.window.h, "ahk_id" hWnd)
+    WinMove(winState.windowArea.x, winState.windowArea.y, winState.windowArea.w, winState.windowArea.h, "ahk_id" hWnd)
   catch as e {
     if DEBUG {
       logException(e, &logg)
@@ -652,7 +652,7 @@ synchronizeWithWindow(hWnd, &config, &gameWindow, &windowMode, &logg)
     logg.debug "Collecting current window state"
 
   winState := collectWindowState(gameWindow.hWnd)
-  windowMode.window     := winState.window
+  windowMode.windowArea := winState.windowArea
   windowMode.clientArea := winState.clientArea
   windowMode.menu       := winState.menu
   windowMode.style      := winState.style
@@ -722,8 +722,8 @@ activateFullscreen(config, gameWindow, windowMode, &logg)
 
 
   ;; Warn if window lost its aspect ratio
-  if noBorderState.window.w != windowMode.clientArea.w
-  || noBorderState.window.h != windowMode.clientArea.h
+  if noBorderState.windowArea.w != windowMode.clientArea.w
+  || noBorderState.windowArea.h != windowMode.clientArea.h
   {
     logg.warn , _options := "MinimumEmptyLinesBefore 1"
     logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
@@ -736,7 +736,7 @@ activateFullscreen(config, gameWindow, windowMode, &logg)
   if DEBUG
     logg.debug "Calculate window fullscreen properties"
 
-  fscr := lib_calcFullscreenArgs(noBorderState.window,
+  fscr := lib_calcFullscreenArgs(noBorderState.windowArea,
                                  _monitor := config.monitor,
                                  _winSize := config.resize,
                                  _taskbar := config.taskbar)
@@ -757,9 +757,9 @@ activateFullscreen(config, gameWindow, windowMode, &logg)
   newWinState := collectWindowState(gameWindow.hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
-  if newWinState.window.w != fscr.window.w || newWinState.window.h != fscr.window.h
+  if newWinState.windowArea.w != fscr.window.w || newWinState.windowArea.h != fscr.window.h
   {
-    fscr := lib_calcFullscreenArgs(newWinState.window,
+    fscr := lib_calcFullscreenArgs(newWinState.windowArea,
                                   _monitor := config.monitor,
                                   _winSize := "keep",
                                   _taskbar := config.taskbar)
