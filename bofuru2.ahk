@@ -56,47 +56,47 @@ DEBUG := false
   consoleWidth := unset
 
   ; Buttons
-  mainGui.AddButton(mainGui.defaultOpts "vButtonWinSelect",           "Select Window")
-  mainGui.AddButton(mainGui.defaultOpts "vButtonFullscreen Disabled", "Toggle Fullscreen")
-  mainGui.AddButton(mainGui.defaultOpts "VButtonExe        Disabled", "Select Exe")
-  mainGui.AddButton(mainGui.defaultOpts "VButtonRun        Disabled", "Run Exe")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_WinSelect",           "Select Window")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Fullscreen Disabled", "Toggle Fullscreen")
+  mainGui.AddButton(mainGui.defaultOpts "VButton_Exe        Disabled", "Select Exe")
+  mainGui.AddButton(mainGui.defaultOpts "VButton_Run        Disabled", "Run Exe")
 
   ; Settings - Monitors
-  mainGui.AddText("vTextMonitor", "Monitor")
-  mainGui.AddRadio(mainGui.defaultOpts "vRadioMonitor{} Group".f("auto"), String("Auto"))
+  mainGui.AddText("vText_Monitor", "Monitor")
+  mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{} Group".f("auto"), String("Auto"))
   loop MonitorGetCount()
   {
-    mainGui.AddRadio(mainGui.defaultOpts "vRadioMonitor{}".f(A_Index), String(A_Index))
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{}".f(A_Index), String(A_Index))
   }
-  mainGui["RadioMonitor" "auto"].Value := true  ; Radio button is checked by default
+  mainGui["Radio_Monitor_" "auto"].Value := true  ; Radio button is checked by default
   groupOpt := unset
 
   ; Settings - Window Size
-  mainGui.AddText("vTextWindowSize", "Window Size")
+  mainGui.AddText("vText_WindowSize", "Window Size")
   for WinSizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     WinSizeOpt_HumanReadable := WinSizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
                                           .StrReplace("-"," ")
-    mainGui.AddRadio(mainGui.defaultOpts "vRadioWinSize{} {}".f(WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinSize_{} {}".f(WinSizeOpt.StrReplace("-","_"),groupOpt), WinSizeOpt_HumanReadable)
   }
-  mainGui["RadioWinSize" "fit"].Value := true  ; Radio button is checked by default
+  mainGui["Radio_WinSize_" "fit"].Value := true  ; Radio button is checked by default
   groupOpt := WinSizeOpt_HumanReadable := unset
 
   ; Settings - Taskbar
-  mainGui.AddText("vTextTaskbar", "Taskbar")
+  mainGui.AddText("vText_Taskbar", "Taskbar")
   for TaskbarOpt in ["hide", "show", "show2", "show3"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-    mainGui.AddRadio(mainGui.defaultOpts "vRadioTaskBar{}".f(TaskbarOpt), TaskbarOpt_HumanReadable)
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_TaskBar_{}".f(TaskbarOpt), TaskbarOpt_HumanReadable)
   }
-  mainGui["RadioTaskBar" "hide"].Value := true  ; Radio button is checked by default
+  mainGui["Radio_TaskBar_" "hide"].Value := true  ; Radio button is checked by default
   groupOpt := TaskbarOpt_HumanReadable := unset
 
   ; Quit Button
-  mainGui.AddButton(mainGui.defaultOpts "vButtonQuit", "Quit")
-  mainGui["ButtonQuit"].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Quit", "Quit")
+  mainGui["Button_Quit"].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
 
   ; Show the window
   mainGui.Show()
