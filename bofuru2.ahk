@@ -12,6 +12,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #Include %A_ScriptDir%\lib\stdlib.ahk
+#Include %A_ScriptDir%\lib\logger.ahk
 #Include %A_ScriptDir%\lib\user_window_select.ahk
 #Include %A_ScriptDir%\lib\can_window_be_fullscreened.ahk
 #Include %A_ScriptDir%\lib\generate_transparent_pixel.ahk
@@ -104,13 +105,48 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Globals
+{
+  ; Console Logger
+  conLog := lib_Logger(
+    ; Define log writer function
+    (message) => (
+      ; Write message to Console
+      mainGui["Console"].Value .= message,
+
+      ; Scroll Console to bottom after weach write
+      DllCall(
+        "User32.dll\SendMessage",
+        "Ptr", mainGui["Console"].hWnd,
+        "UInt",0x115,  ; WM_VSCROLL
+        "Ptr", 7,      ; SB_BOTTOM
+        "Ptr", 0
+      )
+    ),
+
+    ; Define available log methods
+    Map(
+      ; Method   LeadingMsg
+      ; ------   ----------
+      "debug"  , "DEBUG: ",
+      "info"   , "INFO : ",
+      "warn"   , "WARN : ",
+      "error"  , "ERROR: ",
+      "unknown", "UNKNOWN: ",
+      "raw"    , ""
+    )
+  )
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup - Console Welcome Message
 {
-  ConsoleMsg "##################################"
-  ConsoleMsg "#       ===== BoFuRu =====       #"
-  ConsoleMsg "# Windowed Borderless Fullscreen #"
-  ConsoleMsg "##################################"
-  ConsoleMsg , _options := "AfterSpacing1"
+  conLog.raw "##################################", "NoNewLine"
+  conLog.raw "#       ===== BoFuRu =====       #"
+  conLog.raw "# Windowed Borderless Fullscreen #"
+  conLog.raw "##################################", "MinimumEmptyLinesAfter 1"
 }
 
 
@@ -121,12 +157,12 @@ DEBUG := false
   ;; Create background overlay - Generate transparent pixel
   ; Needed to make the overlay allow both mouse clicks and buttons
   if DEBUG
-    ConsoleMsg "DEBUG: Generate transparent pixel"
+    conLog.debug "Generate transparent pixel"
 
   result := lib_GenerateTransparentPixel()
 
   if !result.ok {
-    ConsoleMsg "ERROR: Failed generating transparent pixel: {}".f(result.reason)
+    conLog.error "Failed generating transparent pixel: {}".f(result.reason)
     ExitApp
   }
 
@@ -136,7 +172,7 @@ DEBUG := false
 
   ;; Create background overlay - Create overlay window
   if DEBUG
-    ConsoleMsg "DEBUG: Create background overlay (hidden for now)"
+    conLog.debug "Create background overlay (hidden for now)"
 
   bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
   bkgr.BackColor := "black"
@@ -155,7 +191,7 @@ DEBUG := false
   ; Tell MS Windows to notify us of events for all windows.
   ; - ShellMessage(): Function which receives the events.
   if DEBUG
-    ConsoleMsg "DEBUG: Bind focus change event to toggle AlwaysOnTop"
+    conLog.debug "Bind focus change event to toggle AlwaysOnTop"
 
   if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
   {
@@ -172,7 +208,7 @@ DEBUG := false
   ;; Fetch command line arguments
   args := parseArgs(A_Args)
   if DEBUG
-    ConsoleMsg "DEBUG: Parsed args: {}".f(args.Inspect())
+    conLog.debug "Parsed args: {}".f(args.Inspect())
 
 
   ;; Create global config
@@ -195,7 +231,7 @@ DEBUG := false
   if !args.IsEmpty()
   {
     for , argObj in args.OwnProps()
-      ConsoleMsg "WARN : Unknown arg: {}".f(argObj.argStr)
+      conLog.warn "Unknown arg: {}".f(argObj.argStr)
   }
 }
 
@@ -208,30 +244,30 @@ DEBUG := false
   ;; Run an *.exe
   if cnfg.launch
   {
-    ConsoleMsg("INFO : Launching: " cnfg.launch)
+    conLog.info "Launching: {}".f(cnfg.launch)
     result := launchExe(cnfg.launch)
 
     if ! result.ok {
-      ConsoleMsg "ERROR: Launch failed"
+      conLog.error "Launch failed"
       return
     }
 
     cnfg.pid := result.pid
     result := unset
     if DEBUG
-      ConsoleMsg "DEBUG: Launch success, got PID: " cnfg.pid
+      conLog.debug "Launch success, got PID: " cnfg.pid
   }
 
 
   ;; Find Window
   if cnfg.ahk_wintitle
   {
-    ConsoleMsg "INFO : Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
+    conLog.info "Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
     cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
   }
   else if cnfg.pid
   {
-    manualWindowSelection()
+    manualWindowSelection(&conLog)
   }
 
 
@@ -239,10 +275,10 @@ DEBUG := false
   ; If a game window has been found.
   if cnfg.hWnd
   {
-    synchronizeWithWindow(cnfg.hWnd, &cnfg)
+    synchronizeWithWindow(cnfg.hWnd, &cnfg, &conLog)
 
-    ConsoleMsg "INFO : Activate Window Fullscreen"
-    activateFullscreen()
+    conLog.info "Activate Window Fullscreen"
+    activateFullscreen(&conLog)
   }
 }
 
@@ -250,50 +286,6 @@ DEBUG := false
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Functions
-
-;; Print to console
-ConsoleMsg(message?, options := "")
-{
-  global mainGui
-  static firstTime := true
-  static spacing := 0
-  beforeSpacing  := 0
-  afterSpacing   := 0
-
-  ; Get new spacing (read: empty lines)
-  if RegExMatch(options, "i)(?:^| )b(?:efore)?s(?:pacing)? *(\w+)", &match)
-    beforeSpacing := Integer(match[1])
-
-  if RegExMatch(options, "i)(?:^| )a(?:fter)?s(?:pacing)? *(\w+)", &match)
-    afterSpacing := Integer(match[1])
-
-  ; Print spacing to console
-  loop Max(spacing, beforeSpacing)
-    mainGui["Console"].Value .= "`n"
-  spacing := 0
-
-  ; Store spacing to next invocation
-  spacing += afterSpacing
-
-  ; Print message
-  if IsSet(message) {
-    if ! firstTime
-      mainGui["Console"].Value .= "`n"
-    mainGui["Console"].Value .= message
-  }
-
-  ; Set firstTime
-  if firstTime {
-    firstTime := false
-  }
-
-  ; Scroll to bottom
-  DllCall("User32.dll\SendMessage", "Ptr", mainGui["Console"].hWnd
-                                  , "UInt",0x115  ; WM_VSCROLL
-                                  , "Ptr", 7      ; SB_BOTTOM
-                                  , "Ptr", 0)
-}
-
 
 ;; Parse args
 parseArgs(args)
@@ -404,27 +396,27 @@ CollectWindowState(hWnd)
 
 
 ;; Print window info
-ConsolePrintWindowInfo(cnfg)
+logWindowInfo(cnfg, &logg)
 {
-  ConsoleMsg , _options := "BeforeSpacing1"
-  ConsoleMsg "INFO : Window info"
+  logg.info , _options := "MinimumEmptyLinesBefore 1"
+  logg.info   "Window info"
   if DEBUG {
-  ConsoleMsg "       PID           = {}".f(cnfg.pid)   ;Note: Indent cheating ;)
-  ConsoleMsg "       hWnd          = {}".f(cnfg.hWnd)  ;Note: Indent cheating ;)
+    logg.info "PID           = {}".f(cnfg.pid)
+    logg.info "hWnd          = {}".f(cnfg.hWnd)
   }
-  ConsoleMsg "       Process Name  = {}".f(cnfg.procName.Inspect())
-  ConsoleMsg "       Title         = {}".f(cnfg.winTitle.Inspect())
-  ConsoleMsg "       Class         = {}".f(cnfg.winClass.Inspect())
+  logg.info   "Process Name  = {}".f(cnfg.procName.Inspect())
+  logg.info   "Title         = {}".f(cnfg.winTitle.Inspect())
+  logg.info   "Class         = {}".f(cnfg.winClass.Inspect())
   if DEBUG {
-  ConsoleMsg "       Text          = {}".f(cnfg.winText.Inspect())  ;Note: Indent cheating ;)
+    logg.info "Text          = {}".f(cnfg.winText.Inspect())
   }
-  ConsoleMsg "       --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
-  ConsoleMsg , _options := "AfterSpacing1"
+  logg.info   "--ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
+  logg.info , _options := "MinimumEmptyLinesAfter 1"
 }
 
 
 ;; Print window state
-ConsolePrintWindowState(hWnd_or_winState, message)
+logWindowState(hWnd_or_winState, message, &logg)
 {
   if hWnd_or_winState is Number
     winState := CollectWindowState(hWnd_or_winState)
@@ -435,34 +427,34 @@ ConsolePrintWindowState(hWnd_or_winState, message)
   winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
   winMenuStr    := "0x{:08X}".f(winState.winMenu)
 
-  ConsoleMsg , _options := "BeforeSpacing1"
-  ConsoleMsg "DEBUG: {}".f(message)
-  ConsoleMsg "       x           = {}".f(winState.x)
-  ConsoleMsg "       y           = {}".f(winState.y)
-  ConsoleMsg "       width       = {}".f(winState.width)
-  ConsoleMsg "       height      = {}".f(winState.height)
-  ConsoleMsg "       innerWidth  = {}".f(winState.innerWidth)
-  ConsoleMsg "       innerHeight = {}".f(winState.innerHeight)
-  ConsoleMsg "       winStyle    = {}".f(winStyleStr)
-  ConsoleMsg "       winExStyle  = {}".f(winExStyleStr)
-  ConsoleMsg "       winMenu     = {}".f(winMenuStr)
-  ConsoleMsg , _options := "AfterSpacing1"
+  logg.debug , _options := "MinimumEmptyLinesBefore 1"
+  logg.debug "{}".f(message)
+  logg.debug "x           = {}".f(winState.x)
+  logg.debug "y           = {}".f(winState.y)
+  logg.debug "width       = {}".f(winState.width)
+  logg.debug "height      = {}".f(winState.height)
+  logg.debug "innerWidth  = {}".f(winState.innerWidth)
+  logg.debug "innerHeight = {}".f(winState.innerHeight)
+  logg.debug "winStyle    = {}".f(winStyleStr)
+  logg.debug "winExStyle  = {}".f(winExStyleStr)
+  logg.debug "winMenu     = {}".f(winMenuStr)
+  logg.debug , _options := "MinimumEmptyLinesAfter 1"
 }
 
 
 ;; Print exception
-ConsolePrintException(e)
+logException(e, &logg)
 {
-  ConsoleMsg , _options := "BeforeSpacing1"
-  ConsoleMsg "UNKNOWN: {} threw error of type {}".f(e.What.Inspect(), Type(e))
-  ConsoleMsg "         msg: {}".f(e.Message.Inspect())
-  ConsoleMsg "         xtra: {}".f(e.Extra.Inspect())
-  ConsoleMsg , _options := "AfterSpacing1"
+  logg.unknown , _options := "MinimumEmptyLinesBefore 1"
+  logg.unknown "{} threw error of type {}".f(e.What.Inspect(), Type(e))
+  logg.unknown "msg: {}".f(e.Message.Inspect())
+  logg.unknown "xtra: {}".f(e.Extra.Inspect())
+  logg.unknown , _options := "MinimumEmptyLinesAfter 1"
 }
 
 
 ;; Remove window border
-removeWindowBorder(hWnd)
+removeWindowBorder(hWnd, &logg)
 {
   global DEBUG
 
@@ -476,7 +468,7 @@ removeWindowBorder(hWnd)
     WinSetStyle(newWinStyle, "ahk_id" cnfg.hWnd)
   catch as e
     if DEBUG
-      ConsolePrintException(e)
+      logException(e, &logg)
 
   ; Remove extended styles (NOTE: may not be needed)
   removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
@@ -489,7 +481,7 @@ removeWindowBorder(hWnd)
     WinSetExStyle("-" removeWinExStyle, "ahk_id" cnfg.hWnd)   ; The minus (-) removes the styles from the current window styles
   catch as e
     if DEBUG
-      ConsolePrintException(e)
+      logException(e, &logg)
 
   ; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
@@ -543,27 +535,27 @@ restoreWindowState(hWnd, winState)
 ; - Collects necessary information
 ; - Makes sure the window can be made fullscreen
 ; - Creates a hook that quits the script if the game window closes
-synchronizeWithWindow(hWnd, &cnfg)
+synchronizeWithWindow(hWnd, &cnfg, &logg)
 {
   ;; Collect window info
   CollectWindowInfo(hWnd, &cnfg)
 
 
   ;; Print window info
-  ConsolePrintWindowInfo(cnfg)
+  logWindowInfo(cnfg, &logg)
 
 
   ;; Check if window is allowed
   if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
   {
-    ConsoleMsg "ERROR: Unsupported window selected"
+    logg.error "Unsupported window selected"
     return
   }
 
 
   ;; Exit script if the game window is closed
   if DEBUG
-    ConsoleMsg "DEBUG: Bind exit event to window close"
+    logg.debug "Bind exit event to window close"
   Event_AppExit() {
     if not WinExist("ahk_id" cnfg.hWnd)
       ExitApp(0)
@@ -574,80 +566,80 @@ synchronizeWithWindow(hWnd, &cnfg)
 
   ;; Focus the window
   if DEBUG
-    ConsoleMsg "DEBUG: Put the game window in focus"
+    logg.debug "Put the game window in focus"
 
   WinActivate(cnfg.hWnd)
 
 
   ;; Collect Window State
   if DEBUG
-    ConsoleMsg "DEBUG: Collecting current window state"
+    logg.debug "Collecting current window state"
 
   cnfg.origState := CollectWindowState(cnfg.hWnd)
 
   if DEBUG
-    ConsolePrintWindowState(cnfg.origState, "Window state (original)")
+    logWindowState(cnfg.origState, "Window state (original)", &logg)
 
 
   ;; Restore window state on exit
   if DEBUG
-    ConsoleMsg "DEBUG: Register OnExit callback to restore window state on exit"
+    logg.debug "Register OnExit callback to restore window state on exit"
 
   OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
 
 
   ;; Remove Window Border
-  ConsoleMsg "INFO : Remove window styles (border, menu, title bar, etc)"
-  removeWindowBorder(cnfg.hWnd)
+  logg.info "Remove window styles (border, menu, title bar, etc)"
+  removeWindowBorder(cnfg.hWnd, &logg)
 
 
   ;; Get new window state
   cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
   if DEBUG
-    ConsolePrintWindowState(cnfg.noBorderState, "Window state (no border)")
+    logWindowState(cnfg.noBorderState, "Window state (no border)", &logg)
 
 
   ;; Warn if window lost its aspect ratio
   if cnfg.noBorderState.width  != cnfg.origState.innerWidth
   || cnfg.noBorderState.height != cnfg.origState.innerHeight
   {
-    ConsoleMsg , _options := "BeforeSpacing1"
-    ConsoleMsg "WARN : Window refuses to keep its proportions (aspect ratio) after the border was removed."
-    ConsoleMsg "WARN : You may experience distorted graphics and slightly off mouse clicks."
-    ConsoleMsg , _options := "AfterSpacing1"
+    logg.warn , _options := "MinimumEmptyLinesBefore 1"
+    logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
+    logg.warn "You may experience distorted graphics and slightly off mouse clicks."
+    logg.warn , _options := "MinimumEmptyLinesAfter 1"
   }
 }
 
 
 ;; Manual window selection
 ; Let user click on the window that shall be made fullscreen.
-manualWindowSelection()
+manualWindowSelection(&logg)
 {
   global mainGui
   global cnfg  ; Global config
 
-  ConsoleMsg , _options := "BeforeSpacing1"
-  ConsoleMsg "INFO : Manual Window selection ACTIVATED"
-  ConsoleMsg "       - Click on game window"
-  ConsoleMsg "       - Press Esc to cancel"
-  ConsoleMsg , _options := "AfterSpacing1"
+  logg.info , _options := "MinimumEmptyLinesBefore 1"
+  logg.info "Manual Window selection ACTIVATED"
+  logg.info "- Click on game window"
+  logg.info "- Press Esc to cancel"
+  logg.info , _options := "MinimumEmptyLinesAfter 1"
 
   result := lib_userWindowSelect()
   while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
   {
-    ConsoleMsg "ERROR: This window is unsupported: Try again"
+    logg.error "This window is unsupported: Try again"
     result := lib_userWindowSelect()
   }
 
   if ! result.ok {
     if result.reason = "user cancel"
-      ConsoleMsg "INFO : Manual Window selection CANCELLED", _options := "AfterSpacing1"
+      logg.info "Manual Window selection CANCELLED", _options := "MinimumEmptyLinesAfter 1"
     else
-      ConsoleMsg "ERROR: {}".f(result.reason)
+      logg.error "{}".f(result.reason)
 
     WinActivate(mainGui.hWnd)  ; Focus the Gui
   } else {
-    ConsoleMsg "INFO : Manual Window selection SUCCEEDED", _options := "AfterSpacing1"
+    logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesAfter 1"
     cnfg.hWnd := result.hWnd
   }
 }
@@ -659,7 +651,7 @@ manualWindowSelection()
 ; - global var `cnfg` decides how the fullscreen will be made.
 ; - global var `fscr` will be created.
 ; - global var `bkgr` will be modified.
-activateFullscreen()
+activateFullscreen(&logg)
 {
   global cnfg  ; Global config
   global fscr  ; Fullscreen config
@@ -667,7 +659,7 @@ activateFullscreen()
 
   ;; Calculate window fullscreen properties
   if DEBUG
-    ConsoleMsg "DEBUG: Calculate window fullscreen properties"
+    logg.debug "Calculate window fullscreen properties"
 
   fscr := lib_calcFullscreenArgs(cnfg.noBorderState,
                                  _monitor := cnfg.monitor,
@@ -676,14 +668,14 @@ activateFullscreen()
 
   if ! fscr.ok {
     restoreWindowState(cnfg.hWnd, cnfg.origState)
-    ConsoleMsg "ERROR: {}".f(fscr.reason)
+    logg.error "{}".f(fscr.reason)
     return
   }
 
 
   ;; Resize and reposition window
   if DEBUG
-    ConsoleMsg "DEBUG: Resize and reposition window"
+    logg.debug "Resize and reposition window"
 
   WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
   sleep 1  ; Millisecond
@@ -699,7 +691,7 @@ activateFullscreen()
 
     if ! fscr.ok {
       restoreWindowState(cnfg.hWnd, cnfg.origState)
-      ConsoleMsg "ERROR: {}".f(fscr.reason)
+      logg.error "{}".f(fscr.reason)
       return
     }
 
@@ -743,7 +735,7 @@ activateFullscreen()
   {
     ; Disable game window always on top
     if DEBUG
-      ConsoleMsg "DEBUG: Disable AlwaysOnTop on game window"
+      logg.debug "Disable AlwaysOnTop on game window"
 
     WinSetAlwaysOnTop(false, cnfg.hWnd)
     WinSetAlwaysOnTop(false, bkgr.hWnd)
@@ -752,7 +744,7 @@ activateFullscreen()
   {
     ; Make game window always on top
     if DEBUG
-      ConsoleMsg "DEBUG: Set AlwaysOnTop on game window"
+      logg.debug "Set AlwaysOnTop on game window"
 
     WinSetAlwaysOnTop(true, cnfg.hWnd)
     WinSetAlwaysOnTop(true, bkgr.hWnd)
@@ -761,11 +753,11 @@ activateFullscreen()
 
   ;; Print new window state
   if DEBUG
-    ConsolePrintWindowState(cnfg.hWnd, "Window state (fullscreen)")
+    logWindowState(cnfg.hWnd, "Window state (fullscreen)", &logg)
 
 
   ;; End message
-  ConsoleMsg "INFO : Your game should now be in fullscreen"
+  logg.info "Your game should now be in fullscreen"
 }
 
 
@@ -822,7 +814,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
 
       ; Game Window got focus: Set AlwaysOnTop
       if DEBUG
-        ConsoleMsg "DEBUG: lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        conLog.debug "lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
       try
         WinSetAlwaysOnTop(true, cnfg.hWnd)
       catch {
@@ -855,13 +847,13 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
       ;   Focus was changed to the Windows taskbar, the overlay
       ;   we created around the Game Window, or something unknown.
       if DEBUG
-        ConsoleMsg "DEBUG: lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        conLog.debug "lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
 
     } else {
 
       ; Another Window got focus: Turn off AlwaysOnTop
       if DEBUG
-        ConsoleMsg "DEBUG: lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
+        conLog.debug "lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
       try
         WinSetAlwaysOnTop(false, cnfg.hWnd)
       catch {
