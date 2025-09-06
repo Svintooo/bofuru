@@ -234,6 +234,10 @@ DEBUG := false
   ; Make mouse clicks on overlay restore focus to game window
   bgGui["ClickArea"].OnEvent("Click",       (*) => WinActivate(settings.hWnd))
   bgGui["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(settings.hWnd))
+
+
+  ;; Clean up
+  pixel := unset
 }
 
 
