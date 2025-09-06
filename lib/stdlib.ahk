@@ -31,7 +31,7 @@ __ObjDefineProp(Class.Prototype, "Bind", {
 ;   arr := [1,2,3]
 ;   arr.add_four()  ; Same as: arr.Push(4)
 __ObjDefineProp(Class.Prototype, "DefineFunc", {
-  Call: (this, NewMethod, ExternalMethod, Params*) => __ObjDefineProp(this.prototype, NewMethod, {call: ObjBindMethod(ExternalMethod)})
+  Call: (this, newMethod, externalMethod, params*) => __ObjDefineProp(this.prototype, newMethod, {call: ObjBindMethod(externalMethod)})
 })
 
 ;; __FuncHandler
