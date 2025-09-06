@@ -255,6 +255,7 @@ DEBUG := false
     MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
     OnMessage(MsgNum, ShellMessage)
   }
+  ;TODO: Add error handling here if RegisterShellHookWindow fails
 
 
   ;; Restore game window state on exit
