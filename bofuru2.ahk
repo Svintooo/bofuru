@@ -333,7 +333,7 @@ DEBUG := false
     synchronizeWithWindow(game.hWnd, &settings, &game, &conLog)
 
     conLog.info "Activate Window Fullscreen"
-    activateFullscreen(game, &conLog)
+    activateFullscreen(settings, game, &conLog)
   }
 }
 
@@ -686,12 +686,11 @@ manualWindowSelection(&logg)
 ;; Activate FULLSCREEN
 ; All other code only exist to help use this function.
 ; - Changes window size and position to make it fullscreen.
-; - global var `settings` decides how the fullscreen will be made.
+; - arg `config` decides how the fullscreen will be made.
 ; - global var `fscr` will be created.
 ; - global var `bgGui` will be modified.
-activateFullscreen(gameWindow, &logg)
+activateFullscreen(config, gameWindow, &logg)
 {
-  global settings  ; Global config
   global fscr      ; Fullscreen config
   global bgGui     ; Background overlay window
 
@@ -707,8 +706,8 @@ activateFullscreen(gameWindow, &logg)
 
 
   ;; Warn if window lost its aspect ratio
-  if noBorderState.width  != settings.origState.innerWidth
-  || noBorderState.height != settings.origState.innerHeight
+  if noBorderState.width  != config.origState.innerWidth
+  || noBorderState.height != config.origState.innerHeight
   {
     logg.warn , _options := "MinimumEmptyLinesBefore 1"
     logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
@@ -722,12 +721,12 @@ activateFullscreen(gameWindow, &logg)
     logg.debug "Calculate window fullscreen properties"
 
   fscr := lib_calcFullscreenArgs(noBorderState,
-                                 _monitor := settings.monitor,
-                                 _winSize := settings.resize,
-                                 _taskbar := settings.taskbar)
+                                 _monitor := config.monitor,
+                                 _winSize := config.resize,
+                                 _taskbar := config.taskbar)
 
   if ! fscr.ok {
-    restoreWindowState(gameWindow.hWnd, settings.origState)
+    restoreWindowState(gameWindow.hWnd, config.origState)
     logg.error "{}".f(fscr.reason)
     return
   }
@@ -745,12 +744,12 @@ activateFullscreen(gameWindow, &logg)
   if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
   {
     fscr := lib_calcFullscreenArgs(newWinState,
-                                  _monitor := settings.monitor,
+                                  _monitor := config.monitor,
                                   _winSize := "keep",
-                                  _taskbar := settings.taskbar)
+                                  _taskbar := config.taskbar)
 
     if ! fscr.ok {
-      restoreWindowState(gameWindow.hWnd, settings.origState)
+      restoreWindowState(gameWindow.hWnd, config.origState)
       logg.error "{}".f(fscr.reason)
       return
     }
@@ -822,14 +821,13 @@ activateFullscreen(gameWindow, &logg)
 
 
 ;; Deactivate FULLSCREEN
-deactivateFullscreen(gameWindow)
+deactivateFullscreen(config, gameWindow)
 {
-  global settings  ; Global config
   global fscr      ; Fullscreen config
   global bgGui     ; Background overlay window
 
   bgGui.Hide()
-  restoreWindowState(gameWindow.hWnd, settings.origState)
+  restoreWindowState(gameWindow.hWnd, config.origState)
 }
 
 
