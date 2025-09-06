@@ -256,6 +256,13 @@ DEBUG := false
     MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
     OnMessage(MsgNum, ShellMessage)
   }
+
+
+  ;; Restore game window state on exit
+  if DEBUG
+    conLog.debug "Register OnExit callback to restore window state on exit"
+
+  OnExit (*) => restoreWindowState(game.hWnd, window_mode, &conLog)
 }
 
 
@@ -330,10 +337,10 @@ DEBUG := false
   ; If a game window has been found.
   if game.hWnd
   {
-    synchronizeWithWindow(game.hWnd, &settings, &game, &conLog)
+    synchronizeWithWindow(game.hWnd, &settings, &game, &window_mode, &conLog)
 
     conLog.info "Activate Window Fullscreen"
-    activateFullscreen(settings, game, &conLog)
+    activateFullscreen(settings, game, window_mode, &conLog)
   }
 }
 
@@ -430,7 +437,7 @@ collectWindowState(hWnd)
 
   ; Get window client area width/height
   ; (this is the area without the window border)
-  WinGetClientPos(, , &innerWidth, &innerHeight, hWnd)
+  WinGetClientPos(&clientX, &clientY, &clientWidth, &clientHeight, hWnd)
 
   ; Get window style (border)
   winStyle   := WinGetStyle(hWnd)
@@ -440,11 +447,11 @@ collectWindowState(hWnd)
   winMenu := DllCall("User32.dll\GetMenu", "Ptr", hWnd, "Ptr")
 
   winState := {
-    x:x, y:y,
-    width:width, height:height,
-    innerWidth:innerWidth, innerHeight:innerHeight,
-    winStyle:winStyle, winExStyle:winExStyle,
-    winMenu:winMenu,
+    window:     { x:x,       y:y,       w:width,       h:height       },
+    clientArea: { x:clientX, y:clientY, w:clientWidth, h:clientHeight },
+    menu:       winMenu,
+    style:      winStyle,
+    exStyle:    winExStyle,
   }
 
   return winState
@@ -479,21 +486,17 @@ logWindowState(hWnd_or_winState, message, &logg)
   else
     winState := hWnd_or_winState
 
-  winStyleStr   := "0x{:08X} ({})".f(winState.winStyle,   lib_parseWindowStyle(winState.winStyle)    .Join(" | "))
-  winExStyleStr := "0x{:08X} ({})".f(winState.winExStyle, lib_parseWindowExStyle(winState.winExStyle).Join(" | "))
-  winMenuStr    := "0x{:08X}".f(winState.winMenu)
+  winStyleStr   := "0x{:08X} ({})".f(winState.style,   lib_parseWindowStyle(winState.style)    .Join(" | "))
+  winExStyleStr := "0x{:08X} ({})".f(winState.exStyle, lib_parseWindowExStyle(winState.exStyle).Join(" | "))
+  winMenuStr    := "0x{:08X}".f(winState.menu)
 
   logg.debug , _options := "MinimumEmptyLinesBefore 1"
   logg.debug "{}".f(message)
-  logg.debug "- x           = {}".f(winState.x)
-  logg.debug "- y           = {}".f(winState.y)
-  logg.debug "- width       = {}".f(winState.width)
-  logg.debug "- height      = {}".f(winState.height)
-  logg.debug "- innerWidth  = {}".f(winState.innerWidth)
-  logg.debug "- innerHeight = {}".f(winState.innerHeight)
-  logg.debug "- winStyle    = {}".f(winStyleStr)
-  logg.debug "- winExStyle  = {}".f(winExStyleStr)
-  logg.debug "- winMenu     = {}".f(winMenuStr)
+  logg.debug "- window     = {}".f(winState.window.Inspect())
+  logg.debug "- clientArea = {}".f(winState.clientArea.Inspect())
+  logg.debug "- menu       = {}".f(winMenuStr)
+  logg.debug "- style      = {}".f(winStyleStr)
+  logg.debug "- exStyle    = {}".f(winExStyleStr)
   logg.debug , _options := "MinimumEmptyLinesAfter 1"
 }
 
@@ -510,11 +513,11 @@ logException(e, &logg)
 
 
 ;; Remove window border
-removeWindowBorder(hWnd, &logg)
+removeWindowBorder(hWnd, windowMode, &logg)
 {
   global DEBUG
 
-  if settings.origState.winMenu
+  if windowMode.menu
     DllCall("SetMenu", "uint", game.hWnd, "uint", 0)
 
   ; Remove styles (border)
@@ -541,48 +544,63 @@ removeWindowBorder(hWnd, &logg)
 
   ; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
-  WinMove(, , settings.origState.innerWidth, settings.origState.innerHeight, game.hWnd)
+  WinMove(, , windowMode.clientArea.w, windowMode.clientArea.h, game.hWnd)
   sleep 100  ; TODO: Wait for window resize to finish before continuing
 }
 
 
 ;; Restore window state (this includes the border)
-restoreWindowState(hWnd, winState)
+restoreWindowState(hWnd, winState, &logg)
 {
   ; Remove AlwaysOnTop
   try
     WinSetAlwaysOnTop(false, hWnd)
-  catch {
-    ;
+  catch as e {
+    if DEBUG {
+      logException(e, &logg)
+      MsgBox ""
+    }
   }
 
   ; Set window menu bar
   try
-    if winState.winMenu
-      winMenu := DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.winMenu)
-  catch {
-    ;
+    if winState.menu
+      DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.menu)
+  catch as e {
+    if DEBUG {
+      logException(e, &logg)
+      MsgBox ""
+    }
   }
 
   ; Set window style
   try
-    WinSetStyle(winState.winStyle, "ahk_id" hWnd)
-  catch {
-    ;
+    WinSetStyle(winState.style, "ahk_id" hWnd)
+  catch as e {
+    if DEBUG {
+      logException(e, &logg)
+      MsgBox ""
+    }
   }
 
   ; Set window extended style
   try
-    WinSetExStyle(winState.winExStyle, "ahk_id" hWnd)
-  catch {
-    ;
+    WinSetExStyle(winState.exStyle, "ahk_id" hWnd)
+  catch as e {
+    if DEBUG {
+      logException(e, &logg)
+      MsgBox ""
+    }
   }
 
   ; Set window size/position
   try
-    WinMove(winState.x, winState.y, winState.width, winState.height, "ahk_id" hWnd)
-  catch {
-    ;
+    WinMove(winState.window.x, winState.window.y, winState.window.w, winState.window.h, "ahk_id" hWnd)
+  catch as e {
+    if DEBUG {
+      logException(e, &logg)
+      MsgBox ""
+    }
   }
 }
 
@@ -591,7 +609,7 @@ restoreWindowState(hWnd, winState)
 ; - Collects necessary information
 ; - Makes sure the window can be made fullscreen
 ; - Creates a hook that quits the script if the game window closes
-synchronizeWithWindow(hWnd, &config, &gameWindow, &logg)
+synchronizeWithWindow(hWnd, &config, &gameWindow, &windowMode, &logg)
 {
   ;; Collect window info
   collectWindowInfo(hWnd, &gameWindow)
@@ -629,21 +647,19 @@ synchronizeWithWindow(hWnd, &config, &gameWindow, &logg)
   WinActivate(gameWindow.hWnd)
 
 
-  ;; Collect Window State
+  ;; Configure Window Mode
   if DEBUG
     logg.debug "Collecting current window state"
 
-  config.origState := collectWindowState(gameWindow.hWnd)
+  winState := collectWindowState(gameWindow.hWnd)
+  windowMode.window     := winState.window
+  windowMode.clientArea := winState.clientArea
+  windowMode.menu       := winState.menu
+  windowMode.style      := winState.style
+  windowMode.exStyle    := winState.exStyle
 
   if DEBUG
-    logWindowState(config.origState, "Window state (original)", &logg)
-
-
-  ;; Restore window state on exit
-  if DEBUG
-    logg.debug "Register OnExit callback to restore window state on exit"
-
-  OnExit (*) => restoreWindowState(gameWindow.hWnd, config.origState)
+    logWindowState(windowMode, "Window state (original)", &logg)
 }
 
 
@@ -689,14 +705,14 @@ manualWindowSelection(&logg)
 ; - arg `config` decides how the fullscreen will be made.
 ; - global var `fscr` will be created.
 ; - global var `bgGui` will be modified.
-activateFullscreen(config, gameWindow, &logg)
+activateFullscreen(config, gameWindow, windowMode, &logg)
 {
   global fscr      ; Fullscreen config
   global bgGui     ; Background overlay window
 
   ;; Remove Window Border
   logg.info "Remove window styles (border, menu, title bar, etc)"
-  removeWindowBorder(gameWindow.hWnd, &logg)
+  removeWindowBorder(gameWindow.hWnd, windowMode, &logg)
 
 
   ;; Get new window state
@@ -706,8 +722,8 @@ activateFullscreen(config, gameWindow, &logg)
 
 
   ;; Warn if window lost its aspect ratio
-  if noBorderState.width  != config.origState.innerWidth
-  || noBorderState.height != config.origState.innerHeight
+  if noBorderState.window.w != windowMode.clientArea.w
+  || noBorderState.window.h != windowMode.clientArea.h
   {
     logg.warn , _options := "MinimumEmptyLinesBefore 1"
     logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
@@ -720,13 +736,13 @@ activateFullscreen(config, gameWindow, &logg)
   if DEBUG
     logg.debug "Calculate window fullscreen properties"
 
-  fscr := lib_calcFullscreenArgs(noBorderState,
+  fscr := lib_calcFullscreenArgs(noBorderState.window,
                                  _monitor := config.monitor,
                                  _winSize := config.resize,
                                  _taskbar := config.taskbar)
 
   if ! fscr.ok {
-    restoreWindowState(gameWindow.hWnd, config.origState)
+    restoreWindowState(gameWindow.hWnd, windowMode, &logg)
     logg.error "{}".f(fscr.reason)
     return
   }
@@ -741,23 +757,21 @@ activateFullscreen(config, gameWindow, &logg)
   newWinState := collectWindowState(gameWindow.hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
-  if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
+  if newWinState.window.w != fscr.window.w || newWinState.window.h != fscr.window.h
   {
-    fscr := lib_calcFullscreenArgs(newWinState,
+    fscr := lib_calcFullscreenArgs(newWinState.window,
                                   _monitor := config.monitor,
                                   _winSize := "keep",
                                   _taskbar := config.taskbar)
 
     if ! fscr.ok {
-      restoreWindowState(gameWindow.hWnd, config.origState)
+      restoreWindowState(gameWindow.hWnd, windowMode, &logg)
       logg.error "{}".f(fscr.reason)
       return
     }
 
     WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, gameWindow.hWnd)
   }
-
-  newWinState := unset
 
 
   ;; Modify background overlay
@@ -821,13 +835,13 @@ activateFullscreen(config, gameWindow, &logg)
 
 
 ;; Deactivate FULLSCREEN
-deactivateFullscreen(config, gameWindow)
+deactivateFullscreen(gameWindow, windowMode, &logg)
 {
   global fscr      ; Fullscreen config
   global bgGui     ; Background overlay window
 
   bgGui.Hide()
-  restoreWindowState(gameWindow.hWnd, config.origState)
+  restoreWindowState(gameWindow.hWnd, windowMode, &logg)
 }
 
 

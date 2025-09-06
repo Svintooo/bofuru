@@ -27,7 +27,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
     win := { x:winX, y:winY, w:winW, h:winH }
     winX := winY := winW := WinH := unset
   } else {
-    win := { x:window.x, y:window.y, w:window.width, h:window.height }
+    win := { x:window.x, y:window.y, w:window.w, h:window.h }
   }
 
 
