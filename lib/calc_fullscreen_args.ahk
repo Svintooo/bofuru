@@ -15,10 +15,10 @@
 lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit", taskbar := "hide")
 {
   ;; Set default return values
-  ok                     := true  ; No errors
-  reason                 := ""    ; No error reason message
-  needsBackgroundOverlay := true  ; Usually needed for monitor area not covered by window
-  needsAlwaysOnTop       := true  ; Usually needed to hide MS Windows taskbar
+  ok               := true  ; No errors
+  reason           := ""    ; No error reason message
+  needsBackground  := true  ; Usually needed for monitor area not covered by window
+  needsAlwaysOnTop := true  ; Usually needed to hide MS Windows taskbar
 
 
   ;; Get Window
@@ -80,7 +80,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
 
   ;NOTE: mon = monitor area
   ;      scr = allowed screen area for the window to reside in
-  ;      ovr = screen area for the background overlay
+  ;      bgr = screen area for the background overlay
   mon := {
     x: Min(monX1,monX2),
     y: Min(monY1,monY2),
@@ -88,7 +88,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
     h: Abs(monY1-monY2)
   }
   scr := mon.Clone()
-  ovr := mon.Clone()
+  bgr := mon.Clone()
   cntr := "mon"  ; Window position is centered relative to mon (monitor area)
   monX1 := monX2 := monY1 := monY2 := unset
 
@@ -122,35 +122,35 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
           ; Taskbar at the top or bottom
           if tray.y > mon.y {
             ; Taskbar at the bottom
-            ovr.h -= tray.h
+            bgr.h -= tray.h
           } else {
             ; Taskbar at the top
-            ovr.y += tray.h
-            ovr.h -= tray.h
+            bgr.y += tray.h
+            bgr.h -= tray.h
           }
 
           if opposite_taskbar_area {
             scr.y += tray.h
             scr.h -= tray.h * 2
           } else {
-            scr := ovr.Clone()
+            scr := bgr.Clone()
           }
         } else if tray.h = mon.h {
           ; Taskbar at the left or right side
           if tray.x > mon.x {
             ; Taskbar at the right side
-            ovr.w -= tray.w
+            bgr.w -= tray.w
           } else {
             ; Taskbar at the left side
-            ovr.x += tray.w
-            ovr.w -= tray.w
+            bgr.x += tray.w
+            bgr.w -= tray.w
           }
 
           if opposite_taskbar_area {
             scr.x += tray.w
             scr.w -= tray.w * 2
           } else {
-            scr := ovr.Clone()
+            scr := bgr.Clone()
           }
         } else {
           ; THIS SHOULD NEVER HAPPEN
@@ -232,7 +232,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
   ;; Check if window will cover the whole monitor area
   if win.x = mon.x && win.y = mon.y && win.w = mon.w && win.h = mon.h {
     ; Not needed: window will cover the whole area by itself
-    needsBackgroundOverlay := false
+    needsBackground := false
 
     ; Not needed: MS Windows will hide the taskbar automatically
     needsAlwaysOnTop := false
@@ -242,7 +242,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
   ;; Check if window will cover the whole allowed screen area
   if win.x = scr.x && win.y = scr.y && win.w = scr.w && win.h = scr.h {
     ; Not needed: window will cover the whole area by itself
-    needsBackgroundOverlay := false
+    needsBackground := false
   }
 
 
@@ -251,12 +251,12 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
     ok:     ok,
     reason: reason,
 
-    window:  win,
-    screen:  scr,
-    overlay: ovr,
-    monitor: mon,
+    windowArea:     win,
+    screenArea:     scr,
+    backgroundArea: bgr,
+    monitorArea:    mon,
 
-    needsBackgroundOverlay: needsBackgroundOverlay,
-    needsAlwaysOnTop:       needsAlwaysOnTop,
+    needsBackground:  needsBackground,
+    needsAlwaysOnTop: needsAlwaysOnTop,
   }
 }

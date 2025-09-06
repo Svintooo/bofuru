@@ -61,13 +61,11 @@ DEBUG := false
                    exStyle:    0x00000000, }          ; Window extended style
 
   ;; Fullscreen Mode
-  fullscreen_mode := { status_ok:        false,                 ; Is fullscreen possible?
-                       status_reason:    "",
-                       window:           {x:0, y:0, w:0, h:0},  ; Position/dimention of window
-                       monitor:          {x:0, y:0, w:0, h:0},  ; Position/dimention of computer monitor
-                       screen:           {x:0, y:0, w:0, h:0},  ; Position/dimention of desktop area
-                       background:       {x:0, y:0, w:0, h:0},  ; Position/dimention of background overlay
-                       needsBackground:  false,
+  fullscreen_mode := { windowArea:       {x:0, y:0, w:0, h:0},  ; Position/dimention of window area
+                       monitorArea:      {x:0, y:0, w:0, h:0},  ; Position/dimention of computer monitor area
+                       screenArea:       {x:0, y:0, w:0, h:0},  ; Position/dimention of desktop area
+                       backgroundArea:   {x:0, y:0, w:0, h:0},  ; Position/dimention of background overlay area
+                       needsBackground:  false,                 ; If background overlay is needed
                        needsAlwaysOnTop: false }                ; If AlwaysOnTop is needed on window and background
 
   ;;TODO: Prevent additional properties
@@ -340,7 +338,7 @@ DEBUG := false
     synchronizeWithWindow(game.hWnd, &settings, &game, &window_mode, &conLog)
 
     conLog.info "Activate Window Fullscreen"
-    activateFullscreen(settings, game, window_mode, &conLog)
+    activateFullscreen(settings, game, window_mode, &fullscreen_mode, &conLog)
   }
 }
 
@@ -703,11 +701,10 @@ manualWindowSelection(&logg)
 ; All other code only exist to help use this function.
 ; - Changes window size and position to make it fullscreen.
 ; - arg `config` decides how the fullscreen will be made.
-; - global var `fscr` will be created.
+; - arg `fullscreenMode` will be modified.
 ; - global var `bgGui` will be modified.
-activateFullscreen(config, gameWindow, windowMode, &logg)
+activateFullscreen(config, gameWindow, windowMode, &fullscreenMode, &logg)
 {
-  global fscr      ; Fullscreen config
   global bgGui     ; Background overlay window
 
   ;; Remove Window Border
@@ -732,79 +729,101 @@ activateFullscreen(config, gameWindow, windowMode, &logg)
   }
 
 
-  ;; Calculate window fullscreen properties
+  ;; Define fullscreenMode helper variables
+
+  ; Update function
+  updatefullscreenMode := (state) => (
+    fullscreenMode.windowArea       := state.windowArea,
+    fullscreenMode.monitorArea      := state.monitorArea,
+    fullscreenMode.screenArea       := state.screenArea,
+    fullscreenMode.backgroundArea   := state.backgroundArea,
+    fullscreenMode.needsBackground  := state.needsBackground,
+    fullscreenMode.needsAlwaysOnTop := state.needsAlwaysOnTop
+  )
+
+  ; Shortform access variables
+  fscr    := "fullscreenMode"
+  winArea := "windowArea"
+  bgArea  := "backgroundArea"
+
+
+  ;; Configure Fullscreen Mode
   if DEBUG
-    logg.debug "Calculate window fullscreen properties"
+    logg.debug "Configure fullscreen mode"
 
-  fscr := lib_calcFullscreenArgs(noBorderState.windowArea,
-                                 _monitor := config.monitor,
-                                 _winSize := config.resize,
-                                 _taskbar := config.taskbar)
+  fullscreenState := lib_calcFullscreenArgs(noBorderState.windowArea,
+                                            _monitor := config.monitor,
+                                            _winSize := config.resize,
+                                            _taskbar := config.taskbar)
 
-  if ! fscr.ok {
+  if ! fullscreenState.ok {
     restoreWindowState(gameWindow.hWnd, windowMode, &logg)
-    logg.error "{}".f(fscr.reason)
+    logg.error "{}".f(fullscreenState.reason)
     return
   }
+
+  updatefullscreenMode(fullscreenState)
 
 
   ;; Resize and reposition window
   if DEBUG
     logg.debug "Resize and reposition window"
 
-  WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, gameWindow.hWnd)
+  WinMove(%fscr%.%winArea%.x, %fscr%.%winArea%.y, %fscr%.%winArea%.w, %fscr%.%winArea%.h, gameWindow.hWnd)
   sleep 1  ; Millisecond
   newWinState := collectWindowState(gameWindow.hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
-  if newWinState.windowArea.w != fscr.window.w || newWinState.windowArea.h != fscr.window.h
+  if newWinState.windowArea.w != %fscr%.%winArea%.w || newWinState.windowArea.h != %fscr%.%winArea%.h
   {
-    fscr := lib_calcFullscreenArgs(newWinState.windowArea,
-                                  _monitor := config.monitor,
-                                  _winSize := "keep",
-                                  _taskbar := config.taskbar)
+    fullscreenState := lib_calcFullscreenArgs(newWinState.windowArea,
+                                              _monitor := config.monitor,
+                                              _winSize := "keep",
+                                              _taskbar := config.taskbar)
 
-    if ! fscr.ok {
+    if ! fullscreenState.ok {
       restoreWindowState(gameWindow.hWnd, windowMode, &logg)
-      logg.error "{}".f(fscr.reason)
+      logg.error "{}".f(fullscreenState.reason)
       return
     }
 
-    WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, gameWindow.hWnd)
+    updatefullscreenMode(fullscreenState)
+
+    WinMove(%fscr%.%winArea%.x, %fscr%.%winArea%.y, %fscr%.%winArea%.w, %fscr%.%winArea%.h, gameWindow.hWnd)
   }
 
 
   ;; Modify background overlay
-  if ! fscr.needsBackgroundOverlay
+  if ! fullscreenMode.needsBackground
   {
     bgGui.Hide()
   }
   else
   {
     ; Resize the click area
-    bgGui["ClickArea"].Move(0, 0, fscr.overlay.w, fscr.overlay.h)
+    bgGui["ClickArea"].Move(0, 0, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h)
 
-    ; Resize overlay (also make it visible if it was hidden before)
-    bgGui.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
+    ; Resize background (also make it visible if it was hidden before)
+    bgGui.Show("x{} y{} w{} h{}".f(%fscr%.%bgArea%.x, %fscr%.%bgArea%.y, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h))
 
-    ; Cut a hole in the overlay for the game window to be seen
-    ; NOTE: Coordinates are relative to the overlay, not the desktop area
+    ; Cut a hole in the background for the game window to be seen
+    ; NOTE: Coordinates are relative to the background area, not the desktop area
     polygonStr := Format(
       "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
       "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
-      fscr.overlay.w,                                 ;{1} Overlay Area: width
-      fscr.overlay.h,                                 ;{2} Overlay Area: height
-      fscr.window.x - fscr.overlay.x,                 ;{3} Game Window: x coordinate (left)
-      fscr.window.y - fscr.overlay.y,                 ;{4} Game Window: y coordinate (top)
-      fscr.window.x - fscr.overlay.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
-      fscr.window.y - fscr.overlay.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
+      %fscr%.%bgArea%.w,                                           ;{1} Background Area: width
+      %fscr%.%bgArea%.h,                                           ;{2} Background Area: height
+      %fscr%.%winArea%.x - %fscr%.%bgArea%.x,                      ;{3} Game Window: x coordinate (left)
+      %fscr%.%winArea%.y - %fscr%.%bgArea%.y,                      ;{4} Game Window: y coordinate (top)
+      %fscr%.%winArea%.x - %fscr%.%bgArea%.x + %fscr%.%winArea%.w, ;{5} Game Window: x coordinate (right)
+      %fscr%.%winArea%.y - %fscr%.%bgArea%.y + %fscr%.%winArea%.h, ;{6} Game Window: y coordinate (bottom)
     )
     WinSetRegion(polygonStr, bgGui.hwnd)
   }
 
 
   ;; AlwaysOnTop
-  if ! fscr.needsAlwaysOnTop
+  if ! fullscreenMode.needsAlwaysOnTop
   {
     ; Disable game window always on top
     if DEBUG
@@ -837,8 +856,7 @@ activateFullscreen(config, gameWindow, windowMode, &logg)
 ;; Deactivate FULLSCREEN
 deactivateFullscreen(gameWindow, windowMode, &logg)
 {
-  global fscr      ; Fullscreen config
-  global bgGui     ; Background overlay window
+  global bgGui  ; Background overlay window
 
   bgGui.Hide()
   restoreWindowState(gameWindow.hWnd, windowMode, &logg)
@@ -866,17 +884,17 @@ deactivateFullscreen(gameWindow, windowMode, &logg)
 ; Function is run when any event happens in MS Windows on any window
 ShellMessage(wParam, lParam, msg, script_hwnd)
 {
-  global settings  ; Global config
-  global game      ; Game Window
-  global fscr      ; Fullscreen config
-  global bgGui     ; Background overlay window
+  global settings         ; Global config
+  global game             ; Game Window
+  global fullscreen_mode  ; Fullscreen config
+  global bgGui            ; Background overlay window
 
   static HSHELL_WINDOWACTIVATED  := 0x00000004
        , HSHELL_HIGHBIT          := 0x00008000
        , HSHELL_RUDEAPPACTIVATED := HSHELL_WINDOWACTIVATED | HSHELL_HIGHBIT
 
   ; Do nothing if AlwaysOnTop is not needed
-  if !IsSet(fscr) || !fscr.needsAlwaysOnTop
+  if ! fullscreen_mode.needsAlwaysOnTop
     return
 
   ; React on events about switching focus to another window
