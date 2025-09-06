@@ -35,9 +35,9 @@ DEBUG := false
 ;; Setup - Define All Global Variables
 {
   ;; These are properly defined later in the script
-  mainGui := 0  ; Main window
-  bgGui   := 0  ; Background Overlay window (visible around the game during fullscreen)
-  conLog  := 0  ; Console Logger (prints text to a console in mainGui)
+  mainGui := {}  ; Main window
+  bgGui   := {}  ; Background Overlay window (visible around the game during fullscreen)
+  conLog  := {}  ; Console Logger (prints text to a console in mainGui)
 
   ;; Settings (only modified by the user)
   settings := { monitor: 0,      ; Selected computer monitor
@@ -46,12 +46,12 @@ DEBUG := false
                 launch:  "" }    ; (optional) Start game using this launch string
 
   ;; Game info
-  game := { hWnd:       0,  ; Window ID (a.k.a. Handler Window)
-            proc_ID:    0,  ; Process ID (PID)
-            proc_name: "",  ; Process Name
-            win_title: "",  ; Window Title
-            win_class: "",  ; Window Class
-            win_text:  ""}  ; Window Text
+  game := { hWnd:      0,  ; Window ID (a.k.a. Handler Window)
+            proc_ID:   0,  ; Process ID (PID)
+            proc_name: "", ; Process Name
+            win_title: "", ; Window Title
+            win_class: "", ; Window Class
+            win_text:  ""} ; Window Text
 
   ;; Window Mode
   window_mode := { windowArea: {x:0, y:0, w:0, h:0},  ; Position/dimention of window area
@@ -68,11 +68,12 @@ DEBUG := false
                        needsBackground:  false,                 ; If background overlay is needed
                        needsAlwaysOnTop: false }                ; If AlwaysOnTop is needed on window and background
 
-  ;;TODO: Prevent additional properties
-  ; Object.Seal(settings)
-  ; Object.Seal(game)
-  ; Object.Seal(window_mode)
-  ; Object.Seal(fullscreen_mode)
+  ;TODO: Implement `Object.Seal()`
+  ;; Prevent additional properties
+  ; settings        := Object.Seal(settings)
+  ; game            := Object.Seal(game)
+  ; window_mode     := Object.Seal(window_mode)
+  ; fullscreen_mode := Object.Seal(fullscreen_mode)
 }
 
 
