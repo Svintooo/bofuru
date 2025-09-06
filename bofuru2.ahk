@@ -240,7 +240,6 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start - Launch game and Find game window
 {
-
   ;; Run an *.exe
   if cnfg.launch
   {
@@ -556,10 +555,12 @@ synchronizeWithWindow(hWnd, &cnfg, &logg)
   ;; Exit script if the game window is closed
   if DEBUG
     logg.debug "Bind exit event to window close"
+
   Event_AppExit() {
     if not WinExist("ahk_id" cnfg.hWnd)
       ExitApp(0)
   }
+
   MAX_PRIORITY := 2147483647
   SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 
