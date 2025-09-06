@@ -184,8 +184,8 @@ DEBUG := false
   bgGui.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
 
   ; Make mouse clicks on overlay restore focus to game window
-  bgGui["ClickArea"].OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
-  bgGui["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+  bgGui["ClickArea"].OnEvent("Click",       (*) => WinActivate(settings.hWnd))
+  bgGui["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(settings.hWnd))
 }
 
 
@@ -220,17 +220,17 @@ DEBUG := false
   ;; Create global config
   ; Settings in this object will control everything.
   ; Any code modifying config should trigger a redraw of fullscreen (if fullscreen is active).
-  cnfg := {}
+  settings := {}
 
   ; Set config parameters
   DEBUG        := args.HasOwnProp("debug")   ? args.DeleteProp("debug"  ).value : DEBUG,
-  cnfg.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false,
-  cnfg.winsize := args.HasOwnProp("winsize") ? args.DeleteProp("winsize").value : "fit",
-  cnfg.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
-  cnfg.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
-  cnfg.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
-  cnfg.hWnd    := 0
-  cnfg.pid     := 0
+  settings.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false,
+  settings.winsize := args.HasOwnProp("winsize") ? args.DeleteProp("winsize").value : "fit",
+  settings.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
+  settings.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
+  settings.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
+  settings.hWnd    := 0
+  settings.pid     := 0
 
 
   ;; Handle unknown args
@@ -247,30 +247,30 @@ DEBUG := false
 ;; Start - Launch game and Find game window
 {
   ;; Run an *.exe
-  if cnfg.launch
+  if settings.launch
   {
-    conLog.info "Launching: {}".f(cnfg.launch)
-    result := launchExe(cnfg.launch)
+    conLog.info "Launching: {}".f(settings.launch)
+    result := launchExe(settings.launch)
 
     if ! result.ok {
       conLog.error "Launch failed"
       return
     }
 
-    cnfg.pid := result.pid
+    settings.pid := result.pid
     result := unset
     if DEBUG
-      conLog.debug "Launch success, got PID: " cnfg.pid
+      conLog.debug "Launch success, got PID: " settings.pid
   }
 
 
   ;; Find Window
-  if cnfg.ahk_wintitle
+  if settings.ahk_wintitle
   {
-    conLog.info "Waiting for window: {}".f(cnfg.ahk_wintitle.Inspect())
-    cnfg.hWnd := WinWait(cnfg.ahk_wintitle)
+    conLog.info "Waiting for window: {}".f(settings.ahk_wintitle.Inspect())
+    settings.hWnd := WinWait(settings.ahk_wintitle)
   }
-  else if cnfg.pid
+  else if settings.pid
   {
     manualWindowSelection(&conLog)
   }
@@ -278,9 +278,9 @@ DEBUG := false
 
   ;; Make game window fullscreen
   ; If a game window has been found.
-  if cnfg.hWnd
+  if settings.hWnd
   {
-    synchronizeWithWindow(cnfg.hWnd, &cnfg, &conLog)
+    synchronizeWithWindow(settings.hWnd, &settings, &conLog)
 
     conLog.info "Activate Window Fullscreen"
     activateFullscreen(&conLog)
@@ -360,14 +360,14 @@ launchExe(launch_string)
 
 
 ;; Collect window info
-collectWindowInfo(hWnd, &cnfg)
+collectWindowInfo(hWnd, &config)
 {
-  cnfg.winTitle     := WinGetTitle(       "ahk_id" hWnd )
-  cnfg.winClass     := WinGetClass(       "ahk_id" hWnd )
-  cnfg.winText      := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
-  cnfg.pid          := WinGetPID(         "ahk_id" hWnd )
-  cnfg.procName     := WinGetProcessName( "ahk_id" hWnd )
-  cnfg.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(cnfg.winTitle, cnfg.winClass, cnfg.procName)
+  config.winTitle     := WinGetTitle(       "ahk_id" hWnd )
+  config.winClass     := WinGetClass(       "ahk_id" hWnd )
+  config.winText      := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
+  config.pid          := WinGetPID(         "ahk_id" hWnd )
+  config.procName     := WinGetProcessName( "ahk_id" hWnd )
+  config.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(config.winTitle, config.winClass, config.procName)
 }
 
 
@@ -401,21 +401,21 @@ collectWindowState(hWnd)
 
 
 ;; Print window info
-logWindowInfo(cnfg, &logg)
+logWindowInfo(config, &logg)
 {
   logg.info , _options := "MinimumEmptyLinesBefore 1"
   logg.info   "Window info"
   if DEBUG {
-    logg.info "- PID           = {}".f(cnfg.pid)
-    logg.info "- hWnd          = {}".f(cnfg.hWnd)
+    logg.info "- PID           = {}".f(config.pid)
+    logg.info "- hWnd          = {}".f(config.hWnd)
   }
-  logg.info   "- Process Name  = {}".f(cnfg.procName.Inspect())
-  logg.info   "- Title         = {}".f(cnfg.winTitle.Inspect())
-  logg.info   "- Class         = {}".f(cnfg.winClass.Inspect())
+  logg.info   "- Process Name  = {}".f(config.procName.Inspect())
+  logg.info   "- Title         = {}".f(config.winTitle.Inspect())
+  logg.info   "- Class         = {}".f(config.winClass.Inspect())
   if DEBUG {
-    logg.info "- Text          = {}".f(cnfg.winText.Inspect())
+    logg.info "- Text          = {}".f(config.winText.Inspect())
   }
-  logg.info   "- --ahk-wintitle={}".f(cnfg.ahk_wintitle.Inspect())
+  logg.info   "- --ahk-wintitle={}".f(config.ahk_wintitle.Inspect())
   logg.info , _options := "MinimumEmptyLinesAfter 1"
 }
 
@@ -463,14 +463,14 @@ removeWindowBorder(hWnd, &logg)
 {
   global DEBUG
 
-  if cnfg.origState.winMenu
-    DllCall("SetMenu", "uint", cnfg.hWnd, "uint", 0)
+  if settings.origState.winMenu
+    DllCall("SetMenu", "uint", settings.hWnd, "uint", 0)
 
   ; Remove styles (border)
   newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
                | 0x10000000  ; WS_VISIBLE
   try
-    WinSetStyle(newWinStyle, "ahk_id" cnfg.hWnd)
+    WinSetStyle(newWinStyle, "ahk_id" settings.hWnd)
   catch as e
     if DEBUG
       logException(e, &logg)
@@ -483,14 +483,14 @@ removeWindowBorder(hWnd, &logg)
                     | 0x00000400 ; WS_EX_CONTEXTHELP   (title bar question mark)
                     | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
   try
-    WinSetExStyle("-" removeWinExStyle, "ahk_id" cnfg.hWnd)   ; The minus (-) removes the styles from the current window styles
+    WinSetExStyle("-" removeWinExStyle, "ahk_id" settings.hWnd)   ; The minus (-) removes the styles from the current window styles
   catch as e
     if DEBUG
       logException(e, &logg)
 
   ; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
-  WinMove(, , cnfg.origState.innerWidth, cnfg.origState.innerHeight, cnfg.hWnd)
+  WinMove(, , settings.origState.innerWidth, settings.origState.innerHeight, settings.hWnd)
   sleep 100  ; TODO: Wait for window resize to finish before continuing
 }
 
@@ -540,18 +540,18 @@ restoreWindowState(hWnd, winState)
 ; - Collects necessary information
 ; - Makes sure the window can be made fullscreen
 ; - Creates a hook that quits the script if the game window closes
-synchronizeWithWindow(hWnd, &cnfg, &logg)
+synchronizeWithWindow(hWnd, &config, &logg)
 {
   ;; Collect window info
-  collectWindowInfo(hWnd, &cnfg)
+  collectWindowInfo(hWnd, &config)
 
 
   ;; Print window info
-  logWindowInfo(cnfg, &logg)
+  logWindowInfo(config, &logg)
 
 
   ;; Check if window is allowed
-  if !lib_canWindowBeFullscreened(cnfg.hWnd, cnfg.winClass)
+  if !lib_canWindowBeFullscreened(config.hWnd, config.winClass)
   {
     logg.error "Unsupported window selected"
     return
@@ -563,7 +563,7 @@ synchronizeWithWindow(hWnd, &cnfg, &logg)
     logg.debug "Bind exit event to window close"
 
   Event_AppExit() {
-    if not WinExist("ahk_id" cnfg.hWnd)
+    if not WinExist("ahk_id" config.hWnd)
       ExitApp(0)
   }
 
@@ -575,24 +575,24 @@ synchronizeWithWindow(hWnd, &cnfg, &logg)
   if DEBUG
     logg.debug "Put the game window in focus"
 
-  WinActivate(cnfg.hWnd)
+  WinActivate(config.hWnd)
 
 
   ;; Collect Window State
   if DEBUG
     logg.debug "Collecting current window state"
 
-  cnfg.origState := collectWindowState(cnfg.hWnd)
+  config.origState := collectWindowState(config.hWnd)
 
   if DEBUG
-    logWindowState(cnfg.origState, "Window state (original)", &logg)
+    logWindowState(config.origState, "Window state (original)", &logg)
 
 
   ;; Restore window state on exit
   if DEBUG
     logg.debug "Register OnExit callback to restore window state on exit"
 
-  OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
+  OnExit (*) => restoreWindowState(config.hWnd, config.origState)
 }
 
 
@@ -601,7 +601,7 @@ synchronizeWithWindow(hWnd, &cnfg, &logg)
 manualWindowSelection(&logg)
 {
   global mainGui
-  global cnfg  ; Global config
+  global settings  ; Global config
 
   logg.info , _options := "MinimumEmptyLinesBefore 1"
   logg.info "Manual Window selection ACTIVATED"
@@ -625,7 +625,7 @@ manualWindowSelection(&logg)
     WinActivate(mainGui.hWnd)  ; Focus the Gui
   } else {
     logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesAfter 1"
-    cnfg.hWnd := result.hWnd
+    settings.hWnd := result.hWnd
   }
 }
 
@@ -633,29 +633,29 @@ manualWindowSelection(&logg)
 ;; Activate FULLSCREEN
 ; All other code only exist to help use this function.
 ; - Changes window size and position to make it fullscreen.
-; - global var `cnfg` decides how the fullscreen will be made.
+; - global var `settings` decides how the fullscreen will be made.
 ; - global var `fscr` will be created.
 ; - global var `bgGui` will be modified.
 activateFullscreen(&logg)
 {
-  global cnfg   ; Global config
-  global fscr   ; Fullscreen config
-  global bgGui  ; Background overlay window
+  global settings  ; Global config
+  global fscr      ; Fullscreen config
+  global bgGui     ; Background overlay window
 
   ;; Remove Window Border
   logg.info "Remove window styles (border, menu, title bar, etc)"
-  removeWindowBorder(cnfg.hWnd, &logg)
+  removeWindowBorder(settings.hWnd, &logg)
 
 
   ;; Get new window state
-  cnfg.noBorderState := collectWindowState(cnfg.hWnd)
+  settings.noBorderState := collectWindowState(settings.hWnd)
   if DEBUG
-    logWindowState(cnfg.noBorderState, "Window state (no border)", &logg)
+    logWindowState(settings.noBorderState, "Window state (no border)", &logg)
 
 
   ;; Warn if window lost its aspect ratio
-  if cnfg.noBorderState.width  != cnfg.origState.innerWidth
-  || cnfg.noBorderState.height != cnfg.origState.innerHeight
+  if settings.noBorderState.width  != settings.origState.innerWidth
+  || settings.noBorderState.height != settings.origState.innerHeight
   {
     logg.warn , _options := "MinimumEmptyLinesBefore 1"
     logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
@@ -668,13 +668,13 @@ activateFullscreen(&logg)
   if DEBUG
     logg.debug "Calculate window fullscreen properties"
 
-  fscr := lib_calcFullscreenArgs(cnfg.noBorderState,
-                                 _monitor := cnfg.monitor,
-                                 _winSize := cnfg.winsize,
-                                 _taskbar := cnfg.taskbar)
+  fscr := lib_calcFullscreenArgs(settings.noBorderState,
+                                 _monitor := settings.monitor,
+                                 _winSize := settings.winsize,
+                                 _taskbar := settings.taskbar)
 
   if ! fscr.ok {
-    restoreWindowState(cnfg.hWnd, cnfg.origState)
+    restoreWindowState(settings.hWnd, settings.origState)
     logg.error "{}".f(fscr.reason)
     return
   }
@@ -684,25 +684,25 @@ activateFullscreen(&logg)
   if DEBUG
     logg.debug "Resize and reposition window"
 
-  WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
+  WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, settings.hWnd)
   sleep 1  ; Millisecond
-  newWinState := collectWindowState(cnfg.hWnd)
+  newWinState := collectWindowState(settings.hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
   if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
   {
     fscr := lib_calcFullscreenArgs(newWinState,
-                                  _monitor := cnfg.monitor,
+                                  _monitor := settings.monitor,
                                   _winSize := "keep",
-                                  _taskbar := cnfg.taskbar)
+                                  _taskbar := settings.taskbar)
 
     if ! fscr.ok {
-      restoreWindowState(cnfg.hWnd, cnfg.origState)
+      restoreWindowState(settings.hWnd, settings.origState)
       logg.error "{}".f(fscr.reason)
       return
     }
 
-    WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
+    WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, settings.hWnd)
   }
 
   newWinState := unset
@@ -744,7 +744,7 @@ activateFullscreen(&logg)
     if DEBUG
       logg.debug "Disable AlwaysOnTop on game window"
 
-    WinSetAlwaysOnTop(false, cnfg.hWnd)
+    WinSetAlwaysOnTop(false, settings.hWnd)
     WinSetAlwaysOnTop(false, bgGui.hWnd)
   }
   else
@@ -753,14 +753,14 @@ activateFullscreen(&logg)
     if DEBUG
       logg.debug "Set AlwaysOnTop on game window"
 
-    WinSetAlwaysOnTop(true, cnfg.hWnd)
+    WinSetAlwaysOnTop(true, settings.hWnd)
     WinSetAlwaysOnTop(true, bgGui.hWnd)
   }
 
 
   ;; Print new window state
   if DEBUG
-    logWindowState(cnfg.hWnd, "Window state (fullscreen)", &logg)
+    logWindowState(settings.hWnd, "Window state (fullscreen)", &logg)
 
 
   ;; End message
@@ -771,12 +771,12 @@ activateFullscreen(&logg)
 ;; Deactivate FULLSCREEN
 deactivateFullscreen()
 {
-  global cnfg   ; Global config
-  global fscr   ; Fullscreen config
-  global bgGui  ; Background overlay window
+  global settings  ; Global config
+  global fscr      ; Fullscreen config
+  global bgGui     ; Background overlay window
 
   bgGui.Hide()
-  restoreWindowState(cnfg.hWnd, cnfg.origState)
+  restoreWindowState(settings.hWnd, settings.origState)
 }
 
 
@@ -801,9 +801,9 @@ deactivateFullscreen()
 ; Function is run when any event happens in MS Windows on any window
 ShellMessage(wParam, lParam, msg, script_hwnd)
 {
-  global cnfg   ; Global config
-  global fscr   ; Fullscreen config
-  global bgGui  ; Background overlay window
+  global settings  ; Global config
+  global fscr      ; Fullscreen config
+  global bgGui     ; Background overlay window
 
   static HSHELL_WINDOWACTIVATED  := 0x00000004
        , HSHELL_HIGHBIT          := 0x00008000
@@ -817,13 +817,13 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
   if wParam = HSHELL_WINDOWACTIVATED
   || wParam = HSHELL_RUDEAPPACTIVATED {
 
-    if lParam = cnfg.hWnd {
+    if lParam = settings.hWnd {
 
       ; Game Window got focus: Set AlwaysOnTop
       if DEBUG
         conLog.debug "lParam={} wParam={}".f("game", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
       try
-        WinSetAlwaysOnTop(true, cnfg.hWnd)
+        WinSetAlwaysOnTop(true, settings.hWnd)
       catch {
         ;
       }
@@ -838,7 +838,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
       ;   seems to fix the issue.
       sleep 200  ; Milliseconds
       try
-        WinSetAlwaysOnTop(true, cnfg.hWnd)
+        WinSetAlwaysOnTop(true, settings.hWnd)
       catch {
         ;
       }
@@ -862,7 +862,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
       if DEBUG
         conLog.debug "lParam={} wParam={}".f(lParam, wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
       try
-        WinSetAlwaysOnTop(false, cnfg.hWnd)
+        WinSetAlwaysOnTop(false, settings.hWnd)
       catch {
         ;
       }
