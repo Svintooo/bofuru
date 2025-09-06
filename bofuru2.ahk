@@ -354,7 +354,7 @@ launchExe(launch_string)
 
 
 ;; Collect window info
-CollectWindowInfo(hWnd, &cnfg)
+collectWindowInfo(hWnd, &cnfg)
 {
   cnfg.winTitle     := WinGetTitle(       "ahk_id" hWnd )
   cnfg.winClass     := WinGetClass(       "ahk_id" hWnd )
@@ -366,7 +366,7 @@ CollectWindowInfo(hWnd, &cnfg)
 
 
 ;; Collect Window state
-CollectWindowState(hWnd)
+collectWindowState(hWnd)
 {
   ; Get window size/position
   WinGetPos(&x, &y, &width, &height, hWnd)
@@ -418,7 +418,7 @@ logWindowInfo(cnfg, &logg)
 logWindowState(hWnd_or_winState, message, &logg)
 {
   if hWnd_or_winState is Number
-    winState := CollectWindowState(hWnd_or_winState)
+    winState := collectWindowState(hWnd_or_winState)
   else
     winState := hWnd_or_winState
 
@@ -537,7 +537,7 @@ restoreWindowState(hWnd, winState)
 synchronizeWithWindow(hWnd, &cnfg, &logg)
 {
   ;; Collect window info
-  CollectWindowInfo(hWnd, &cnfg)
+  collectWindowInfo(hWnd, &cnfg)
 
 
   ;; Print window info
@@ -576,7 +576,7 @@ synchronizeWithWindow(hWnd, &cnfg, &logg)
   if DEBUG
     logg.debug "Collecting current window state"
 
-  cnfg.origState := CollectWindowState(cnfg.hWnd)
+  cnfg.origState := collectWindowState(cnfg.hWnd)
 
   if DEBUG
     logWindowState(cnfg.origState, "Window state (original)", &logg)
@@ -595,7 +595,7 @@ synchronizeWithWindow(hWnd, &cnfg, &logg)
 
 
   ;; Get new window state
-  cnfg.noBorderState := CollectWindowState(cnfg.hWnd)
+  cnfg.noBorderState := collectWindowState(cnfg.hWnd)
   if DEBUG
     logWindowState(cnfg.noBorderState, "Window state (no border)", &logg)
 
@@ -680,7 +680,7 @@ activateFullscreen(&logg)
 
   WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, cnfg.hWnd)
   sleep 1  ; Millisecond
-  newWinState := CollectWindowState(cnfg.hWnd)
+  newWinState := collectWindowState(cnfg.hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
   if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
