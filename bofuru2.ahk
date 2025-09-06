@@ -46,12 +46,14 @@ DEBUG := false
                 , _winTitle := "BoFuRu")
   mainGui.SetFont("S12")  ; Font Size
   mainGui.OnEvent("Close", (*) => ExitApp())  ; Stop script on window close
-  mainGui.spacing     := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
-  mainGui.defaultOpts := "w1000 Y+{} ".f(mainGui.spacing)
+  mainGui.spacing := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
 
   ; Console
-  mainGui.AddEdit(mainGui.defaultOpts "vConsole h300 +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
+  mainGui.AddEdit("vConsole w1000 h300 +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
   mainGui["Console"].setFont(, "Consolas")  ; Monospace font
+  mainGui["Console"].getPos(, , &consoleWidth, )
+  mainGui.defaultOpts := "w{} Y+{} ".f(consoleWidth, mainGui.spacing)
+  consoleWidth := unset
 
   ; Buttons
   mainGui.AddButton(mainGui.defaultOpts "vButtonWinSelect",           "Select Window")
