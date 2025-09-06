@@ -19,15 +19,14 @@
 #Include %A_ScriptDir%\lib\parse_window_style.ahk
 #Include %A_ScriptDir%\lib\calc_fullscreen_args.ahk
 
-; Sets how matching is done for the WinTitle parameter used by various
-; AHK functions.
+; Make WinTitle (arg used by AHK functions) do regex instead of string matching.
 SetTitleMatchMode "RegEx"
 
-; Use coordinates relative to the screen instead of relative to the window for
-; all AHK functions that sets/retrieves/uses mouse coordinates.
+; Make all mouse coordinates relative to the desktop area.
+; (the default is relative to the window position under the mouse pointer)
 CoordMode "Mouse", "Screen"
 
-; Print more debug info to console
+; Print debug info to log
 DEBUG := false
 
 
@@ -37,7 +36,7 @@ DEBUG := false
 {
   ; NOTE: Each GuiControl can be given a NAME.
   ;       NAME is set with option: "vNAME"
-  ;       A GuiControl can then be accessed with code: mainGui["NAME"]
+  ;       A GuiControl can then be accessed with: mainGui["NAME"]
 
   ; NOTE: A radio button with option "Group" starts a new group of radio buttons.
   ;       Each radio button created afterwards belong to the same group.
@@ -105,7 +104,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Globals
+;; Setup - Logging
 {
   ; Console Logger
   conLog := lib_Logger(
