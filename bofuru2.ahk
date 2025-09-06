@@ -163,7 +163,7 @@ DEBUG := false
 
   if !result.ok {
     conLog.error "Failed generating transparent pixel: {}".f(result.reason)
-    ExitApp
+    return
   }
 
   pixel := result.data
