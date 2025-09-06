@@ -272,9 +272,7 @@ DEBUG := false
 {
   ;; Fetch command line arguments
   args := parseArgs(A_Args)
-  if DEBUG
-    conLog.debug "Parsed args: {}".f(args.Inspect())
-
+  args_tmp := args.Clone()
 
 
   ;; Set settings parameters
@@ -284,6 +282,12 @@ DEBUG := false
   settings.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
   settings.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
   settings.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
+
+
+  ;; Print args
+  if DEBUG
+    conLog.debug "Parsed args: {}".f(args_tmp.Inspect())
+  args_tmp := unset
 
 
   ;; Handle unknown args
