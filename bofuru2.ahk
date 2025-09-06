@@ -701,14 +701,14 @@ activateFullscreen(gameWindow, &logg)
 
 
   ;; Get new window state
-  settings.noBorderState := collectWindowState(gameWindow.hWnd)
+  noBorderState := collectWindowState(gameWindow.hWnd)
   if DEBUG
-    logWindowState(settings.noBorderState, "Window state (no border)", &logg)
+    logWindowState(noBorderState, "Window state (no border)", &logg)
 
 
   ;; Warn if window lost its aspect ratio
-  if settings.noBorderState.width  != settings.origState.innerWidth
-  || settings.noBorderState.height != settings.origState.innerHeight
+  if noBorderState.width  != settings.origState.innerWidth
+  || noBorderState.height != settings.origState.innerHeight
   {
     logg.warn , _options := "MinimumEmptyLinesBefore 1"
     logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
@@ -721,7 +721,7 @@ activateFullscreen(gameWindow, &logg)
   if DEBUG
     logg.debug "Calculate window fullscreen properties"
 
-  fscr := lib_calcFullscreenArgs(settings.noBorderState,
+  fscr := lib_calcFullscreenArgs(noBorderState,
                                  _monitor := settings.monitor,
                                  _winSize := settings.resize,
                                  _taskbar := settings.taskbar)
