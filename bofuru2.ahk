@@ -322,7 +322,7 @@ DEBUG := false
   }
   else if game.proc_ID
   {
-    manualWindowSelection(&conLog)
+    game.hWnd := manualWindowSelection(&conLog)
   }
 
 
@@ -333,7 +333,7 @@ DEBUG := false
     synchronizeWithWindow(game.hWnd, &settings, &game, &conLog)
 
     conLog.info "Activate Window Fullscreen"
-    activateFullscreen(&conLog)
+    activateFullscreen(game, &conLog)
   }
 }
 
@@ -674,9 +674,11 @@ manualWindowSelection(&logg)
       logg.error "{}".f(result.reason)
 
     WinActivate(mainGui.hWnd)  ; Focus the Gui
+
+    return false
   } else {
     logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesAfter 1"
-    game.hWnd := result.hWnd
+    return result.hWnd
   }
 }
 
@@ -687,7 +689,7 @@ manualWindowSelection(&logg)
 ; - global var `settings` decides how the fullscreen will be made.
 ; - global var `fscr` will be created.
 ; - global var `bgGui` will be modified.
-activateFullscreen(&logg)
+activateFullscreen(gameWindow, &logg)
 {
   global settings  ; Global config
   global fscr      ; Fullscreen config
@@ -695,11 +697,11 @@ activateFullscreen(&logg)
 
   ;; Remove Window Border
   logg.info "Remove window styles (border, menu, title bar, etc)"
-  removeWindowBorder(game.hWnd, &logg)
+  removeWindowBorder(gameWindow.hWnd, &logg)
 
 
   ;; Get new window state
-  settings.noBorderState := collectWindowState(game.hWnd)
+  settings.noBorderState := collectWindowState(gameWindow.hWnd)
   if DEBUG
     logWindowState(settings.noBorderState, "Window state (no border)", &logg)
 
@@ -725,7 +727,7 @@ activateFullscreen(&logg)
                                  _taskbar := settings.taskbar)
 
   if ! fscr.ok {
-    restoreWindowState(game.hWnd, settings.origState)
+    restoreWindowState(gameWindow.hWnd, settings.origState)
     logg.error "{}".f(fscr.reason)
     return
   }
@@ -735,9 +737,9 @@ activateFullscreen(&logg)
   if DEBUG
     logg.debug "Resize and reposition window"
 
-  WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, game.hWnd)
+  WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, gameWindow.hWnd)
   sleep 1  ; Millisecond
-  newWinState := collectWindowState(game.hWnd)
+  newWinState := collectWindowState(gameWindow.hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
   if newWinState.width != fscr.window.w || newWinState.height != fscr.window.h
@@ -748,12 +750,12 @@ activateFullscreen(&logg)
                                   _taskbar := settings.taskbar)
 
     if ! fscr.ok {
-      restoreWindowState(game.hWnd, settings.origState)
+      restoreWindowState(gameWindow.hWnd, settings.origState)
       logg.error "{}".f(fscr.reason)
       return
     }
 
-    WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, game.hWnd)
+    WinMove(fscr.window.x, fscr.window.y, fscr.window.w, fscr.window.h, gameWindow.hWnd)
   }
 
   newWinState := unset
@@ -795,7 +797,7 @@ activateFullscreen(&logg)
     if DEBUG
       logg.debug "Disable AlwaysOnTop on game window"
 
-    WinSetAlwaysOnTop(false, game.hWnd)
+    WinSetAlwaysOnTop(false, gameWindow.hWnd)
     WinSetAlwaysOnTop(false, bgGui.hWnd)
   }
   else
@@ -804,14 +806,14 @@ activateFullscreen(&logg)
     if DEBUG
       logg.debug "Set AlwaysOnTop on game window"
 
-    WinSetAlwaysOnTop(true, game.hWnd)
+    WinSetAlwaysOnTop(true, gameWindow.hWnd)
     WinSetAlwaysOnTop(true, bgGui.hWnd)
   }
 
 
   ;; Print new window state
   if DEBUG
-    logWindowState(game.hWnd, "Window state (fullscreen)", &logg)
+    logWindowState(gameWindow.hWnd, "Window state (fullscreen)", &logg)
 
 
   ;; End message
@@ -820,14 +822,14 @@ activateFullscreen(&logg)
 
 
 ;; Deactivate FULLSCREEN
-deactivateFullscreen()
+deactivateFullscreen(gameWindow)
 {
   global settings  ; Global config
   global fscr      ; Fullscreen config
   global bgGui     ; Background overlay window
 
   bgGui.Hide()
-  restoreWindowState(game.hWnd, settings.origState)
+  restoreWindowState(gameWindow.hWnd, settings.origState)
 }
 
 
@@ -853,6 +855,7 @@ deactivateFullscreen()
 ShellMessage(wParam, lParam, msg, script_hwnd)
 {
   global settings  ; Global config
+  global game      ; Game Window
   global fscr      ; Fullscreen config
   global bgGui     ; Background overlay window
 
