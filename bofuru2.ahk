@@ -32,7 +32,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Main Gui Window
+;; Setup - Window: Main Gui
 {
   ; NOTE: Each GuiControl can be given a NAME.
   ;       NAME is set with option: "vNAME"
@@ -142,7 +142,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Console Welcome Message
+;; Setup - Log Welcome Message
 {
   conLog.raw "##################################", "NoNewLine"
   conLog.raw "#       ===== BoFuRu =====       #"
@@ -153,9 +153,9 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup
+;; Setup - Window: Background Overlay
 {
-  ;; Create background overlay - Generate transparent pixel
+  ;; Generate transparent pixel
   ; Needed to make the overlay allow both mouse clicks and buttons
   if DEBUG
     conLog.debug "Generate transparent pixel"
@@ -171,14 +171,14 @@ DEBUG := false
   result := unset
 
 
-  ;; Create background overlay - Create overlay window
+  ;; Create window
   if DEBUG
     conLog.debug "Create background overlay (hidden for now)"
 
   bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
   bkgr.BackColor := "black"
 
-  ; Create internal window control element (meant to covers the whole overlay)
+  ; Create internal window control (will always cover the whole overlay)
   WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
                                  ; and have other elements placed on top of them.
   bkgr.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
@@ -186,8 +186,13 @@ DEBUG := false
   ; Make mouse clicks on overlay restore focus to game window
   bkgr["ClickArea"].OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
   bkgr["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+}
 
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Misc
+{
   ;; Detect focus change to any window
   ; Tell MS Windows to notify us of events for all windows.
   ; - ShellMessage(): Function which receives the events.
