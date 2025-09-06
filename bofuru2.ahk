@@ -587,28 +587,6 @@ synchronizeWithWindow(hWnd, &cnfg, &logg)
     logg.debug "Register OnExit callback to restore window state on exit"
 
   OnExit (*) => restoreWindowState(cnfg.hWnd, cnfg.origState)
-
-
-  ;; Remove Window Border
-  logg.info "Remove window styles (border, menu, title bar, etc)"
-  removeWindowBorder(cnfg.hWnd, &logg)
-
-
-  ;; Get new window state
-  cnfg.noBorderState := collectWindowState(cnfg.hWnd)
-  if DEBUG
-    logWindowState(cnfg.noBorderState, "Window state (no border)", &logg)
-
-
-  ;; Warn if window lost its aspect ratio
-  if cnfg.noBorderState.width  != cnfg.origState.innerWidth
-  || cnfg.noBorderState.height != cnfg.origState.innerHeight
-  {
-    logg.warn , _options := "MinimumEmptyLinesBefore 1"
-    logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
-    logg.warn "You may experience distorted graphics and slightly off mouse clicks."
-    logg.warn , _options := "MinimumEmptyLinesAfter 1"
-  }
 }
 
 
@@ -657,6 +635,28 @@ activateFullscreen(&logg)
   global cnfg  ; Global config
   global fscr  ; Fullscreen config
   global bkgr  ; Background overlay window
+
+  ;; Remove Window Border
+  logg.info "Remove window styles (border, menu, title bar, etc)"
+  removeWindowBorder(cnfg.hWnd, &logg)
+
+
+  ;; Get new window state
+  cnfg.noBorderState := collectWindowState(cnfg.hWnd)
+  if DEBUG
+    logWindowState(cnfg.noBorderState, "Window state (no border)", &logg)
+
+
+  ;; Warn if window lost its aspect ratio
+  if cnfg.noBorderState.width  != cnfg.origState.innerWidth
+  || cnfg.noBorderState.height != cnfg.origState.innerHeight
+  {
+    logg.warn , _options := "MinimumEmptyLinesBefore 1"
+    logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
+    logg.warn "You may experience distorted graphics and slightly off mouse clicks."
+    logg.warn , _options := "MinimumEmptyLinesAfter 1"
+  }
+
 
   ;; Calculate window fullscreen properties
   if DEBUG
