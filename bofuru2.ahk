@@ -175,17 +175,17 @@ DEBUG := false
   if DEBUG
     conLog.debug "Create background overlay (hidden for now)"
 
-  bkgr := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
-  bkgr.BackColor := "black"
+  bgGui := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
+  bgGui.BackColor := "black"
 
   ; Create internal window control (will always cover the whole overlay)
   WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
                                  ; and have other elements placed on top of them.
-  bkgr.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
+  bgGui.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
 
   ; Make mouse clicks on overlay restore focus to game window
-  bkgr["ClickArea"].OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
-  bkgr["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
+  bgGui["ClickArea"].OnEvent("Click",       (*) => WinActivate(cnfg.hWnd))
+  bgGui["ClickArea"].OnEvent("DoubleClick", (*) => WinActivate(cnfg.hWnd))
 }
 
 
@@ -635,12 +635,12 @@ manualWindowSelection(&logg)
 ; - Changes window size and position to make it fullscreen.
 ; - global var `cnfg` decides how the fullscreen will be made.
 ; - global var `fscr` will be created.
-; - global var `bkgr` will be modified.
+; - global var `bgGui` will be modified.
 activateFullscreen(&logg)
 {
-  global cnfg  ; Global config
-  global fscr  ; Fullscreen config
-  global bkgr  ; Background overlay window
+  global cnfg   ; Global config
+  global fscr   ; Fullscreen config
+  global bgGui  ; Background overlay window
 
   ;; Remove Window Border
   logg.info "Remove window styles (border, menu, title bar, etc)"
@@ -711,15 +711,15 @@ activateFullscreen(&logg)
   ;; Modify background overlay
   if ! fscr.needsBackgroundOverlay
   {
-    bkgr.Hide()
+    bgGui.Hide()
   }
   else
   {
     ; Resize the click area
-    bkgr["ClickArea"].Move(0, 0, fscr.overlay.w, fscr.overlay.h)
+    bgGui["ClickArea"].Move(0, 0, fscr.overlay.w, fscr.overlay.h)
 
     ; Resize overlay (also make it visible if it was hidden before)
-    bkgr.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
+    bgGui.Show("x{} y{} w{} h{}".f(fscr.overlay.x, fscr.overlay.y, fscr.overlay.w, fscr.overlay.h))
 
     ; Cut a hole in the overlay for the game window to be seen
     ; NOTE: Coordinates are relative to the overlay, not the desktop area
@@ -733,7 +733,7 @@ activateFullscreen(&logg)
       fscr.window.x - fscr.overlay.x + fscr.window.w, ;{5} Game Window: x coordinate (right)
       fscr.window.y - fscr.overlay.y + fscr.window.h, ;{6} Game Window: y coordinate (bottom)
     )
-    WinSetRegion(polygonStr, bkgr.hwnd)
+    WinSetRegion(polygonStr, bgGui.hwnd)
   }
 
 
@@ -745,7 +745,7 @@ activateFullscreen(&logg)
       logg.debug "Disable AlwaysOnTop on game window"
 
     WinSetAlwaysOnTop(false, cnfg.hWnd)
-    WinSetAlwaysOnTop(false, bkgr.hWnd)
+    WinSetAlwaysOnTop(false, bgGui.hWnd)
   }
   else
   {
@@ -754,7 +754,7 @@ activateFullscreen(&logg)
       logg.debug "Set AlwaysOnTop on game window"
 
     WinSetAlwaysOnTop(true, cnfg.hWnd)
-    WinSetAlwaysOnTop(true, bkgr.hWnd)
+    WinSetAlwaysOnTop(true, bgGui.hWnd)
   }
 
 
@@ -771,11 +771,11 @@ activateFullscreen(&logg)
 ;; Deactivate FULLSCREEN
 deactivateFullscreen()
 {
-  global cnfg  ; Global config
-  global fscr  ; Fullscreen config
-  global bkgr  ; Background overlay window
+  global cnfg   ; Global config
+  global fscr   ; Fullscreen config
+  global bgGui  ; Background overlay window
 
-  bkgr.Hide()
+  bgGui.Hide()
   restoreWindowState(cnfg.hWnd, cnfg.origState)
 }
 
@@ -801,9 +801,9 @@ deactivateFullscreen()
 ; Function is run when any event happens in MS Windows on any window
 ShellMessage(wParam, lParam, msg, script_hwnd)
 {
-  global cnfg  ; Global config
-  global fscr  ; Fullscreen config
-  global bkgr  ; Background overlay window
+  global cnfg   ; Global config
+  global fscr   ; Fullscreen config
+  global bgGui  ; Background overlay window
 
   static HSHELL_WINDOWACTIVATED  := 0x00000004
        , HSHELL_HIGHBIT          := 0x00008000
@@ -828,7 +828,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
         ;
       }
       try
-        WinSetAlwaysOnTop(true, bkgr.hWnd)
+        WinSetAlwaysOnTop(true, bgGui.hWnd)
       catch {
         ;
       }
@@ -843,7 +843,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
         ;
       }
       try
-        WinSetAlwaysOnTop(true, bkgr.hWnd)
+        WinSetAlwaysOnTop(true, bgGui.hWnd)
       catch {
         ;
       }
@@ -867,7 +867,7 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
         ;
       }
       try
-        WinSetAlwaysOnTop(false, bkgr.hWnd)
+        WinSetAlwaysOnTop(false, bgGui.hWnd)
       catch {
         ;
       }
