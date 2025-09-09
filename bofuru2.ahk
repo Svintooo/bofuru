@@ -329,7 +329,7 @@ DEBUG := false
   }
   else if game.proc_ID
   {
-    game.hWnd := manualWindowSelection(conLog)
+    game.hWnd := manualWindowSelection(mainGui, conLog)
   }
 
 
@@ -665,11 +665,8 @@ synchronizeWithWindow(hWnd, &config, &gameWindow, &windowMode, logg)
 
 ;; Manual window selection
 ; Let user click on the window that shall be made fullscreen.
-manualWindowSelection(logg)
+manualWindowSelection(mainWindow, logg)
 {
-  global mainGui
-  global game  ; Global config
-
   logg.info , _options := "MinimumEmptyLinesBefore 1"
   logg.info "Manual Window selection ACTIVATED"
   logg.info "- Click on game window"
@@ -689,7 +686,7 @@ manualWindowSelection(logg)
     else
       logg.error "{}".f(result.reason)
 
-    WinActivate(mainGui.hWnd)  ; Focus the Gui
+    WinActivate(mainWindow.hWnd)  ; Focus the Gui
 
     return false
   } else {
