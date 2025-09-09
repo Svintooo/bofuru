@@ -337,27 +337,38 @@ DEBUG := false
 
 
   ;; Find Window
+  game_hWnd := 0
+
   if settings.ahk_wintitle
   {
     conLog.info "Waiting for window: {}".f(settings.ahk_wintitle.Inspect())
-    game.hWnd := WinWait(settings.ahk_wintitle)
+    game_hWnd := WinWait(settings.ahk_wintitle)
   }
   else if game.proc_ID
   {
-    game.hWnd := manualWindowSelection(mainGui, conLog)
+    game_hWnd := manualWindowSelection(mainGui, conLog)
   }
 
 
   ;; Make game window fullscreen
   ; If a game window has been found.
-  if game.hWnd
+  if game_hWnd
   {
-    synchronizeWithWindow(game.hWnd, &game, conLog)
-
     conLog.info "Activate Window Fullscreen"
-    removeWindowBorder(game.hWnd, &window_mode, &fullscreen_mode, conLog)
-    activateFullscreen(settings, game, bgGui, window_mode, &fullscreen_mode, conLog)
+
+    ;; Set which window to use for fullscreen
+    result := setGameWindow(game_hWnd, &game, conLog)
+    if !result
+      return
+
+    ;; Prepare window for fullscreen
+    prepareFullscreen(game_hWnd, &window_mode, &fullscreen_mode, conLog)
+
+    ;; Make window fullscreen
+    activateFullscreen(game_hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
   }
+
+  game_hWnd := unset
 }
 
 
@@ -529,7 +540,7 @@ logException(e, logg)
 
 
 ;; Remove window border
-removeWindowBorder(hWnd, &windowMode, &fullscreenMode, logg)
+prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
 {
   global DEBUG
 
@@ -589,7 +600,7 @@ removeWindowBorder(hWnd, &windowMode, &fullscreenMode, logg)
   sleep 100  ; TODO: Wait for window resize to finish before continuing
 
 
-  ;; Get new window state
+  ;; Give new window state to fullscreen_mode to base fullscreen calculations on
   noBorderState := collectWindowState(hWnd)
   if DEBUG
     logWindowState(noBorderState, "Window state (no border)", logg)
@@ -668,26 +679,31 @@ restoreWindowState(hWnd, winState, logg)
 }
 
 
-;; Synchronize the script with the game window
-; - Collects necessary information
-; - Makes sure the window can be made fullscreen
-; - Creates a hook that quits the script if the game window closes
-synchronizeWithWindow(hWnd, &gameWindow, logg)
+;; Stores which window to use for fullscreen
+; - Check if window is allowed to be made fullscreen
+; - Collect and store window query info
+setGameWindow(hWnd, &gameWindow, logg)
 {
-  ;; Collect window info
-  collectWindowInfo(hWnd, &gameWindow)
+  ; Check if window is allowed to be made fullscreen
+  if !lib_canWindowBeFullscreened(hWnd, WinGetClass(hWnd)) {
 
-
-  ;; Print window info
-  logWindowInfo(gameWindow, logg)
-
-
-  ;; Check if window is allowed
-  if !lib_canWindowBeFullscreened(gameWindow.hWnd, gameWindow.winClass)
-  {
     logg.error "Unsupported window selected"
-    return
+    result := false
+
+  } else {
+
+    result := true
+
+    ; Collect window query info
+    collectWindowInfo(hWnd, &gameWindow)
+
+    ; Print window query info
+    logWindowInfo(gameWindow, logg)
+
   }
+
+  ; Return
+  return result
 }
 
 
@@ -727,7 +743,7 @@ manualWindowSelection(mainWindow, logg)
 ;; Activate FULLSCREEN
 ; All other code only exist to help use this function.
 ; - Changes window size and position to make it fullscreen.
-activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, logg)
+activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, logg)
 {
   ;; Define fullscreenMode helper variables
 
@@ -757,9 +773,9 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
                                             _taskbar := config.taskbar)
 
   if ! fullscreenState.ok {
-    restoreWindowState(gameWindow.hWnd, windowMode, logg)
+    restoreWindowState(game_hWnd, windowMode, logg)
     logg.error "{}".f(fullscreenState.reason)
-    return
+    return false
   }
 
   updatefullscreenMode(fullscreenState)
@@ -769,9 +785,9 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
   if DEBUG
     logg.debug "Resize and reposition window"
 
-  WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, gameWindow.hWnd)
+  WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, game_hWnd)
   sleep 1  ; Millisecond
-  newWinState := collectWindowState(gameWindow.hWnd)
+  newWinState := collectWindowState(game_hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
   if newWinState.windowArea.w != %fscrMode%.%winArea%.w || newWinState.windowArea.h != %fscrMode%.%winArea%.h
@@ -782,14 +798,14 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
                                               _taskbar := config.taskbar)
 
     if ! fullscreenState.ok {
-      restoreWindowState(gameWindow.hWnd, windowMode, logg)
+      restoreWindowState(game_hWnd, windowMode, logg)
       logg.error "{}".f(fullscreenState.reason)
       return
     }
 
     updatefullscreenMode(fullscreenState)
 
-    WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, gameWindow.hWnd)
+    WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, game_hWnd)
   }
 
 
@@ -829,7 +845,7 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
     if DEBUG
       logg.debug "Disable AlwaysOnTop on game window"
 
-    WinSetAlwaysOnTop(false, gameWindow.hWnd)
+    WinSetAlwaysOnTop(false, game_hWnd)
     WinSetAlwaysOnTop(false, bgWindow.hWnd)
   }
   else
@@ -838,26 +854,30 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
     if DEBUG
       logg.debug "Set AlwaysOnTop on game window"
 
-    WinSetAlwaysOnTop(true, gameWindow.hWnd)
+    WinSetAlwaysOnTop(true, game_hWnd)
     WinSetAlwaysOnTop(true, bgWindow.hWnd)
   }
 
 
   ;; Print new window state
   if DEBUG
-    logWindowState(gameWindow.hWnd, "Window state (fullscreen)", logg)
+    logWindowState(game_hWnd, "Window state (fullscreen)", logg)
 
 
   ;; End message
   logg.info "Your game should now be in fullscreen"
+
+
+  ;; Return
+  return true
 }
 
 
 ;; Deactivate FULLSCREEN
-deactivateFullscreen(gameWindow, bgWindow, windowMode, logg)
+deactivateFullscreen(game_hWnd, bgWindow, windowMode, logg)
 {
   bgWindow.Hide()
-  restoreWindowState(gameWindow.hWnd, windowMode, logg)
+  restoreWindowState(game_hWnd, windowMode, logg)
 }
 
 
