@@ -262,7 +262,7 @@ DEBUG := false
 
   ;; Restore game window state on exit
   if DEBUG
-    conLog.debug "Register OnExit callback to restore window state on exit"
+    conLog.debug "Register OnExit callback to restore game window state on exit"
 
   OnExit (*) => restoreWindowState(game.hWnd, window_mode, conLog)
 
