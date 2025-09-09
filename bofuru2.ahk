@@ -263,6 +263,19 @@ DEBUG := false
     conLog.debug "Register OnExit callback to restore window state on exit"
 
   OnExit (*) => restoreWindowState(game.hWnd, window_mode, conLog)
+
+
+  ;; Exit script if the game window is closed
+  if DEBUG
+    conLog.debug "Bind exit event to when the game is closed"
+
+  Event_GameExit() {
+    if game.hWnd && not WinExist(game.hWnd)
+      ExitApp(0)
+  }
+
+  MAX_PRIORITY := 2147483647
+  SetTimer(Event_GameExit, , _prio := MAX_PRIORITY)
 }
 
 
@@ -625,19 +638,6 @@ synchronizeWithWindow(hWnd, &config, &gameWindow, &windowMode, logg)
     logg.error "Unsupported window selected"
     return
   }
-
-
-  ;; Exit script if the game window is closed
-  if DEBUG
-    logg.debug "Bind exit event to window close"
-
-  Event_AppExit() {
-    if not WinExist("ahk_id" gameWindow.hWnd)
-      ExitApp(0)
-  }
-
-  MAX_PRIORITY := 2147483647
-  SetTimer(Event_AppExit, , _prio := MAX_PRIORITY)
 
 
   ;; Focus the window
