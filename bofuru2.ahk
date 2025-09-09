@@ -736,9 +736,9 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
   )
 
   ; Shortform access variables
-  fscr    := "fullscreenMode"
-  winArea := "windowArea"
-  bgArea  := "backgroundArea"
+  fscrMode := "fullscreenMode"
+  winArea  := "windowArea"
+  bgArea   := "backgroundArea"
 
 
   ;; Configure Fullscreen Mode
@@ -763,12 +763,12 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
   if DEBUG
     logg.debug "Resize and reposition window"
 
-  WinMove(%fscr%.%winArea%.x, %fscr%.%winArea%.y, %fscr%.%winArea%.w, %fscr%.%winArea%.h, gameWindow.hWnd)
+  WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, gameWindow.hWnd)
   sleep 1  ; Millisecond
   newWinState := collectWindowState(gameWindow.hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
-  if newWinState.windowArea.w != %fscr%.%winArea%.w || newWinState.windowArea.h != %fscr%.%winArea%.h
+  if newWinState.windowArea.w != %fscrMode%.%winArea%.w || newWinState.windowArea.h != %fscrMode%.%winArea%.h
   {
     fullscreenState := lib_calcFullscreenArgs(newWinState.windowArea,
                                               _monitor := config.monitor,
@@ -783,7 +783,7 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
 
     updatefullscreenMode(fullscreenState)
 
-    WinMove(%fscr%.%winArea%.x, %fscr%.%winArea%.y, %fscr%.%winArea%.w, %fscr%.%winArea%.h, gameWindow.hWnd)
+    WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, gameWindow.hWnd)
   }
 
 
@@ -795,22 +795,22 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
   else
   {
     ; Resize the click area
-    bgWindow["ClickArea"].Move(0, 0, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h)
+    bgWindow["ClickArea"].Move(0, 0, %fscrMode%.%bgArea%.w, %fscrMode%.%bgArea%.h)
 
     ; Resize background (also make it visible if it was hidden before)
-    bgWindow.Show("x{} y{} w{} h{}".f(%fscr%.%bgArea%.x, %fscr%.%bgArea%.y, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h))
+    bgWindow.Show("x{} y{} w{} h{}".f(%fscrMode%.%bgArea%.x, %fscrMode%.%bgArea%.y, %fscrMode%.%bgArea%.w, %fscrMode%.%bgArea%.h))
 
     ; Cut a hole in the background for the game window to be seen
     ; NOTE: Coordinates are relative to the background area, not the desktop area
     polygonStr := Format(
       "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
       "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
-      %fscr%.%bgArea%.w,                                           ;{1} Background Area: width
-      %fscr%.%bgArea%.h,                                           ;{2} Background Area: height
-      %fscr%.%winArea%.x - %fscr%.%bgArea%.x,                      ;{3} Game Window: x coordinate (left)
-      %fscr%.%winArea%.y - %fscr%.%bgArea%.y,                      ;{4} Game Window: y coordinate (top)
-      %fscr%.%winArea%.x - %fscr%.%bgArea%.x + %fscr%.%winArea%.w, ;{5} Game Window: x coordinate (right)
-      %fscr%.%winArea%.y - %fscr%.%bgArea%.y + %fscr%.%winArea%.h, ;{6} Game Window: y coordinate (bottom)
+      %fscrMode%.%bgArea%.w,                                                   ;{1} Background Area: width
+      %fscrMode%.%bgArea%.h,                                                   ;{2} Background Area: height
+      %fscrMode%.%winArea%.x - %fscrMode%.%bgArea%.x,                          ;{3} Game Window: x coordinate (left)
+      %fscrMode%.%winArea%.y - %fscrMode%.%bgArea%.y,                          ;{4} Game Window: y coordinate (top)
+      %fscrMode%.%winArea%.x - %fscrMode%.%bgArea%.x + %fscrMode%.%winArea%.w, ;{5} Game Window: x coordinate (right)
+      %fscrMode%.%winArea%.y - %fscrMode%.%bgArea%.y + %fscrMode%.%winArea%.h, ;{6} Game Window: y coordinate (bottom)
     )
     WinSetRegion(polygonStr, bgWindow.hwnd)
   }
