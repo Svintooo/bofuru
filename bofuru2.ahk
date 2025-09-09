@@ -51,20 +51,22 @@ DEBUG := false
             proc_name: "", ; Process Name
             win_title: "", ; Window Title
             win_class: "", ; Window Class
-            win_text:  ""} ; Window Text
+            win_text:  "", ; Window Text
+            win_exe:   ""} ; Window Executable
 
   ;; Window Mode
-  window_mode := { windowArea: {x:0, y:0, w:0, h:0},  ; Position/dimention of window area
-                   clientArea: {x:0, y:0, w:0, h:0},  ; Position/dimention of window client area
+  window_mode := { windowArea: {x:0, y:0, w:0, h:0},  ; Position/size of window area
+                   clientArea: {x:0, y:0, w:0, h:0},  ; Position/size of window client area
                    menu:       0x00000000,            ; Window menu
                    style:      0x00000000,            ; Window style
                    exStyle:    0x00000000, }          ; Window extended style
 
   ;; Fullscreen Mode
-  fullscreen_mode := { windowArea:       {x:0, y:0, w:0, h:0},  ; Position/dimention of window area
-                       monitorArea:      {x:0, y:0, w:0, h:0},  ; Position/dimention of computer monitor area
-                       screenArea:       {x:0, y:0, w:0, h:0},  ; Position/dimention of desktop area
-                       backgroundArea:   {x:0, y:0, w:0, h:0},  ; Position/dimention of background overlay area
+  fullscreen_mode := { windowBaseArea:   {x:0, y:0, w:0, h:0},  ; Position/size of window area before fullscreen
+                       windowArea:       {x:0, y:0, w:0, h:0},  ; Position/size of window area during fullscreen
+                       monitorArea:      {x:0, y:0, w:0, h:0},  ; Position/size of computer monitor area
+                       screenArea:       {x:0, y:0, w:0, h:0},  ; Position/size of desktop area
+                       backgroundArea:   {x:0, y:0, w:0, h:0},  ; Position/size of background overlay area
                        needsBackground:  false,                 ; If background overlay is needed
                        needsAlwaysOnTop: false }                ; If AlwaysOnTop is needed on window and background
 
@@ -350,9 +352,10 @@ DEBUG := false
   ; If a game window has been found.
   if game.hWnd
   {
-    synchronizeWithWindow(game.hWnd, &settings, &game, &window_mode, conLog)
+    synchronizeWithWindow(game.hWnd, &game, conLog)
 
     conLog.info "Activate Window Fullscreen"
+    removeWindowBorder(game.hWnd, &window_mode, &fullscreen_mode, conLog)
     activateFullscreen(settings, game, bgGui, window_mode, &fullscreen_mode, conLog)
   }
 }
@@ -526,39 +529,86 @@ logException(e, logg)
 
 
 ;; Remove window border
-removeWindowBorder(hWnd, windowMode, logg)
+removeWindowBorder(hWnd, &windowMode, &fullscreenMode, logg)
 {
   global DEBUG
 
+  ;; Configure Window Mode
+  if DEBUG
+    logg.debug "Collecting current window state"
+
+  winState := collectWindowState(hWnd)
+  windowMode.windowArea := winState.windowArea
+  windowMode.clientArea := winState.clientArea
+  windowMode.menu       := winState.menu
+  windowMode.style      := winState.style
+  windowMode.exStyle    := winState.exStyle
+
+  if DEBUG
+    logWindowState(windowMode, "Window state (original)", logg)
+
+
+  ;; From here, remove all window styles
+  logg.info "Remove window styles (border, menu, title bar, etc)"
+
+
+  ;; Remove window menu (if it exists)
   if windowMode.menu
     DllCall("SetMenu", "uint", game.hWnd, "uint", 0)
 
-  ; Remove styles (border)
+
+  ;; Remove window styles (border)
   newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
                | 0x10000000  ; WS_VISIBLE
+
   try
     WinSetStyle(newWinStyle, "ahk_id" game.hWnd)
   catch as e
     if DEBUG
       logException(e, logg)
 
-  ; Remove extended styles (NOTE: may not be needed)
+
+  ;; Remove window extended styles (NOTE: this code may not be needed)
   removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
                     | 0x00000100 ; WS_EX_WINDOWEDGE    (raised border edges)
                     | 0x00000200 ; WS_EX_CLIENTEDGE    (sunken border edges)
                     | 0x00020000 ; WS_EX_STATICEDGE    (three-dimensional border)
                     | 0x00000400 ; WS_EX_CONTEXTHELP   (title bar question mark)
                     | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
+
   try
     WinSetExStyle("-" removeWinExStyle, "ahk_id" game.hWnd)   ; The minus (-) removes the styles from the current window styles
   catch as e
     if DEBUG
       logException(e, logg)
 
-  ; Restore the correct window client area width/height
+
+  ;; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
   WinMove(, , windowMode.clientArea.w, windowMode.clientArea.h, game.hWnd)
   sleep 100  ; TODO: Wait for window resize to finish before continuing
+
+
+  ;; Get new window state
+  noBorderState := collectWindowState(hWnd)
+  if DEBUG
+    logWindowState(noBorderState, "Window state (no border)", logg)
+
+  fullscreenMode.windowBaseArea.x := noBorderState.windowArea.x
+  fullscreenMode.windowBaseArea.y := noBorderState.windowArea.y
+  fullscreenMode.windowBaseArea.w := noBorderState.windowArea.w
+  fullscreenMode.windowBaseArea.h := noBorderState.windowArea.h
+
+
+  ;; Warn if window lost its aspect ratio
+  if fullscreenMode.windowBaseArea.w != windowMode.clientArea.w
+  || fullscreenMode.windowBaseArea.h != windowMode.clientArea.h
+  {
+    logg.warn , _options := "MinimumEmptyLinesBefore 1"
+    logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
+    logg.warn "You may experience distorted graphics and slightly off mouse clicks."
+    logg.warn , _options := "MinimumEmptyLinesAfter 1"
+  }
 }
 
 
@@ -622,7 +672,7 @@ restoreWindowState(hWnd, winState, logg)
 ; - Collects necessary information
 ; - Makes sure the window can be made fullscreen
 ; - Creates a hook that quits the script if the game window closes
-synchronizeWithWindow(hWnd, &config, &gameWindow, &windowMode, logg)
+synchronizeWithWindow(hWnd, &gameWindow, logg)
 {
   ;; Collect window info
   collectWindowInfo(hWnd, &gameWindow)
@@ -638,28 +688,6 @@ synchronizeWithWindow(hWnd, &config, &gameWindow, &windowMode, logg)
     logg.error "Unsupported window selected"
     return
   }
-
-
-  ;; Focus the window
-  if DEBUG
-    logg.debug "Put the game window in focus"
-
-  WinActivate(gameWindow.hWnd)
-
-
-  ;; Configure Window Mode
-  if DEBUG
-    logg.debug "Collecting current window state"
-
-  winState := collectWindowState(gameWindow.hWnd)
-  windowMode.windowArea := winState.windowArea
-  windowMode.clientArea := winState.clientArea
-  windowMode.menu       := winState.menu
-  windowMode.style      := winState.style
-  windowMode.exStyle    := winState.exStyle
-
-  if DEBUG
-    logWindowState(windowMode, "Window state (original)", logg)
 }
 
 
@@ -701,28 +729,6 @@ manualWindowSelection(mainWindow, logg)
 ; - Changes window size and position to make it fullscreen.
 activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, logg)
 {
-  ;; Remove Window Border
-  logg.info "Remove window styles (border, menu, title bar, etc)"
-  removeWindowBorder(gameWindow.hWnd, windowMode, logg)
-
-
-  ;; Get new window state
-  noBorderState := collectWindowState(gameWindow.hWnd)
-  if DEBUG
-    logWindowState(noBorderState, "Window state (no border)", logg)
-
-
-  ;; Warn if window lost its aspect ratio
-  if noBorderState.windowArea.w != windowMode.clientArea.w
-  || noBorderState.windowArea.h != windowMode.clientArea.h
-  {
-    logg.warn , _options := "MinimumEmptyLinesBefore 1"
-    logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
-    logg.warn "You may experience distorted graphics and slightly off mouse clicks."
-    logg.warn , _options := "MinimumEmptyLinesAfter 1"
-  }
-
-
   ;; Define fullscreenMode helper variables
 
   ; Update function
@@ -745,7 +751,7 @@ activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, lo
   if DEBUG
     logg.debug "Configure fullscreen mode"
 
-  fullscreenState := lib_calcFullscreenArgs(noBorderState.windowArea,
+  fullscreenState := lib_calcFullscreenArgs(fullscreenMode.windowBaseArea,
                                             _monitor := config.monitor,
                                             _winSize := config.resize,
                                             _taskbar := config.taskbar)
