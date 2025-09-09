@@ -340,7 +340,7 @@ DEBUG := false
     synchronizeWithWindow(game.hWnd, &settings, &game, &window_mode, conLog)
 
     conLog.info "Activate Window Fullscreen"
-    activateFullscreen(settings, game, window_mode, &fullscreen_mode, conLog)
+    activateFullscreen(settings, game, bgGui, window_mode, &fullscreen_mode, conLog)
   }
 }
 
@@ -702,13 +702,8 @@ manualWindowSelection(logg)
 ;; Activate FULLSCREEN
 ; All other code only exist to help use this function.
 ; - Changes window size and position to make it fullscreen.
-; - arg `config` decides how the fullscreen will be made.
-; - arg `fullscreenMode` will be modified.
-; - global var `bgGui` will be modified.
-activateFullscreen(config, gameWindow, windowMode, &fullscreenMode, logg)
+activateFullscreen(config, gameWindow, bgWindow, windowMode, &fullscreenMode, logg)
 {
-  global bgGui     ; Background overlay window
-
   ;; Remove Window Border
   logg.info "Remove window styles (border, menu, title bar, etc)"
   removeWindowBorder(gameWindow.hWnd, windowMode, logg)
@@ -798,15 +793,15 @@ activateFullscreen(config, gameWindow, windowMode, &fullscreenMode, logg)
   ;; Modify background overlay
   if ! fullscreenMode.needsBackground
   {
-    bgGui.Hide()
+    bgWindow.Hide()
   }
   else
   {
     ; Resize the click area
-    bgGui["ClickArea"].Move(0, 0, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h)
+    bgWindow["ClickArea"].Move(0, 0, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h)
 
     ; Resize background (also make it visible if it was hidden before)
-    bgGui.Show("x{} y{} w{} h{}".f(%fscr%.%bgArea%.x, %fscr%.%bgArea%.y, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h))
+    bgWindow.Show("x{} y{} w{} h{}".f(%fscr%.%bgArea%.x, %fscr%.%bgArea%.y, %fscr%.%bgArea%.w, %fscr%.%bgArea%.h))
 
     ; Cut a hole in the background for the game window to be seen
     ; NOTE: Coordinates are relative to the background area, not the desktop area
@@ -820,7 +815,7 @@ activateFullscreen(config, gameWindow, windowMode, &fullscreenMode, logg)
       %fscr%.%winArea%.x - %fscr%.%bgArea%.x + %fscr%.%winArea%.w, ;{5} Game Window: x coordinate (right)
       %fscr%.%winArea%.y - %fscr%.%bgArea%.y + %fscr%.%winArea%.h, ;{6} Game Window: y coordinate (bottom)
     )
-    WinSetRegion(polygonStr, bgGui.hwnd)
+    WinSetRegion(polygonStr, bgWindow.hwnd)
   }
 
 
@@ -832,7 +827,7 @@ activateFullscreen(config, gameWindow, windowMode, &fullscreenMode, logg)
       logg.debug "Disable AlwaysOnTop on game window"
 
     WinSetAlwaysOnTop(false, gameWindow.hWnd)
-    WinSetAlwaysOnTop(false, bgGui.hWnd)
+    WinSetAlwaysOnTop(false, bgWindow.hWnd)
   }
   else
   {
@@ -841,7 +836,7 @@ activateFullscreen(config, gameWindow, windowMode, &fullscreenMode, logg)
       logg.debug "Set AlwaysOnTop on game window"
 
     WinSetAlwaysOnTop(true, gameWindow.hWnd)
-    WinSetAlwaysOnTop(true, bgGui.hWnd)
+    WinSetAlwaysOnTop(true, bgWindow.hWnd)
   }
 
 
@@ -856,11 +851,9 @@ activateFullscreen(config, gameWindow, windowMode, &fullscreenMode, logg)
 
 
 ;; Deactivate FULLSCREEN
-deactivateFullscreen(gameWindow, windowMode, logg)
+deactivateFullscreen(gameWindow, bgWindow, windowMode, logg)
 {
-  global bgGui  ; Background overlay window
-
-  bgGui.Hide()
+  bgWindow.Hide()
   restoreWindowState(gameWindow.hWnd, windowMode, logg)
 }
 
