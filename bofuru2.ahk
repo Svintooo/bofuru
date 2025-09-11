@@ -753,8 +753,9 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
                                  _taskbar := config.taskbar)
 
   if ! fscr.ok {
-    modifyWindowState(game_hWnd, windowMode, logg)
+    ; Restore window mode and return
     logg.error "{}".f(fscr.reason)
+    modifyWindowState(game_hWnd, windowMode, logg)
     return false
   }
 
@@ -778,8 +779,9 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
                                    _taskbar := config.taskbar)
 
     if ! fscr.ok {
-      modifyWindowState(game_hWnd, windowMode, logg)
+      ; Restore window mode and return
       logg.error "{}".f(fscr.reason)
+      modifyWindowState(game_hWnd, windowMode, logg)
       return false
     }
 
@@ -856,7 +858,10 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 ;; Deactivate FULLSCREEN
 deactivateFullscreen(game_hWnd, bgWindow, windowMode, logg)
 {
+  ; Hide the background overlay
   bgWindow.Hide()
+
+  ; Change game back to window mode
   modifyWindowState(game_hWnd, windowMode, logg)
 }
 
