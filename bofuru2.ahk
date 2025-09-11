@@ -752,7 +752,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
   ;; Define fullscreenMode helper variables
 
   ; Update function
-  updatefullscreenMode := (state) => (
+  func_updatefullscreenMode := (state) => (
     fullscreenMode.windowArea       := state.windowArea,
     fullscreenMode.monitorArea      := state.monitorArea,
     fullscreenMode.screenArea       := state.screenArea,
@@ -782,7 +782,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     return false
   }
 
-  updatefullscreenMode(fullscreenState)
+  func_updatefullscreenMode(fullscreenState)
 
 
   ;; Resize and reposition window
@@ -807,7 +807,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
       return
     }
 
-    updatefullscreenMode(fullscreenState)
+    func_updatefullscreenMode(fullscreenState)
 
     WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, game_hWnd)
   }
