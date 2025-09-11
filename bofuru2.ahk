@@ -263,7 +263,7 @@ DEBUG := false
   if DEBUG
     conLog.debug "Register OnExit callback to restore game window state on exit"
 
-  OnExit (*) => modifyWindowState(game.hWnd, window_mode, conLog)
+  OnExit (*) => deactivateFullscreen(game.hWnd, bgGui, window_mode, conLog)
 
 
   ;; Exit script if the game window is closed
@@ -638,10 +638,6 @@ modifyWindowState(hWnd, newWindowState, logg)
   if !WinExist(hWnd)
     return
 
-  ;; Remove AlwaysOnTop
-  runCatch ()=>WinSetAlwaysOnTop(false, hWnd)
-         , "Remove AlwaysOnTop"
-
   ;; Set window menu bar
   runCatch ()=>DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", newWindowState.menu)
          , "Modify window Menu bar"
@@ -857,6 +853,9 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 ;; Deactivate FULLSCREEN
 deactivateFullscreen(game_hWnd, bgWindow, windowMode, logg)
 {
+  ; Remove AlwaysOnTop
+  WinSetAlwaysOnTop(false, game_hWnd)
+
   ; Hide the background overlay
   bgWindow.Hide()
 
