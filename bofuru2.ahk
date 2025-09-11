@@ -57,20 +57,17 @@ DEBUG := false
             win_exe:   ""} ; Window Executable
 
   ;; Window Mode
-  window_mode := { windowArea: {x:0, y:0, w:0, h:0},  ; Position/size of window area
-                   clientArea: {x:0, y:0, w:0, h:0},  ; Position/size of window client area
-                   menu:       0x00000000,            ; Window menu
-                   style:      0x00000000,            ; Window style
-                   exStyle:    0x00000000, }          ; Window extended style
+  ; Data needed to put game into window mode.
+  window_mode := { x:0, y:0, w:0, h:0,     ; Window area
+                   menu:    0x00000000,    ; Window menu
+                   style:   0x00000000,    ; Window style (border)
+                   exStyle: 0x00000000, }  ; Window extended style
 
   ;; Fullscreen Mode
-  fullscreen_mode := { windowBaseArea:   {x:0, y:0, w:0, h:0},  ; Position/size of window area before fullscreen
-                       windowArea:       {x:0, y:0, w:0, h:0},  ; Position/size of window area during fullscreen
-                       monitorArea:      {x:0, y:0, w:0, h:0},  ; Position/size of computer monitor area
-                       screenArea:       {x:0, y:0, w:0, h:0},  ; Position/size of desktop area
-                       backgroundArea:   {x:0, y:0, w:0, h:0},  ; Position/size of background overlay area
-                       needsBackground:  false,                 ; If background overlay is needed
-                       needsAlwaysOnTop: false }                ; If AlwaysOnTop is needed on window and background
+  ; Data needed to put game into fullscreen mode.
+  fullscreen_mode := { x:0, y:0, w:0, h:0,        ; Base window area, used to calculate fullscreen area
+                       needsBackground:  false,   ; If background overlay is needed
+                       needsAlwaysOnTop: false }  ; If AlwaysOnTop is needed on game and background
 
   ;TODO: Implement `Object.Seal()`
   ;; Prevent additional properties
@@ -476,7 +473,7 @@ collectWindowState(hWnd)
   winMenu := DllCall("User32.dll\GetMenu", "Ptr", hWnd, "Ptr")
 
   winState := {
-    windowArea: { x:x,       y:y,       w:width,       h:height       },
+    x:x, y:y, w:width, h:height,
     clientArea: { x:clientX, y:clientY, w:clientWidth, h:clientHeight },
     menu:       winMenu,
     style:      winStyle,
@@ -518,10 +515,11 @@ logWindowState(hWnd_or_winState, message, logg)
   winStyleStr   := "0x{:08X} ({})".f(winState.style,   lib_parseWindowStyle(winState.style)    .Join(" | "))
   winExStyleStr := "0x{:08X} ({})".f(winState.exStyle, lib_parseWindowExStyle(winState.exStyle).Join(" | "))
   winMenuStr    := "0x{:08X}".f(winState.menu)
+  windowArea    := {x:winState.x, y:winState.y, w:winState.w, h:winState.h}
 
   logg.debug , _options := "MinimumEmptyLinesBefore 1"
   logg.debug "{}".f(message)
-  logg.debug "- window     = {}".f(winState.windowArea.Inspect())
+  logg.debug "- window     = {}".f(windowArea.Inspect())
   logg.debug "- clientArea = {}".f(winState.clientArea.Inspect())
   logg.debug "- menu       = {}".f(winMenuStr)
   logg.debug "- style      = {}".f(winStyleStr)
@@ -554,11 +552,13 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
     logg.debug "Collecting current window state"
 
   winState := collectWindowState(hWnd)
-  windowMode.windowArea := winState.windowArea
-  windowMode.clientArea := winState.clientArea
-  windowMode.menu       := winState.menu
-  windowMode.style      := winState.style
-  windowMode.exStyle    := winState.exStyle
+  windowMode.x       := winState.x
+  windowMode.y       := winState.y
+  windowMode.w       := winState.w
+  windowMode.h       := winState.h
+  windowMode.menu    := winState.menu
+  windowMode.style   := winState.style
+  windowMode.exStyle := winState.exStyle
 
   if DEBUG
     logWindowState(windowMode, "Window state (original)", logg)
@@ -608,7 +608,8 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
 
   ;; Restore the correct window client area width/height
   ; (these gets distorted when the border is removed)
-  WinMove(, , windowMode.clientArea.w, windowMode.clientArea.h, game.hWnd)
+  ; Now that the window border is gone, windowArea = clientArea
+  WinMove(, , winState.clientArea.w, winState.clientArea.h, game.hWnd)
   sleep 100  ; TODO: Wait for window resize to finish before continuing
 
 
@@ -617,15 +618,15 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
   if DEBUG
     logWindowState(noBorderState, "Window state (no border)", logg)
 
-  fullscreenMode.windowBaseArea.x := noBorderState.windowArea.x
-  fullscreenMode.windowBaseArea.y := noBorderState.windowArea.y
-  fullscreenMode.windowBaseArea.w := noBorderState.windowArea.w
-  fullscreenMode.windowBaseArea.h := noBorderState.windowArea.h
+  fullscreenMode.x := noBorderState.x
+  fullscreenMode.y := noBorderState.y
+  fullscreenMode.w := noBorderState.w
+  fullscreenMode.h := noBorderState.h
 
 
-  ;; Warn if window lost its aspect ratio
-  if fullscreenMode.windowBaseArea.w != windowMode.clientArea.w
-  || fullscreenMode.windowBaseArea.h != windowMode.clientArea.h
+  ;; Warn if window failed to get its client area restored
+  if noBorderState.w != winState.clientArea.w
+  || noBorderState.h != winState.clientArea.h
   {
     logg.warn , _options := "MinimumEmptyLinesBefore 1"
     logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
@@ -636,7 +637,7 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
 
 
 ;; Restore window state (this includes the border)
-restoreWindowState(hWnd, winState, logg)
+restoreWindowState(hWnd, windowMode, logg)
 {
   ; Remove AlwaysOnTop
   try
@@ -650,8 +651,8 @@ restoreWindowState(hWnd, winState, logg)
 
   ; Set window menu bar
   try
-    if winState.menu
-      DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", winState.menu)
+    if windowMode.menu
+      DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", windowMode.menu)
   catch as e {
     if DEBUG {
       logException(e, logg)
@@ -661,7 +662,7 @@ restoreWindowState(hWnd, winState, logg)
 
   ; Set window style
   try
-    WinSetStyle(winState.style, "ahk_id" hWnd)
+    WinSetStyle(windowMode.style, "ahk_id" hWnd)
   catch as e {
     if DEBUG {
       logException(e, logg)
@@ -671,7 +672,7 @@ restoreWindowState(hWnd, winState, logg)
 
   ; Set window extended style
   try
-    WinSetExStyle(winState.exStyle, "ahk_id" hWnd)
+    WinSetExStyle(windowMode.exStyle, "ahk_id" hWnd)
   catch as e {
     if DEBUG {
       logException(e, logg)
@@ -681,7 +682,7 @@ restoreWindowState(hWnd, winState, logg)
 
   ; Set window size/position
   try
-    WinMove(winState.windowArea.x, winState.windowArea.y, winState.windowArea.w, winState.windowArea.h, "ahk_id" hWnd)
+    WinMove(windowMode.x, windowMode.y, windowMode.w, windowMode.h, "ahk_id" hWnd)
   catch as e {
     if DEBUG {
       logException(e, logg)
@@ -762,63 +763,58 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 
   ; Update function
   func_updatefullscreenMode := (state) => (
-    fullscreenMode.windowArea       := state.windowArea,
-    fullscreenMode.monitorArea      := state.monitorArea,
-    fullscreenMode.screenArea       := state.screenArea,
-    fullscreenMode.backgroundArea   := state.backgroundArea,
     fullscreenMode.needsBackground  := state.needsBackground,
     fullscreenMode.needsAlwaysOnTop := state.needsAlwaysOnTop
   )
 
   ; Shortform access variables
-  fscrMode := "fullscreenMode"
-  winArea  := "windowArea"
-  bgArea   := "backgroundArea"
+  winArea  := "windowArea"      ; fscr.windowArea     = fscr.%winArea%
+  bgArea   := "backgroundArea"  ; fscr.backgroundArea = fscr.%bgArea%
 
 
-  ;; Configure Fullscreen Mode
+  ;; Calculate Fullscreen Mode
   if DEBUG
     logg.debug "Configure fullscreen mode"
 
-  fullscreenState := lib_calcFullscreenArgs(fullscreenMode.windowBaseArea,
-                                            _monitor := config.monitor,
-                                            _winSize := config.resize,
-                                            _taskbar := config.taskbar)
+  fscr := lib_calcFullscreenArgs(fullscreenMode,
+                                 _monitor := config.monitor,
+                                 _winSize := config.resize,
+                                 _taskbar := config.taskbar)
 
-  if ! fullscreenState.ok {
+  if ! fscr.ok {
     restoreWindowState(game_hWnd, windowMode, logg)
-    logg.error "{}".f(fullscreenState.reason)
+    logg.error "{}".f(fscr.reason)
     return false
   }
 
-  func_updatefullscreenMode(fullscreenState)
+  func_updatefullscreenMode(fscr)
 
 
   ;; Resize and reposition window
   if DEBUG
     logg.debug "Resize and reposition window"
 
-  WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, game_hWnd)
+  WinMove(fscr.%winArea%.x, fscr.%winArea%.y, fscr.%winArea%.w, fscr.%winArea%.h, game_hWnd)
   sleep 1  ; Millisecond
   newWinState := collectWindowState(game_hWnd)
 
   ; If window did not get the intended size, reposition window using its current size
-  if newWinState.windowArea.w != %fscrMode%.%winArea%.w || newWinState.windowArea.h != %fscrMode%.%winArea%.h
+  if newWinState.w != fscr.%winArea%.w || newWinState.h != fscr.%winArea%.h
   {
-    fullscreenState := lib_calcFullscreenArgs(newWinState.windowArea,
-                                              _monitor := config.monitor,
-                                              _winSize := "keep",
-                                              _taskbar := config.taskbar)
+    fscr := lib_calcFullscreenArgs(newWinState,
+                                   _monitor := config.monitor,
+                                   _winSize := "keep",
+                                   _taskbar := config.taskbar)
 
-    if ! fullscreenState.ok {
+    if ! fscr.ok {
       restoreWindowState(game_hWnd, windowMode, logg)
-      logg.error "{}".f(fullscreenState.reason)
+      logg.error "{}".f(fscr.reason)
       return
     }
 
-    func_updatefullscreenMode(fullscreenState)
+    func_updatefullscreenMode(fscr)
 
-    WinMove(%fscrMode%.%winArea%.x, %fscrMode%.%winArea%.y, %fscrMode%.%winArea%.w, %fscrMode%.%winArea%.h, game_hWnd)
+    WinMove(fscr.%winArea%.x, fscr.%winArea%.y, fscr.%winArea%.w, fscr.%winArea%.h, game_hWnd)
   }
 
 
@@ -830,22 +826,22 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
   else
   {
     ; Resize the click area
-    bgWindow["ClickArea"].Move(0, 0, %fscrMode%.%bgArea%.w, %fscrMode%.%bgArea%.h)
+    bgWindow["ClickArea"].Move(0, 0, fscr.%bgArea%.w, fscr.%bgArea%.h)
 
     ; Resize background (also make it visible if it was hidden before)
-    bgWindow.Show("x{} y{} w{} h{}".f(%fscrMode%.%bgArea%.x, %fscrMode%.%bgArea%.y, %fscrMode%.%bgArea%.w, %fscrMode%.%bgArea%.h))
+    bgWindow.Show("x{} y{} w{} h{}".f(fscr.%bgArea%.x, fscr.%bgArea%.y, fscr.%bgArea%.w, fscr.%bgArea%.h))
 
     ; Cut a hole in the background for the game window to be seen
     ; NOTE: Coordinates are relative to the background area, not the desktop area
     polygonStr := Format(
       "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
       "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
-      %fscrMode%.%bgArea%.w,                                                   ;{1} Background Area: width
-      %fscrMode%.%bgArea%.h,                                                   ;{2} Background Area: height
-      %fscrMode%.%winArea%.x - %fscrMode%.%bgArea%.x,                          ;{3} Game Window: x coordinate (left)
-      %fscrMode%.%winArea%.y - %fscrMode%.%bgArea%.y,                          ;{4} Game Window: y coordinate (top)
-      %fscrMode%.%winArea%.x - %fscrMode%.%bgArea%.x + %fscrMode%.%winArea%.w, ;{5} Game Window: x coordinate (right)
-      %fscrMode%.%winArea%.y - %fscrMode%.%bgArea%.y + %fscrMode%.%winArea%.h, ;{6} Game Window: y coordinate (bottom)
+      fscr.%bgArea%.w,                                       ;{1} Background Area: width
+      fscr.%bgArea%.h,                                       ;{2} Background Area: height
+      fscr.%winArea%.x - fscr.%bgArea%.x,                    ;{3} Game Window: x coordinate (left)
+      fscr.%winArea%.y - fscr.%bgArea%.y,                    ;{4} Game Window: y coordinate (top)
+      fscr.%winArea%.x - fscr.%bgArea%.x + fscr.%winArea%.w, ;{5} Game Window: x coordinate (right)
+      fscr.%winArea%.y - fscr.%bgArea%.y + fscr.%winArea%.h, ;{6} Game Window: y coordinate (bottom)
     )
     WinSetRegion(polygonStr, bgWindow.hwnd)
   }
