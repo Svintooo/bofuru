@@ -620,58 +620,46 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
 
 ;; Modify window state (this includes the border)
 ; Done using best effort: Any failure is ignored
-modifyWindowState(hWnd, windowMode, logg)
+modifyWindowState(hWnd, newWindowState, logg)
 {
-  ; Remove AlwaysOnTop
-  try
-    WinSetAlwaysOnTop(false, hWnd)
-  catch as e {
-    if DEBUG {
-      logException(e, logg)
-      MsgBox ""
-    }
+  ;; Helper function
+  ; Run code, catch exception, ignore errors
+  runCatch(func, name?) {
+    try
+      func.Call()
+    catch as e
+      if IsSet(name)
+        logg.warn "{} failed (this may not be a problem)".f(name)
+      if DEBUG
+        logException(e, logg)
   }
 
-  ; Set window menu bar
-  try
-    if windowMode.menu
-      DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", windowMode.menu)
-  catch as e {
-    if DEBUG {
-      logException(e, logg)
-      MsgBox ""
-    }
-  }
+  ;; Check if window exist
+  if !WinExist(hWnd)
+    return
 
-  ; Set window style
-  try
-    WinSetStyle(windowMode.style, "ahk_id" hWnd)
-  catch as e {
-    if DEBUG {
-      logException(e, logg)
-      MsgBox ""
-    }
-  }
+  ;; Remove AlwaysOnTop
+  runCatch ()=>WinSetAlwaysOnTop(false, hWnd)
+         , "Remove AlwaysOnTop"
 
-  ; Set window extended style
-  try
-    WinSetExStyle(windowMode.exStyle, "ahk_id" hWnd)
-  catch as e {
-    if DEBUG {
-      logException(e, logg)
-      MsgBox ""
-    }
-  }
+  ;; Set window menu bar
+  runCatch ()=>DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", newWindowState.menu)
+         , "Modify window Menu bar"
 
-  ; Set window size/position
-  try
-    WinMove(windowMode.x, windowMode.y, windowMode.w, windowMode.h, "ahk_id" hWnd)
-  catch as e {
-    if DEBUG {
-      logException(e, logg)
-      MsgBox ""
-    }
-  }
+  ;; Set window style
+  runCatch ()=>WinSetStyle(newWindowState.style, "ahk_id" hWnd)
+         , "Modify window border (style)"
+
+  ;; Set window extended style
+  runCatch ()=>WinSetExStyle(newWindowState.exStyle, "ahk_id" hWnd)
+         , "Modify window extended style"
+
+  ;; Set window size/position
+  runCatch ()=>WinMove(newWindowState.x, newWindowState.y, newWindowState.w, newWindowState.h, "ahk_id" hWnd)
+         , "Modify window size/position"
+
+  ;; Return
+  return
 }
 
 
