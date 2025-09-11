@@ -726,7 +726,6 @@ manualWindowSelection(mainWindow, logg)
 
 ;; Activate FULLSCREEN
 ; All other code only exist to help use this function.
-; - Calculate fullscreen, store calculations in var fullscreenMode.
 ; - Changes window size and position to make it fullscreen.
 activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, logg)
 {
