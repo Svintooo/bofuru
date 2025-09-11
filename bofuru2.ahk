@@ -539,7 +539,10 @@ logException(e, logg)
 }
 
 
-;; Remove window border
+;; Prepare for fullscreen
+; - Store original window state in var windowMode
+; - Remove all styles and border from game window
+; - Store new window state in var fullscreenMode
 prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
 {
   global DEBUG
@@ -681,7 +684,7 @@ restoreWindowState(hWnd, winState, logg)
 
 ;; Stores which window to use for fullscreen
 ; - Check if window is allowed to be made fullscreen
-; - Collect and store window query info
+; - Collect and store window query info in var gameWindow
 setGameWindow(hWnd, &gameWindow, logg)
 {
   ; Check if window is allowed to be made fullscreen
@@ -742,6 +745,7 @@ manualWindowSelection(mainWindow, logg)
 
 ;; Activate FULLSCREEN
 ; All other code only exist to help use this function.
+; - Calculate fullscreen, store calculations in var fullscreenMode.
 ; - Changes window size and position to make it fullscreen.
 activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, logg)
 {
