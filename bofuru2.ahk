@@ -575,11 +575,14 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
   newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
                | 0x10000000  ; WS_VISIBLE
 
-  try
+  try {
     WinSetStyle(newWinStyle, "ahk_id" game.hWnd)
-  catch as e
+  } catch as e {
+    logg.warn "Maybe failed to remove window border"
+
     if DEBUG
       logException(e, logg)
+  }
 
 
   ;; Remove window extended styles (NOTE: this code may not be needed)
@@ -590,11 +593,14 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
                     | 0x00000400 ; WS_EX_CONTEXTHELP   (title bar question mark)
                     | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
 
-  try
+  try {
     WinSetExStyle("-" removeWinExStyle, "ahk_id" game.hWnd)   ; The minus (-) removes the styles from the current window styles
-  catch as e
-    if DEBUG
+  } catch as e {
+    if DEBUG {
+      logg.debug "Maybe failed to remove window extended styles"
       logException(e, logg)
+    }
+  }
 
 
   ;; Restore the correct window client area width/height
