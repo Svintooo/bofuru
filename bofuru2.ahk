@@ -263,7 +263,7 @@ DEBUG := false
   if DEBUG
     conLog.debug "Register OnExit callback to restore game window state on exit"
 
-  OnExit (*) => restoreWindowState(game.hWnd, window_mode, conLog)
+  OnExit (*) => modifyWindowState(game.hWnd, window_mode, conLog)
 
 
   ;; Exit script if the game window is closed
@@ -564,52 +564,34 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
     logWindowState(windowMode, "Window state (original)", logg)
 
 
-  ;; From here, remove all window styles
-  logg.info "Remove window styles (border, menu, title bar, etc)"
+  ;; Remove all window decorations
+  logg.info "Remove window decorations (border, menu, title bar, etc)"
 
+  newWinState := {
+    ; New window area
+    x: winState.clientArea.x,
+    y: winState.clientArea.y,
+    w: winState.clientArea.w,
+    h: winState.clientArea.h,
 
-  ;; Remove window menu (if it exists)
-  if windowMode.menu
-    DllCall("SetMenu", "uint", game.hWnd, "uint", 0)
+    ; Remove window menu
+    menu:    0x00000000,
 
+    ; Set new window styles
+    style:   0x80000000  ; WS_POPUP (no border, no titlebar)
+           | 0x10000000, ; WS_VISIBLE
 
-  ;; Remove window styles (border)
-  newWinStyle := 0x80000000  ; WS_POPUP (no border, no titlebar)
-               | 0x10000000  ; WS_VISIBLE
-
-  try {
-    WinSetStyle(newWinStyle, "ahk_id" game.hWnd)
-  } catch as e {
-    logg.warn "Maybe failed to remove window border"
-
-    if DEBUG
-      logException(e, logg)
+    ; Remove some window extended styles
+    exStyle: "-{}".f(    ; Prepend minus (-) to remove exStyles from current exStyles
+             0x00000001  ; WS_EX_DLGMODALFRAME (double border)
+           | 0x00000100  ; WS_EX_WINDOWEDGE    (raised border edges)
+           | 0x00000200  ; WS_EX_CLIENTEDGE    (sunken border edges)
+           | 0x00020000  ; WS_EX_STATICEDGE    (three-dimensional border)
+           | 0x00000400  ; WS_EX_CONTEXTHELP   (title bar question mark)
+           | 0x00000080) ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
   }
 
-
-  ;; Remove window extended styles (NOTE: this code may not be needed)
-  removeWinExStyle := 0x00000001 ; WS_EX_DLGMODALFRAME (double border)
-                    | 0x00000100 ; WS_EX_WINDOWEDGE    (raised border edges)
-                    | 0x00000200 ; WS_EX_CLIENTEDGE    (sunken border edges)
-                    | 0x00020000 ; WS_EX_STATICEDGE    (three-dimensional border)
-                    | 0x00000400 ; WS_EX_CONTEXTHELP   (title bar question mark)
-                    | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
-
-  try {
-    ;NOTE: The minus (-) removes the styles from the current window styles
-    WinSetExStyle("-" removeWinExStyle, "ahk_id" game.hWnd)
-  } catch as e {
-    if DEBUG {
-      logg.debug "Maybe failed to remove window extended styles"
-      logException(e, logg)
-    }
-  }
-
-
-  ;; Restore the correct window client area width/height
-  ; (these gets distorted when the border is removed)
-  ; Now that the window border is gone, windowArea = clientArea
-  WinMove(, , winState.clientArea.w, winState.clientArea.h, game.hWnd)
+  modifyWindowState(hWnd, newWinState, logg)
   sleep 100  ; TODO: Wait for window resize to finish before continuing
 
 
@@ -636,8 +618,9 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
 }
 
 
-;; Restore window state (this includes the border)
-restoreWindowState(hWnd, windowMode, logg)
+;; Modify window state (this includes the border)
+; Done using best effort: Any failure is ignored
+modifyWindowState(hWnd, windowMode, logg)
 {
   ; Remove AlwaysOnTop
   try
@@ -782,7 +765,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
                                  _taskbar := config.taskbar)
 
   if ! fscr.ok {
-    restoreWindowState(game_hWnd, windowMode, logg)
+    modifyWindowState(game_hWnd, windowMode, logg)
     logg.error "{}".f(fscr.reason)
     return false
   }
@@ -807,7 +790,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
                                    _taskbar := config.taskbar)
 
     if ! fscr.ok {
-      restoreWindowState(game_hWnd, windowMode, logg)
+      modifyWindowState(game_hWnd, windowMode, logg)
       logg.error "{}".f(fscr.reason)
       return
     }
@@ -886,7 +869,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 deactivateFullscreen(game_hWnd, bgWindow, windowMode, logg)
 {
   bgWindow.Hide()
-  restoreWindowState(game_hWnd, windowMode, logg)
+  modifyWindowState(game_hWnd, windowMode, logg)
 }
 
 
