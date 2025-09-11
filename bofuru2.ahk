@@ -34,20 +34,22 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup - Define All Global Variables
 {
-  ;; These are properly defined later in the script
+  ;; Object that are properly defined later in the script
   mainGui := {}  ; Main window
   bgGui   := {}  ; Background Overlay window (visible around the game during fullscreen)
   conLog  := {}  ; Console Logger (prints text to a console in mainGui)
 
-  ;; Settings (only modified by the user)
-  settings := { monitor: 0,      ; Selected computer monitor
-                resize:  "",     ; Window resize method during fullscreen
-                taskbar: false,  ; Show MS Windows Taskbar during fullscreen
+  ;; Settings
+  ; Modified by user, either through CLI args or throught the mainGui.
+  settings := { monitor:  0,     ; Computer monitor
+                resize:  "",     ; Window resize method
+                taskbar: false,  ; Show MS Windows Taskbar
                 launch:  "" }    ; (optional) Start game using this launch string
 
   ;; Game info
-  game := { hWnd:      0,  ; Window ID (a.k.a. Handler Window)
-            proc_ID:   0,  ; Process ID (PID)
+  ; Data that can be used to find the game window.
+  game := { hWnd:       0, ; Window ID (a.k.a. Handler Window)
+            proc_ID:    0, ; Process ID (PID)
             proc_name: "", ; Process Name
             win_title: "", ; Window Title
             win_class: "", ; Window Class
@@ -594,7 +596,8 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
                     | 0x00000080 ; WS_EX_TOOLWINDOW    (floating toolbar window type: shorter title bar, smaller title bar font, no ALT+TAB)
 
   try {
-    WinSetExStyle("-" removeWinExStyle, "ahk_id" game.hWnd)   ; The minus (-) removes the styles from the current window styles
+    ;NOTE: The minus (-) removes the styles from the current window styles
+    WinSetExStyle("-" removeWinExStyle, "ahk_id" game.hWnd)
   } catch as e {
     if DEBUG {
       logg.debug "Maybe failed to remove window extended styles"
@@ -626,7 +629,7 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
   {
     logg.warn , _options := "MinimumEmptyLinesBefore 1"
     logg.warn "Window refuses to keep its proportions (aspect ratio) after the border was removed."
-    logg.warn "You may experience distorted graphics and slightly off mouse clicks."
+    logg.warn "You may experience distorted graphics and mouse clicks that slightly miss their mark."
     logg.warn , _options := "MinimumEmptyLinesAfter 1"
   }
 }
