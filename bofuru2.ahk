@@ -592,7 +592,7 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
   }
 
   modifyWindowState(hWnd, newWinState, logg)
-  sleep 100  ; TODO: Wait for window resize to finish before continuing
+  sleep 100  ; TODO: Properly wait for window resize to finish before continuing
 
 
   ;; Give new window state to fullscreen_mode to base fullscreen calculations on
@@ -780,7 +780,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     if ! fscr.ok {
       modifyWindowState(game_hWnd, windowMode, logg)
       logg.error "{}".f(fscr.reason)
-      return
+      return false
     }
 
     func_updatefullscreenMode(fscr)
