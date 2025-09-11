@@ -34,8 +34,8 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup - Define All Global Variables
 {
-  ;; Object that are properly defined later in the script
-  mainGui := {}  ; Main window
+  ;; Objects that are properly defined later in the script
+  mainGui := {}  ; Main window (control panel)
   bgGui   := {}  ; Background Overlay window (visible around the game during fullscreen)
   conLog  := {}  ; Console Logger (prints text to a console in mainGui)
 
@@ -65,7 +65,7 @@ DEBUG := false
 
   ;; Fullscreen Mode
   ; Data needed to put game into fullscreen mode.
-  fullscreen_mode := { x:0, y:0, w:0, h:0,        ; Base window area, used to calculate fullscreen area
+  fullscreen_mode := { x:0, y:0, w:0, h:0,        ; Window area without borders (while still in window mode)
                        needsBackground:  false,   ; If background overlay is needed
                        needsAlwaysOnTop: false }  ; If AlwaysOnTop is needed on game and background
 
@@ -834,7 +834,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     ; Cut a hole in the background for the game window to be seen
     ; NOTE: Coordinates are relative to the background area, not the desktop area
     polygonStr := Format(
-      "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 "
+      "  0-0   {1}-0   {1}-{2}   0-{2}   0-0 " .
       "{3}-{4} {5}-{4} {5}-{6} {3}-{6} {3}-{4}",
       fscr.%bgArea%.w,                                       ;{1} Background Area: width
       fscr.%bgArea%.h,                                       ;{2} Background Area: height
