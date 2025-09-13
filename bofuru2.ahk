@@ -263,7 +263,11 @@ DEBUG := false
   if DEBUG
     conLog.debug "Register OnExit callback to restore game window state on exit"
 
-  OnExit (*) => deactivateFullscreen(game.hWnd, bgGui, window_mode, conLog)
+  ExitFunc(*) {
+    global window_mode, fullscreen_mode
+    deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
+  }
+  OnExit ExitFunc
 
 
   ;; Exit script if the game window is closed
@@ -851,7 +855,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 
 
 ;; Deactivate FULLSCREEN
-deactivateFullscreen(game_hWnd, bgWindow, windowMode, logg)
+deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
 {
   ;; Remove AlwaysOnTop
   WinSetAlwaysOnTop(false, game_hWnd)
@@ -861,8 +865,12 @@ deactivateFullscreen(game_hWnd, bgWindow, windowMode, logg)
 
   ;; Change game back to window mode
   modifyWindowState(game_hWnd, windowMode, logg)
-}
 
+  ;; Zero all window/fullscreen props
+  ; (maybe not needed, but it feels right)
+  windowMode.x     := windowMode.y     := windowMode.w     := windowMode.h     := windowMode.menu := windowMode.style := windowMode.exStyle         := 0
+  fullscreenMode.x := fullscreenMode.y := fullscreenMode.w := fullscreenMode.h := fullscreenMode.needsBackground := fullscreenMode.needsAlwaysOnTop := 0
+}
 
 
 ;; Toggle AlwaysOnTop on window focus switch
