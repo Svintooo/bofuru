@@ -868,8 +868,10 @@ deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
 
   ;; Zero all window/fullscreen props
   ; (maybe not needed, but it feels right)
-  windowMode.x     := windowMode.y     := windowMode.w     := windowMode.h     := windowMode.menu := windowMode.style := windowMode.exStyle         := 0
-  fullscreenMode.x := fullscreenMode.y := fullscreenMode.w := fullscreenMode.h := fullscreenMode.needsBackground := fullscreenMode.needsAlwaysOnTop := 0
+  for propName in windowMode.OwnProps()
+    windowMode.%propName% := 0
+  for propName in fullscreenMode.OwnProps()
+    fullscreenMode.%propName% := 0
 }
 
 
