@@ -353,12 +353,12 @@ DEBUG := false
   ; If a game window has been found.
   if game_hWnd
   {
-    conLog.info "Activate Window Fullscreen"
-
     ;; Set which window to use for fullscreen
     result := setGameWindow(game_hWnd, &game, conLog)
     if !result
       return
+
+    conLog.info "Activate Window Fullscreen"
 
     ;; Prepare window for fullscreen
     prepareFullscreen(game_hWnd, &window_mode, &fullscreen_mode, conLog)
