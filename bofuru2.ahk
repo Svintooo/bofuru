@@ -178,7 +178,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Logging
+;; Setup - Window: Main Gui: Logging
 {
   ; Console Logger
   conLog := lib_Logger(
