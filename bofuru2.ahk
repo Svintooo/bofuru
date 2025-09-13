@@ -253,10 +253,11 @@ DEBUG := false
 
   if DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
   {
-    MsgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
+    msgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
     OnMessage(MsgNum, ShellMessage)
   }
   ;TODO: Add error handling here if RegisterShellHookWindow fails
+  msgNum := unset
 
 
   ;; Restore game window state on exit
@@ -305,7 +306,6 @@ DEBUG := false
   ;; Print args
   if DEBUG
     conLog.debug "Parsed args: {}".f(args_tmp.Inspect())
-  args_tmp := unset
 
 
   ;; Handle unknown args
@@ -314,6 +314,11 @@ DEBUG := false
     for , argObj in args.OwnProps()
       conLog.warn "Unknown arg: {}".f(argObj.argStr)
   }
+
+
+  ;; Cleanup
+  args     := unset
+  args_tmp := unset
 }
 
 
