@@ -80,6 +80,30 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Explain - the internal State Machine                                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                           ;;
+;; States:                                                                   ;;
+;; 0) [NoGame] No Game Selected                                              ;;
+;; 1) [Window] Window Mode                                                   ;;
+;; 2) [Transi] Transition to Fullscreen                                      ;;
+;; 3) [Fulscr] Fullscreen Mode                                               ;;
+;;                                                                           ;;
+;; Edges:                                                                    ;;
+;; - NoGame->Window: setGameWindow()       # Select a game                   ;;
+;; - Window->Transi: prepareFullscreen()   # Go fullscreen (step 1 of 2)     ;;
+;; - Transi->Fulscr: activateFullscreen()  # Go fullsceeen (step 2 of 2)     ;;
+;; - Fulscr->Window: deactivateFullscreen()# Go window mode                  ;;
+;;                                                                           ;;
+;; Loop Edges:                                                               ;;
+;; - Window->Window: setGameWindow()       # Selecting another game          ;;
+;; - Fulscr->Fulscr: activateFullscreen()  # Settings changed dur fullscreen ;;
+;;                                                                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup - Window: Main Gui
 {
   ; NOTE: Each GuiControl can be given a NAME.
