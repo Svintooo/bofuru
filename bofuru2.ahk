@@ -65,9 +65,9 @@ DEBUG := false
 
   ;; Fullscreen Mode
   ; Data needed to put game into fullscreen mode.
-  fullscreen_mode := { x:0, y:0, w:0, h:0,        ; Window area without borders (while still in window mode)
-                       needsBackground:  false,   ; If background overlay is needed
-                       needsAlwaysOnTop: false }  ; If AlwaysOnTop is needed on game and background
+  fullscreen_mode := { x:0, y:0, w:0, h:0,         ; Window area without borders (while still in window mode)
+                       needsBackground:  false,    ; If background overlay is needed
+                       needsAlwaysOnTop: false, }  ; If AlwaysOnTop is needed on game and background
 
   ;TODO: Implement `Object.Seal()`
   ;; Prevent additional properties
