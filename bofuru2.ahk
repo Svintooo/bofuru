@@ -853,13 +853,13 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 ;; Deactivate FULLSCREEN
 deactivateFullscreen(game_hWnd, bgWindow, windowMode, logg)
 {
-  ; Remove AlwaysOnTop
+  ;; Remove AlwaysOnTop
   WinSetAlwaysOnTop(false, game_hWnd)
 
-  ; Hide the background overlay
+  ;; Hide the background overlay
   bgWindow.Hide()
 
-  ; Change game back to window mode
+  ;; Change game back to window mode
   modifyWindowState(game_hWnd, windowMode, logg)
 }
 
