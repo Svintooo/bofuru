@@ -276,6 +276,8 @@ DEBUG := false
     conLog.debug "Bind exit event to when the game is closed"
 
   Event_GameExit() {
+    global game
+
     if game.hWnd && not WinExist(game.hWnd)
       ExitApp(0)
   }
