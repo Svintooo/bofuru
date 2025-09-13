@@ -290,7 +290,9 @@ DEBUG := false
 
   ExitFunc(*) {
     global window_mode, fullscreen_mode
-    deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
+
+    if game.hWnd
+      deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
   }
   OnExit ExitFunc
 
@@ -889,7 +891,11 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
 {
   ;; Remove AlwaysOnTop
-  WinSetAlwaysOnTop(false, game_hWnd)
+  try
+    WinSetAlwaysOnTop(false, game_hWnd)
+  catch {
+    ; If game window is gone
+  }
 
   ;; Hide the background overlay
   bgWindow.Hide()
