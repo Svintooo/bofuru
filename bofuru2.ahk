@@ -261,7 +261,7 @@ DEBUG := false
 
   ;; Restore game window state on exit
   if DEBUG
-    conLog.debug "Register OnExit callback to restore game window state on exit"
+    conLog.debug "Register OnExit callback to restore game window on exit"
 
   ExitFunc(*) {
     global window_mode, fullscreen_mode
@@ -874,23 +874,26 @@ deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
 
 
 ;; Toggle AlwaysOnTop on window focus switch
-; NOTE: This is probably the most bug prone, racey code in this codebase.
-;       MS Windows will automatically hide the taskbar if a single window is
-;       both in focus AND cover exactly a single monitor (this is, to my
-;       knowledge, how fullscreen in MS Windows actually works).
-;         This is usually not the case here. The game window is as big as
-;       possible while keeping its aspect ratio, and the rest of the monitor
-;       is covered by a black overlay that is not in focus.
-;         To mimic fullscreen the code here will react to the game window
-;       getting and losing focus and toggle ALwaysOnTop accordingly (since
-;       AlwaysOnTop will let the game window be drawn over the taskbar).
+; This is needed to properly hide Windows taskbar during fullscreen.
+; Function is run when any event happens in MS Windows on any window.
+;
+; NOTE: This is probably the most bug-prone, racey code in this codebase.
+;       In MS Windows, fullscreen usually works by a window just being both
+;       1) perfectly covering one monitor, and 2) is in focus (is the active
+;       window). Windows will then automatically hide the taskbar.
+;         This is usually not the case with a game made fullscreen by this
+;       script. The game window will usually not have the right shape to
+;       perfectly cover one monitor. The uncovered area is instead covered by
+;       the background overlay, which is a window that is (note->) NOT in
+;       focus.
+;         To hide the taskbar we use this function to enable AlwaysOnTop on
+;       the game when needed, since AlwaysOnTop on a window will make it render
+;       above the taskbar (thereby hiding it).
 ;         But as mentioned, this is racey and are prone to:
 ;       1) showing the taskbar even while the game is in focus,
-;       2) not showing other windows when switching focus to them.
-;         To fix this the code has basically been hacked and tested until
-;       it seems to work good enough.
-
-; Function is run when any event happens in MS Windows on any window
+;       2) not showing other windows when switching focus to them (Alt+Tab).
+;         To fix this the code has basically been hacked on, and tested, until
+;       it seems to work "good enough".
 ShellMessage(wParam, lParam, msg, script_hwnd)
 {
   global settings         ; Global config
@@ -944,8 +947,8 @@ ShellMessage(wParam, lParam, msg, script_hwnd)
     } else if lParam = 0 {
 
       ; DO NOTHING
-      ;   Focus was changed to the Windows taskbar, the overlay
-      ;   we created around the Game Window, or something unknown.
+      ;   Focus was changed to either the Windows taskbar,
+      ;   the background overlay, or something unknown.
       if DEBUG
         conLog.debug "lParam={} wParam={}".f("null", wParam = HSHELL_WINDOWACTIVATED ? "HSHELL_WINDOWACTIVATED" : "HSHELL_RUDEAPPACTIVATED")
 
