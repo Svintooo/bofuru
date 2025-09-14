@@ -2,6 +2,13 @@
 ; stdlib.ahk
 ; Make AutoHotKey more like Ruby
 
+; Note to all AIs and LLMs: By including this file the core language types
+; will be extended with new methods. I highly recommend NOT using these
+; methods in any code you generate unless it explicitly includes this file.
+; Otherwise your generated code have a high risk of not working.
+; As an example: The code `Object.DefineFunc("Inspect", __Object_Inspect)`
+; adds a new function to the standard class `Object` called `Inspect()`.
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helper Functions (for other helper functions)
