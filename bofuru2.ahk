@@ -490,11 +490,11 @@ launchExe(launch_string)
 collectWindowInfo(hWnd, &gameWindow)
 {
   gameWindow.hWnd         := hWnd
-  gameWindow.winTitle     := WinGetTitle(       "ahk_id" hWnd )
-  gameWindow.winClass     := WinGetClass(       "ahk_id" hWnd )
-  gameWindow.winText      := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
+  gameWindow.win_title    := WinGetTitle(       "ahk_id" hWnd )
+  gameWindow.win_class    := WinGetClass(       "ahk_id" hWnd )
+  gameWindow.win_text     := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
   gameWindow.proc_ID      := WinGetPID(         "ahk_id" hWnd )
-  gameWindow.procName     := WinGetProcessName( "ahk_id" hWnd )
+  gameWindow.proc_name    := WinGetProcessName( "ahk_id" hWnd )
   gameWindow.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(gameWindow.winTitle, gameWindow.winClass, gameWindow.procName)
 }
 
@@ -537,11 +537,11 @@ logWindowInfo(gameWindow, logg)
     logg.info "- PID           = {}".f(gameWindow.proc_ID)
     logg.info "- hWnd          = {}".f(gameWindow.hWnd)
   }
-  logg.info   "- Process Name  = {}".f(gameWindow.procName.Inspect())
-  logg.info   "- Title         = {}".f(gameWindow.winTitle.Inspect())
-  logg.info   "- Class         = {}".f(gameWindow.winClass.Inspect())
+  logg.info   "- Process Name  = {}".f(gameWindow.proc_name.Inspect())
+  logg.info   "- Title         = {}".f(gameWindow.win_title.Inspect())
+  logg.info   "- Class         = {}".f(gameWindow.win_class.Inspect())
   if DEBUG {
-    logg.info "- Text          = {}".f(gameWindow.winText.Inspect())
+    logg.info "- Text          = {}".f(gameWindow.win_text.Inspect())
   }
   logg.info   "- --ahk-wintitle={}".f(gameWindow.ahk_wintitle.Inspect())
   logg.info , _options := "MinimumEmptyLinesAfter 1"
