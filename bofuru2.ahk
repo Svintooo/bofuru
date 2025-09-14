@@ -41,20 +41,20 @@ DEBUG := false
 
   ;; Settings
   ; Modified by user, either through CLI args or throught the mainGui.
-  settings := { monitor:  0,     ; Computer monitor
-                resize:  "",     ; Window resize method
-                taskbar: false,  ; Show MS Windows Taskbar
-                launch:  "" }    ; (optional) Start game using this launch string
+  settings := { monitor:     0,    ; Computer monitor
+                resize:     "",    ; Window resize method
+                taskbar: false,    ; Show MS Windows Taskbar
+                launch:     "", }  ; (optional) Start game using this launch string
 
   ;; Game info
   ; Data that can be used to find the game window.
-  game := { hWnd:       0, ; Window ID (a.k.a. Handler Window)
-            proc_ID:    0, ; Process ID (PID)
-            proc_name: "", ; Process Name
-            win_title: "", ; Window Title
-            win_class: "", ; Window Class
-            win_text:  "", ; Window Text
-            win_exe:   ""} ; Window Executable
+  game := { hWnd:       0,    ; Window ID (a.k.a. Handler Window)
+            proc_ID:    0,    ; Process ID (PID)
+            proc_name: "",    ; Process Name
+            win_title: "",    ; Window Title
+            win_class: "",    ; Window Class
+            win_text:  "",    ; Window Text
+            win_exe:   "", }  ; Window Executable
 
   ;; Window Mode
   ; Data needed to put game into window mode.
@@ -113,27 +113,30 @@ DEBUG := false
   ; NOTE: A radio button with option "Group" starts a new group of radio buttons.
   ;       Each radio button created afterwards belong to the same group.
 
-  ; Window
+  ;; Window
   mainGui := Gui("+Border +Caption +MinimizeBox -MaximizeBox +MinSize +MaxSize -Resize +SysMenu +Theme"
                 , _winTitle := "BoFuRu")
   mainGui.SetFont("S12")  ; Font Size
   mainGui.OnEvent("Close", (*) => ExitApp())  ; Stop script on window close
   mainGui.spacing := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
 
-  ; Console
+
+  ;; Console
   mainGui.AddEdit("vConsole w1000 h300 +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
   mainGui["Console"].setFont(, "Consolas")  ; Monospace font
   mainGui["Console"].getPos(, , &consoleWidth, )
   mainGui.defaultOpts := "w{} Y+{} ".f(consoleWidth, mainGui.spacing)
   consoleWidth := unset
 
-  ; Buttons
+
+  ;; Buttons
   mainGui.AddButton(mainGui.defaultOpts "vButton_WinSelect",           "Select Window")
   mainGui.AddButton(mainGui.defaultOpts "vButton_Fullscreen Disabled", "Toggle Fullscreen")
   mainGui.AddButton(mainGui.defaultOpts "VButton_Exe        Disabled", "Select Exe")
   mainGui.AddButton(mainGui.defaultOpts "VButton_Run        Disabled", "Run Exe")
 
-  ; Settings - Monitors
+
+  ;; Settings - Monitors
   mainGui.AddText("vText_Monitor", "Monitor")
   mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{} Group".f("auto"), String("Auto"))
   loop MonitorGetCount()
@@ -143,7 +146,8 @@ DEBUG := false
   mainGui["Radio_Monitor_" "auto"].Value := true  ; Radio button is checked by default
   groupOpt := unset
 
-  ; Settings - Window Resize
+
+  ;; Settings - Window Resize
   mainGui.AddText("vText_WindowResize", "Window Reize")
   for WinResizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
   {
@@ -155,7 +159,8 @@ DEBUG := false
   mainGui["Radio_WinResize_" "fit"].Value := true  ; Radio button is checked by default
   groupOpt := WinResizeOpt_HumanReadable := unset
 
-  ; Settings - Taskbar
+
+  ;; Settings - Taskbar
   mainGui.AddText("vText_Taskbar", "Taskbar")
   for TaskbarOpt in ["hide", "show", "show2", "show3"]
   {
@@ -166,11 +171,13 @@ DEBUG := false
   mainGui["Radio_TaskBar_" "hide"].Value := true  ; Radio button is checked by default
   groupOpt := TaskbarOpt_HumanReadable := unset
 
-  ; Quit Button
+
+  ;; Quit Button
   mainGui.AddButton(mainGui.defaultOpts "vButton_Quit", "Quit")
   mainGui["Button_Quit"].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
 
-  ; Show the window
+
+  ;; Show the window
   mainGui.Show()
   DllCall("User32.dll\HideCaret", "Ptr", mainGui["Console"].Hwnd)
 }
