@@ -69,12 +69,14 @@ DEBUG := false
                        needsBackground:  false,    ; If background overlay is needed
                        needsAlwaysOnTop: false, }  ; If AlwaysOnTop is needed on game and background
 
-  ;TODO: Implement `Object.Seal()`
-  ;; Prevent additional properties
-  ; settings        := Object.Seal(settings)
-  ; game            := Object.Seal(game)
-  ; window_mode     := Object.Seal(window_mode)
-  ; fullscreen_mode := Object.Seal(fullscreen_mode)
+  ;; Seal all global objects (prevent additional properties)
+  ObjSealFunc(*) {
+    throw Error("New properties not allowed")
+  }
+  settings       .Base := { __Set: ObjSealFunc }
+  game           .Base := { __Set: ObjSealFunc }
+  window_mode    .Base := { __Set: ObjSealFunc }
+  fullscreen_mode.Base := { __Set: ObjSealFunc }
 }
 
 
