@@ -116,7 +116,7 @@ DEBUG := false
   ;; Window
   mainGui := Gui("+Border +Caption +MinimizeBox -MaximizeBox +MinSize +MaxSize -Resize +SysMenu +Theme"
                 , _winTitle := "BoFuRu")
-  mainGui.SetFont("S12")  ; Font Size
+  mainGui.SetFont("S11")  ; Font Size
   mainGui.OnEvent("Close", (*) => ExitApp())  ; Stop script on window close
   mainGui.spacing := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
 
