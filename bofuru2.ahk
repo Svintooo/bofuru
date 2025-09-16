@@ -760,57 +760,18 @@ logException(e, logg)
 checkFullscreenActive(game_hWnd, bg_hWnd, windowMode, fullscreenMode)
 {
   ;; Abort if game has closed
-  conLog.debug "checkFullscreenActive(): Abort?"
   if !WinExist(game_hWnd)
     return false
 
 
-  ;; Is fullscreen if background overlay is active
-  conLog.debug "checkFullscreenActive(): bg visible?"
-  WS_VISIBLE := 0x10000000
-
-  if (WinGetStyle(bg_hWnd) & WS_VISIBLE) != 0
-    return true
-
-
-  ;; Not fullscreen if game window has a border
-  conLog.debug "checkFullscreenActive(): game has border?"
-  WS_BORDER     := 0x00800000  ; Border: thin-lined
-  WS_DLGFRAME   := 0x00400000  ; Border: dialog box style
-
-  if (WinGetStyle(game_hWnd) & (WS_BORDER + WS_DLGFRAME)) != 0
-    return false
-
-
-
   ;; Not fullscreen if all window/fullscreen props are zero
-  conLog.debug "checkFullscreenActive(): global props are all zero?"
-  if windowMode    .PropValues.HasAll((value) => (value = 0))
-  && fullscreenMode.PropValues.HasAll((value) => (value = 0))
+  if windowMode    .PropValues().HasAll((value) => (value = 0))
+  && fullscreenMode.PropValues().HasAll((value) => (value = 0))
     return false
 
 
-  ;; Is fullscreen if game window perfectly covers one monitor
-  conLog.debug "checkFullscreenActive(): game perfectly covers a monitor?"
-  WinGetPos(&gameX, &gameY, &gameW, &gameH, game_hWnd)
-  conLog.debug "  &gameX, &gameY, &gameW, &gameH: {}".f(gameX, gameY, gameW, gameH)
-
-  Loop MonitorGetCount() {
-    MonitorGet(A_Index, &monX1, &monY1, &monX2, &monY2)
-    conLog.debug "  A_Index, &monX1, &monY1, &monX2, &monY2: {}".f(A_Index, monX1, monY1, monX2, monY2)
-
-    if gameX = monX1 && gameY = monY1 && gameX+gameW = monX2 && gameY+gameH = monY2
-      return true
-
-    if gameX = monX1 && gameX+gameW = monX2
-    && gameY = monY1 && gameY+gameH = monY2
-      return true
-  }
-
-
-  ;; Not fullscreen
-  conLog.debug "checkFullscreenActive(): Defaulting to false"
-  return false
+  ;; Is fullscreen
+  return true
 }
 
 
