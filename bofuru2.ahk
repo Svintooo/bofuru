@@ -53,8 +53,7 @@ DEBUG := false
             proc_name: "",    ; Process Name
             win_title: "",    ; Window Title
             win_class: "",    ; Window Class
-            win_text:  "",    ; Window Text
-            win_exe:   "", }  ; Window Executable
+            win_text:  "", }  ; Window Text
 
   ;; Window Mode
   ; Data needed to put game into window mode.
@@ -132,18 +131,24 @@ DEBUG := false
   ;; Buttons
   mainGui.AddButton(mainGui.defaultOpts "vButton_WinSelect",           "Select Window")
   mainGui.AddButton(mainGui.defaultOpts "vButton_Fullscreen Disabled", "Toggle Fullscreen")
-  mainGui.AddButton(mainGui.defaultOpts "VButton_Exe        Disabled", "Select Exe")
-  mainGui.AddButton(mainGui.defaultOpts "VButton_Run        Disabled", "Run Exe")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Exe",                 "Select Exe")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Run        Disabled", "Launch Exe")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_CreateLnk  Disabled", "Create Shortcut")
+
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_WinTitle")
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_WinClass")
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_ProcName")
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_Launch")
 
 
   ;; Settings - Monitors
   mainGui.AddText("vText_Monitor", "Monitor")
-  mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{} Group".f("auto"), String("Auto"))
+  mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_0 Group", "Auto")
   loop MonitorGetCount()
   {
     mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{}".f(A_Index), String(A_Index))
   }
-  mainGui["Radio_Monitor_" "auto"].Value := true  ; Radio button is checked by default
+  mainGui["Radio_Monitor_" "0"].Value := true  ; Radio button "Auto" is checked by default
   groupOpt := unset
 
 
@@ -172,9 +177,13 @@ DEBUG := false
   groupOpt := TaskbarOpt_HumanReadable := unset
 
 
+  ;; Checkboxes
+  mainGui.AddText("vText_QuitTogether", "Misc")
+  mainGui.AddCheckBox(mainGui.defaultOpts "vCheckBox_QuitTogether", "Quit together with game")
+
+
   ;; Quit Button
   mainGui.AddButton(mainGui.defaultOpts "vButton_Quit", "Quit")
-  mainGui["Button_Quit"].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
 
 
   ;; Show the window
@@ -216,6 +225,138 @@ DEBUG := false
       "raw"    , ""
     )
   )
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Window: Main Gui: Actions
+{
+  ;; Text fields
+  ; Function to update text fields with values from globals
+  MainGui_textFieldsUpdate() {
+    global settings, game
+    mainGui["Edit_WinTitle"].Value := game.win_title
+    mainGui["Edit_WinClass"].Value := game.win_class
+    mainGui["Edit_ProcName"].Value := game.proc_name
+    mainGui["Edit_Launch"  ].Value := settings.launch
+  }
+
+  ; Events to update globals with values from text fields
+  mainGui["Edit_WinTitle"].OnEvent("Change", (ctrl, *) => game.win_title  := ctrl.Value)
+  mainGui["Edit_WinClass"].OnEvent("Change", (ctrl, *) => game.win_class  := ctrl.Value)
+  mainGui["Edit_ProcName"].OnEvent("Change", (ctrl, *) => game.proc_name  := ctrl.Value)
+  mainGui["Edit_Launch"  ].OnEvent("Change", (ctrl, *) => settings.launch := ctrl.Value)
+
+  ;NOTE: Maybe it would be better to use the text fields directly instead of using the globals?
+  ;      The current code may have a risk of getting the text fields desync:ed.
+
+
+  ;; Buttons Actions
+  Button_WinSelect_Func(*) {
+    global game, mainGui, conLog
+    game_hWnd := manualWindowSelection(mainGui, conLog)
+    if game_hWnd
+      setGameWindow(game_hWnd, &game, conLog)
+    conLog.debug game.Inspect()
+    MainGui_textFieldsUpdate()
+  }
+  Button_Fullscreen_Func(*) {
+    global settings, game, window_mode, fullscreen_mode, bgGui, conLog
+    if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode) {
+      deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
+    } else {
+      prepareFullscreen(game.hWnd, &window_mode, &fullscreen_mode, conLog)
+      activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
+    }
+  }
+  Button_Exe_Func(*) {
+    global settings
+    file_must_exist := 0x00000001
+    selectedFile := FileSelect(file_must_exist, , "Select Game - " A_ScriptName, "Application (*.exe; *.lnk)")
+    if ! selectedFile
+      return
+    if InStr(selectedFile, " ")
+      selectedFile := '"' selectedFile '"'
+    settings.launch := selectedFile
+    MainGui_textFieldsUpdate()
+  }
+  Button_Run_Func(*) {
+    global settings
+    if settings.launch
+      launchExe(settings.launch)
+  }
+  Button_CreateLnk_Func(*) {
+    global settings
+    prompt_to_create_new_file := 0x00000008
+    newShortcutFile := FileSelect("S" prompt_to_create_new_file, , "Create Shortcut - " A_ScriptName)
+    if ! newShortcutFile
+      return
+    if ! RegExMatch(newShortcutFile, "\.lnk$")
+      newShortcutFile := newShortcutFile ".lnk"
+    if SubStr(settings.launch, 1, 1) = '"' {
+      target := '"' settings.launch.SubStr(2).Split('"')[1] '"'
+      args   := settings.launch.SubStr(target.Length()+1)
+    } else {
+      target := settings.launch.Split(" ")[1]
+      args   := settings.launch.SubStr(target.Length()+1)
+    }
+    FileCreateShortcut(target, newShortcutFile, , args)
+  }
+  mainGui["Button_WinSelect" ].OnEvent("Click", Button_WinSelect_Func)
+  mainGui["Button_Fullscreen"].OnEvent("Click", Button_Fullscreen_Func)
+  mainGui["Button_Exe"       ].OnEvent("Click", Button_Exe_Func)
+  mainGui["Button_Run"       ].OnEvent("Click", Button_Run_Func)
+  mainGui["Button_CreateLnk" ].OnEvent("Click", Button_CreateLnk_Func)
+  mainGui["Button_Quit"      ].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
+
+
+  ;; GuiControls Enable/Disable
+  Event_GuiControls_ToggleEnabled(*) {
+    global settings, game
+
+    mainGui["Button_Fullscreen"].Enabled := WinExist(game.hWnd)
+    mainGui["Button_Run"       ].Enabled := settings.launch.IsPresent()
+    mainGui["Button_CreateLnk" ].Enabled := mainGui["Button_Fullscreen"].Enabled
+                                         && mainGui["Button_Run"       ].Enabled
+
+    mainGui["Edit_WinTitle"].Enabled := not WinExist(game.hWnd)
+    mainGui["Edit_WinClass"].Enabled := not WinExist(game.hWnd)
+    mainGui["Edit_ProcName"].Enabled := not WinExist(game.hWnd)
+    ;mainGui["Edit_Launch"  ].Enabled :=
+  }
+
+  SetTimer(Event_GuiControls_ToggleEnabled)
+
+
+  ;; Settings updater function
+  ; Used to update props in global `settings`.
+  Settings_update(prop, value) {
+    global bgGui, conLog
+    global settings, game, window_mode, fullscreen_mode
+
+    settings.%prop% := value
+    MainGui_textFieldsUpdate()
+
+    if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
+      activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
+
+    if DEBUG
+      conLog.debug "Settings: {}".f(settings.Inspect())
+  }
+
+
+  ;; Radio buttons Actions
+  for radio_ctrl in mainGui {
+    if RegExMatch(radio_ctrl.Name, "^Radio_Monitor_")
+      radio_ctrl.OnEvent("Click", (ctrl, *) => Settings_update("monitor", ctrl.Name.RegExReplace("^Radio_[^_]+_")))
+
+    if RegExMatch(radio_ctrl.Name, "^Radio_WinResize_")
+      radio_ctrl.OnEvent("Click", (ctrl, *) => Settings_update("resize", ctrl.Name.RegExReplace("^Radio_[^_]+_")))
+
+    if RegExMatch(radio_ctrl.Name, "^Radio_TaskBar_")
+      radio_ctrl.OnEvent("Click", (ctrl, *) => Settings_update("taskbar", ctrl.Name.RegExReplace("^Radio_[^_]+_")))
+  }
 }
 
 
@@ -298,7 +439,7 @@ DEBUG := false
   ExitFunc(*) {
     global window_mode, fullscreen_mode
 
-    if game.hWnd
+    if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
       deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
   }
   OnExit ExitFunc
@@ -373,19 +514,31 @@ DEBUG := false
     }
 
     game.proc_ID := result.pid
-    result := unset
+    MainGui_textFieldsUpdate()
+
     if DEBUG
       conLog.debug "Launch success, got PID: " game.proc_ID
+
+    result := unset
   }
 
 
   ;; Find Window
   game_hWnd := 0
 
-  if settings.ahk_wintitle
+  if game.PropValues.HasAny((value) => (value.Present()))
   {
-    conLog.info "Waiting for window: {}".f(settings.ahk_wintitle.Inspect())
-    game_hWnd := WinWait(settings.ahk_wintitle)
+    ahk_wintitle := []
+    if game.win_title
+      ahk_wintitle.Add(game.win_title)
+    if game.win_title
+      ahk_wintitle.Add("ahk_class " game.win_class)
+    if game.win_title
+      ahk_wintitle.Add("ahk_exe " game.proc_name)
+    ahk_wintitle := ahk_wintitle.Join(" ")
+
+    conLog.info "Waiting for window: {}".f(ahk_wintitle.Inspect())
+    game_hWnd := WinWait(ahk_wintitle)
   }
   else if game.proc_ID
   {
@@ -401,14 +554,16 @@ DEBUG := false
     result := setGameWindow(game_hWnd, &game, conLog)
     if !result
       return
-
-    conLog.info "Activate Window Fullscreen"
+    MainGui_textFieldsUpdate()
 
     ;; Prepare window for fullscreen
     prepareFullscreen(game_hWnd, &window_mode, &fullscreen_mode, conLog)
 
     ;; Make window fullscreen
     activateFullscreen(game_hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
+
+    ;; End message
+    conLog.info "Your game should now be in fullscreen"
   }
 
   game_hWnd := unset
@@ -489,13 +644,13 @@ launchExe(launch_string)
 ;; Collect window info
 collectWindowInfo(hWnd, &gameWindow)
 {
-  gameWindow.hWnd         := hWnd
-  gameWindow.win_title    := WinGetTitle(       "ahk_id" hWnd )
-  gameWindow.win_class    := WinGetClass(       "ahk_id" hWnd )
-  gameWindow.win_text     := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
-  gameWindow.proc_ID      := WinGetPID(         "ahk_id" hWnd )
-  gameWindow.proc_name    := WinGetProcessName( "ahk_id" hWnd )
-  gameWindow.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(gameWindow.winTitle, gameWindow.winClass, gameWindow.procName)
+  gameWindow.hWnd      := hWnd
+  gameWindow.win_title := WinGetTitle(       "ahk_id" hWnd )
+  gameWindow.win_class := WinGetClass(       "ahk_id" hWnd )
+  gameWindow.win_text  := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
+  gameWindow.proc_ID   := WinGetPID(         "ahk_id" hWnd )
+  gameWindow.proc_name := WinGetProcessName( "ahk_id" hWnd )
+  ;gameWindow.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(gameWindow.winTitle, gameWindow.winClass, gameWindow.procName)
 }
 
 
@@ -543,7 +698,6 @@ logWindowInfo(gameWindow, logg)
   if DEBUG {
     logg.info "- Text          = {}".f(gameWindow.win_text.Inspect())
   }
-  logg.info   "- --ahk-wintitle={}".f(gameWindow.ahk_wintitle.Inspect())
   logg.info , _options := "MinimumEmptyLinesAfter 1"
 }
 
@@ -583,6 +737,64 @@ logException(e, logg)
 }
 
 
+;; Check if game is in Fullscreen Mode
+checkFullscreenActive(game_hWnd, bg_hWnd, windowMode, fullscreenMode)
+{
+  ;; Abort if game has closed
+  conLog.debug "checkFullscreenActive(): Abort?"
+  if !WinExist(game_hWnd)
+    return false
+
+
+  ;; Is fullscreen if background overlay is active
+  conLog.debug "checkFullscreenActive(): bg visible?"
+  WS_VISIBLE := 0x10000000
+
+  if (WinGetStyle(bg_hWnd) & WS_VISIBLE) != 0
+    return true
+
+
+  ;; Not fullscreen if game window has a border
+  conLog.debug "checkFullscreenActive(): game has border?"
+  WS_BORDER     := 0x00800000  ; Border: thin-lined
+  WS_DLGFRAME   := 0x00400000  ; Border: dialog box style
+
+  if (WinGetStyle(game_hWnd) & (WS_BORDER + WS_DLGFRAME)) != 0
+    return false
+
+
+
+  ;; Not fullscreen if all window/fullscreen props are zero
+  conLog.debug "checkFullscreenActive(): global props are all zero?"
+  if windowMode    .PropValues.HasAll((value) => (value = 0))
+  && fullscreenMode.PropValues.HasAll((value) => (value = 0))
+    return false
+
+
+  ;; Is fullscreen if game window perfectly covers one monitor
+  conLog.debug "checkFullscreenActive(): game perfectly covers a monitor?"
+  WinGetPos(&gameX, &gameY, &gameW, &gameH, game_hWnd)
+  conLog.debug "  &gameX, &gameY, &gameW, &gameH: {}".f(gameX, gameY, gameW, gameH)
+
+  Loop MonitorGetCount() {
+    MonitorGet(A_Index, &monX1, &monY1, &monX2, &monY2)
+    conLog.debug "  A_Index, &monX1, &monY1, &monX2, &monY2: {}".f(A_Index, monX1, monY1, monX2, monY2)
+
+    if gameX = monX1 && gameY = monY1 && gameX+gameW = monX2 && gameY+gameH = monY2
+      return true
+
+    if gameX = monX1 && gameX+gameW = monX2
+    && gameY = monY1 && gameY+gameH = monY2
+      return true
+  }
+
+
+  ;; Not fullscreen
+  conLog.debug "checkFullscreenActive(): Defaulting to false"
+  return false
+}
+
+
 ;; Prepare for fullscreen
 ; - Store original window state in var windowMode
 ; - Remove all styles and border from game window
@@ -590,6 +802,9 @@ logException(e, logg)
 prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
 {
   global DEBUG
+
+  ;; Logg that fullscreen will now be activated
+  conLog.info "Activate Window Fullscreen"
 
   ;; Configure Window Mode
   if DEBUG
@@ -795,7 +1010,9 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     ; Restore window mode and return
     logg.error "{}".f(fscr.reason)
     modifyWindowState(game_hWnd, windowMode, logg)
+    bgWindow.Hide()
     return false
+    ;TODO: This code block exists two times. make a helper function (or something)
   }
 
   func_updatefullscreenMode(fscr)
@@ -821,7 +1038,9 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
       ; Restore window mode and return
       logg.error "{}".f(fscr.reason)
       modifyWindowState(game_hWnd, windowMode, logg)
+      bgWindow.Hide()
       return false
+      ;TODO: This code block exists two times. make a helper function (or something)
     }
 
     func_updatefullscreenMode(fscr)
@@ -885,10 +1104,6 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     logWindowState(game_hWnd, "Window state (fullscreen)", logg)
 
 
-  ;; End message
-  logg.info "Your game should now be in fullscreen"
-
-
   ;; Return
   return true
 }
@@ -897,12 +1112,12 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 ;; Deactivate FULLSCREEN
 deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
 {
+  ;; Do nothing if game window is gone
+  if ! WinExist(game_hWnd)
+    return false
+
   ;; Remove AlwaysOnTop
-  try
-    WinSetAlwaysOnTop(false, game_hWnd)
-  catch {
-    ; If game window is gone
-  }
+  WinSetAlwaysOnTop(false, game_hWnd)
 
   ;; Hide the background overlay
   bgWindow.Hide()
@@ -916,6 +1131,9 @@ deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
     windowMode.%propName% := 0
   for propName in fullscreenMode.OwnProps()
     fullscreenMode.%propName% := 0
+
+  ;; Return
+  return true
 }
 
 

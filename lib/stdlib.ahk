@@ -745,6 +745,22 @@ __String_Split(StringObj, Delimiters?, OmitChars?, MaxParts?)
   return StrSplit(StringObj, Delimiters?, OmitChars?, MaxParts?)
 }
 
+;; Extract a substring from a string
+; Example:
+;   "abcdef".SubStr(2, 3) -> "bcd"
+String.DefineFunc("SubStr", __String_SubStr)
+__String_SubStr(StringObj, StartingPos, Length?)
+{
+  return SubStr(StringObj, StartingPos, Length?)
+}
+
+;; String length
+String.DefineFunc("Length", __String_Length)
+__String_Length(StringObj)
+{
+  return StrLen(StringObj)
+}
+
 ;; Convert each element to String, and join them together to one single String.
 ; Example:
 ;   [1,2,3.3,"444"].Join("|") -> "1|2|3.3|444"
