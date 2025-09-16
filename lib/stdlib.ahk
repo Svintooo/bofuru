@@ -399,7 +399,7 @@ Object.DefineFunc("PropValues", __Object_PropValues)
 __Object_PropValues(SomeObj)
 {
   ArrayObj := Array()
-  
+
   for , value in SomeObj.OwnProps()
     ArrayObj.Push(value)
 
