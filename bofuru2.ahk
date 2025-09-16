@@ -41,10 +41,11 @@ DEBUG := false
 
   ;; Settings
   ; Modified by user, either through CLI args or throught the mainGui.
-  settings := { monitor:     0,    ; Computer monitor
-                resize:     "",    ; Window resize method
-                taskbar: false,    ; Show MS Windows Taskbar
-                launch:     "", }  ; (optional) Start game using this launch string
+  settings := { monitor:           0,    ; Computer monitor
+                resize:           "",    ; Window resize method
+                taskbar:          "",    ; Show MS Windows Taskbar
+                launch:           "",    ; (optional) Start game using this launch string
+                quit_together: false, }  ; If game and script should quit together
 
   ;; Game info
   ; Data that can be used to find the game window.
@@ -240,13 +241,17 @@ DEBUG := false
     mainGui["Edit_WinClass"].Value := game.win_class
     mainGui["Edit_ProcName"].Value := game.proc_name
     mainGui["Edit_Launch"  ].Value := settings.launch
+
+    if settings.quit_together is Integer
+      mainGui["CheckBox_QuitTogether"].Value := settings.quit_together
   }
 
   ; Events to update globals with values from text fields
-  mainGui["Edit_WinTitle"].OnEvent("Change", (ctrl, *) => game.win_title  := ctrl.Value)
-  mainGui["Edit_WinClass"].OnEvent("Change", (ctrl, *) => game.win_class  := ctrl.Value)
-  mainGui["Edit_ProcName"].OnEvent("Change", (ctrl, *) => game.proc_name  := ctrl.Value)
-  mainGui["Edit_Launch"  ].OnEvent("Change", (ctrl, *) => settings.launch := ctrl.Value)
+  mainGui["Edit_WinTitle"        ].OnEvent("Change", (ctrl, *) => game.win_title         := ctrl.Value)
+  mainGui["Edit_WinClass"        ].OnEvent("Change", (ctrl, *) => game.win_class         := ctrl.Value)
+  mainGui["Edit_ProcName"        ].OnEvent("Change", (ctrl, *) => game.proc_name         := ctrl.Value)
+  mainGui["Edit_Launch"          ].OnEvent("Change", (ctrl, *) => settings.launch        := ctrl.Value)
+  mainGui["CheckBox_QuitTogether"].OnEvent("Click",  (ctrl, *) => settings.quit_together := ctrl.Value)
 
   ;NOTE: Maybe it would be better to use the text fields directly instead of using the globals?
   ;      The current code may have a risk of getting the text fields desync:ed.
@@ -450,9 +455,9 @@ DEBUG := false
     conLog.debug "Bind exit event to when the game is closed"
 
   Event_GameExit() {
-    global game
+    global settings, game
 
-    if game.hWnd && not WinExist(game.hWnd)
+    if settings.quit_together && game.hWnd && not WinExist(game.hWnd)
       ExitApp(0)
   }
 
@@ -471,12 +476,17 @@ DEBUG := false
 
 
   ;; Set settings parameters
-  DEBUG            := args.HasOwnProp("debug")   ? args.DeleteProp("debug"  ).value : DEBUG,
+  DEBUG            := args.HasOwnProp("debug"  ) ? args.DeleteProp("debug"  ).value : DEBUG,
   settings.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false,
-  settings.resize  := args.HasOwnProp("resize")  ? args.DeleteProp("resize" ).value : "fit",
+  settings.resize  := args.HasOwnProp("resize" ) ? args.DeleteProp("resize" ).value : "fit",
   settings.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
-  settings.launch  := args.HasOwnProp("launch")  ? args.DeleteProp("launch" ).value : ""
-  settings.ahk_wintitle := args.HasOwnProp("ahk_wintitle") ? args.DeleteProp("ahk_wintitle").value : ""
+  settings.launch  := args.HasOwnProp("launch" ) ? args.DeleteProp("launch" ).value : ""
+  ; If set to a string, then will be converted to bool later in the code
+  settings.quit_together := args.HasOwnProp("quit_together") ? args.DeleteProp("quit_together") : "auto"
+
+  game.win_title := args.HasOwnProp("wintitle") ? args.DeleteProp("wintitle").value : ""
+  game.win_class := args.HasOwnProp("winclass") ? args.DeleteProp("winclass").value : ""
+  game.proc_name := args.HasOwnProp("winexe"  ) ? args.DeleteProp("winexe"  ).value : ""
 
 
   ;; Print args
@@ -566,6 +576,15 @@ DEBUG := false
     conLog.info "Your game should now be in fullscreen"
   }
 
+
+  ;; Set `settings.quit_together` to a bool
+  if settings.quit_together = "auto" {
+    settings.quit_together := checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
+    MainGui_textFieldsUpdate()
+  }
+
+
+  ;; Cleanup
   game_hWnd := unset
 }
 
