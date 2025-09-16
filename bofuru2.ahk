@@ -263,7 +263,6 @@ DEBUG := false
     game_hWnd := manualWindowSelection(mainGui, conLog)
     if game_hWnd
       setGameWindow(game_hWnd, &game, conLog)
-    conLog.debug game.Inspect()
     MainGui_textFieldsUpdate()
   }
   Button_Fullscreen_Func(*) {
