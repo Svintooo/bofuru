@@ -965,7 +965,7 @@ manualWindowSelection(mainWindow, logg)
 
   if ! result.ok {
     if result.reason = "user cancel"
-      logg.info "Manual Window selection CANCELLED", _options := "MinimumEmptyLinesAfter 1"
+      logg.info "Manual Window selection CANCELLED", _options := "MinimumEmptyLinesBefore 1 MinimumEmptyLinesAfter 1"
     else
       logg.error "{}".f(result.reason)
 
@@ -973,7 +973,7 @@ manualWindowSelection(mainWindow, logg)
 
     return false
   } else {
-    logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesAfter 1"
+    logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesBefore 1 MinimumEmptyLinesAfter 1"
     return result.hWnd
   }
 }
