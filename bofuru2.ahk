@@ -258,7 +258,7 @@ DEBUG := false
 
   ; Function that adds a hook function to a property
   wrapObj_addPropHook(obj, propName, type, func) {
-    setFunc := (this, name, value, typ, fun) => (this.Base.%name% := value, (value is typ) ? fun(value) : typ)
+    setFunc := (this, name, value, typ, fun) => (this.Base.%name% := value, (value is typ) ? fun(value) : true)
     setFunc := setFunc.Bind(, propName, , type, func)
     obj.DefineProp(propName, { Set: setFunc })  ; This replaces the setFunc in wrapObj()
   }
