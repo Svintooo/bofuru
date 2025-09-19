@@ -235,18 +235,48 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup - Window: Main Gui: Actions
 {
-  ;; Text fields
-  ; Function to update text fields with values from globals
-  MainGui_textFieldsUpdate() {
-    global settings, game
-    mainGui["Edit_WinTitle"].Value := game.win_title
-    mainGui["Edit_WinClass"].Value := game.win_class
-    mainGui["Edit_ProcName"].Value := game.proc_name
-    mainGui["Edit_Launch"  ].Value := settings.launch
+  ;; Global objects - Ability to run hooks on prop modification
+  ; Prepares all global objects so they can run custom functions when
+  ; its properties are modified.
 
-    if settings.quit_together is Integer
-      mainGui["CheckBox_QuitTogether"].Value := settings.quit_together
+  ; Function that modifies an object so it can receive a hook function
+  wrapObj(obj) {
+    newObj := {}
+
+    for propName, propValue in obj.OwnProps() {
+      setFunc := (this, name, value) => (this.Base.%name% := value)
+      getFunc := (this, name)        => (this.Base.%name%)
+      setFunc := setFunc.Bind(,propName)
+      getFunc := getFunc.Bind(,propName)
+      newObj.DefineProp(propName, { Set:setFunc, Get:getFunc })
+    }
+
+    newObj.Base := obj
+
+    return newObj
   }
+
+  ; Function that adds a hook function to a property
+  wrapObj_addPropHook(obj, propName, type, func) {
+    setFunc := (this, name, value, typ, fun) => (this.Base.%name% := value, (value is typ) ? fun(value) : typ)
+    setFunc := setFunc.Bind(, propName, , type, func)
+    obj.DefineProp(propName, { Set: setFunc })  ; This replaces the setFunc in wrapObj()
+  }
+
+  ; Modify global objects
+  settings        := wrapObj(settings)
+  game            := wrapObj(game)
+  window_mode     := wrapObj(window_mode)
+  fullscreen_mode := wrapObj(fullscreen_mode)
+
+
+  ;; Text fields
+  ; Hooks to update text fields with values from globals
+  wrapObj_addPropHook(game    , "win_title"    , String , (value) => (mainGui["Edit_WinTitle"        ].Value := value))
+  wrapObj_addPropHook(game    , "win_class"    , String , (value) => (mainGui["Edit_WinClass"        ].Value := value))
+  wrapObj_addPropHook(game    , "proc_name"    , String , (value) => (mainGui["Edit_ProcName"        ].Value := value))
+  wrapObj_addPropHook(settings, "launch"       , String , (value) => (mainGui["Edit_Launch"          ].Value := value))
+  wrapObj_addPropHook(settings, "quit_together", Integer, (value) => (mainGui["CheckBox_QuitTogether"].Value := value))
 
   ; Events to update globals with values from text fields
   mainGui["Edit_WinTitle"        ].OnEvent("Change", (ctrl, *) => game.win_title         := ctrl.Value)
@@ -255,8 +285,12 @@ DEBUG := false
   mainGui["Edit_Launch"          ].OnEvent("Change", (ctrl, *) => settings.launch        := ctrl.Value)
   mainGui["CheckBox_QuitTogether"].OnEvent("Click",  (ctrl, *) => settings.quit_together := ctrl.Value)
 
-  ;NOTE: Maybe it would be better to use the text fields directly instead of using the globals?
-  ;      The current code may have a risk of getting the text fields desync:ed.
+  ; IMPORTANT: The events in the Gui Controls above modifies properties in globals.
+  ;            REMEMBER that globals now react to this and modifies the Gui Controls.
+  ;            This will (fortunately) not create an infinite loop since the events
+  ;            are only triggered when the Gui is interacted with, not when code is
+  ;            modifying the Gui Control values.
+  ;            I did not find a good solution to prevent this so I left it as is.
 
 
   ;; Buttons Actions
@@ -265,7 +299,6 @@ DEBUG := false
     game_hWnd := manualWindowSelection(mainGui, conLog)
     if game_hWnd
       setGameWindow(game_hWnd, &game, conLog)
-    MainGui_textFieldsUpdate()
   }
   Button_Fullscreen_Func(*) {
     global settings, game, window_mode, fullscreen_mode, bgGui, conLog
@@ -285,7 +318,6 @@ DEBUG := false
     if InStr(selectedFile, " ")
       selectedFile := '"' selectedFile '"'
     settings.launch := selectedFile
-    MainGui_textFieldsUpdate()
   }
   Button_Run_Func(*) {
     global settings
@@ -342,7 +374,6 @@ DEBUG := false
     global settings, game, window_mode, fullscreen_mode
 
     settings.%prop% := value
-    MainGui_textFieldsUpdate()
 
     if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
       activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
@@ -525,7 +556,6 @@ DEBUG := false
     }
 
     game.proc_ID := result.pid
-    MainGui_textFieldsUpdate()
 
     if DEBUG
       conLog.debug "Launch success, got PID: " game.proc_ID
@@ -565,7 +595,6 @@ DEBUG := false
     result := setGameWindow(game_hWnd, &game, conLog)
     if !result
       return
-    MainGui_textFieldsUpdate()
 
     ;; Prepare window for fullscreen
     prepareFullscreen(game_hWnd, &window_mode, &fullscreen_mode, conLog)
@@ -579,10 +608,8 @@ DEBUG := false
 
 
   ;; Set `settings.quit_together` to a bool
-  if settings.quit_together = "auto" {
+  if settings.quit_together = "auto"
     settings.quit_together := checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
-    MainGui_textFieldsUpdate()
-  }
 
 
   ;; Cleanup
