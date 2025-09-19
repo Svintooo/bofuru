@@ -67,7 +67,8 @@ DEBUG := false
   ; Data needed to put game into fullscreen mode.
   fullscreen_mode := { x:0, y:0, w:0, h:0,         ; Window area without borders (while still in window mode)
                        needsBackground:  false,    ; If background overlay is needed
-                       needsAlwaysOnTop: false, }  ; If AlwaysOnTop is needed on game and background
+                       needsAlwaysOnTop: false,    ; If AlwaysOnTop is needed on game and background
+                       active:           false, }  ; If fullscreen mode is currently active
 
   ;; Seal all global objects (prevent additional properties)
   ObjSealFunc(*) {
@@ -300,7 +301,7 @@ DEBUG := false
   }
   Button_Fullscreen_Func(*) {
     global settings, game, window_mode, fullscreen_mode, bgGui, conLog
-    if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode) {
+    if checkFullscreenActive(game.hWnd, fullscreen_mode) {
       deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
     } else {
       prepareFullscreen(game.hWnd, &window_mode, &fullscreen_mode, conLog)
@@ -374,7 +375,7 @@ DEBUG := false
     settings.%prop% := value
 
     ; Redo fullscreen if fullscreen settings have changed
-    if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
+    if checkFullscreenActive(game.hWnd, fullscreen_mode)
       activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
 
     if DEBUG
@@ -480,21 +481,27 @@ DEBUG := false
   ExitFunc(*) {
     global window_mode, fullscreen_mode
 
-    if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
+    if checkFullscreenActive(game.hWnd, fullscreen_mode)
       deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
   }
   OnExit ExitFunc
 
 
-  ;; Exit script if the game window is closed
+  ;; React when game window is closed
   if DEBUG
-    conLog.debug "Bind exit event to when the game is closed"
+    conLog.debug "React to event when the game is closed"
 
   Event_GameExit() {
-    global settings, game
+    global settings, game, window_mode, fullscreen_mode
 
-    if settings.quit_together && game.hWnd && not WinExist(game.hWnd)
-      ExitApp(0)
+    if game.hWnd && not WinExist(game.hWnd) {
+      game.hWnd := 0
+
+      if settings.quit_together
+        ExitApp(0)
+      else
+        deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
+    }
   }
 
   MAX_PRIORITY := 2147483647
@@ -611,9 +618,9 @@ DEBUG := false
   }
 
 
-  ;; Set `settings.quit_together` to a bool
+  ;; Convert `settings.quit_together` to a bool
   if settings.quit_together = "auto"
-    settings.quit_together := checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
+    settings.quit_together := checkFullscreenActive(game.hWnd, fullscreen_mode)
 
 
   ;; Cleanup
@@ -789,21 +796,9 @@ logException(e, logg)
 
 
 ;; Check if game is in Fullscreen Mode
-checkFullscreenActive(game_hWnd, bg_hWnd, windowMode, fullscreenMode)
+checkFullscreenActive(game_hWnd, fullscreenMode)
 {
-  ;; Abort if game has closed
-  if !WinExist(game_hWnd)
-    return false
-
-
-  ;; Not fullscreen if all window/fullscreen props are zero
-  if windowMode    .PropValues().HasAll((value) => (value = 0))
-  && fullscreenMode.PropValues().HasAll((value) => (value = 0))
-    return false
-
-
-  ;; Is fullscreen
-  return true
+  return game_hWnd && WinExist(game_hWnd) && fullscreenMode.active
 }
 
 
@@ -1116,6 +1111,10 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     logWindowState(game_hWnd, "Window state (fullscreen)", logg)
 
 
+  ;; Set that fullscreen mode is active
+  fullscreenMode.active := true
+
+
   ;; Return
   return true
 }
@@ -1124,21 +1123,25 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 ;; Deactivate FULLSCREEN
 deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
 {
-  ;; Do nothing if game window is gone
-  if ! WinExist(game_hWnd)
-    return false
-
-  ;; Remove AlwaysOnTop
-  WinSetAlwaysOnTop(false, game_hWnd)
+  ;; Set that fullscreen mode is not active
+  fullscreenMode.active := false
 
   ;; Hide the background overlay
   bgWindow.Hide()
 
-  ;; Change game back to window mode
-  modifyWindowState(game_hWnd, windowMode, logg)
+  if WinExist(game_hWnd)
+  {
+    ;; Remove AlwaysOnTop
+    WinSetAlwaysOnTop(false, game_hWnd)
+
+    ;; Change game back to window mode
+    modifyWindowState(game_hWnd, windowMode, logg)
+  }
 
   ;; Zero all window/fullscreen props
+  ; Prevent reusing old values by mistake.
   ; (maybe not needed, but it feels right)
+  ; IMPORTANT: Run this after changing game back to window mode.
   for propName in windowMode.OwnProps()
     windowMode.%propName% := 0
   for propName in fullscreenMode.OwnProps()
