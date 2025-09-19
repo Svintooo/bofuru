@@ -365,8 +365,8 @@ DEBUG := false
   SetTimer(Event_GuiControls_ToggleEnabled)
 
 
-  ;; Settings updater function
-  ; Used to update props in global `settings`.
+  ;; Fullsceen settings updater function
+  ; Used to update props in global `settings` that affects fullscreen mode.
   Settings_update(prop, value) {
     global bgGui, conLog
     global settings, game, window_mode, fullscreen_mode
