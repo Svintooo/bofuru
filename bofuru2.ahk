@@ -272,18 +272,16 @@ DEBUG := false
 
   ;; Text fields
   ; Hooks to update text fields with values from globals
-  wrapObj_addPropHook(game    , "win_title"    , String , (value) => (mainGui["Edit_WinTitle"        ].Value := value))
-  wrapObj_addPropHook(game    , "win_class"    , String , (value) => (mainGui["Edit_WinClass"        ].Value := value))
-  wrapObj_addPropHook(game    , "proc_name"    , String , (value) => (mainGui["Edit_ProcName"        ].Value := value))
-  wrapObj_addPropHook(settings, "launch"       , String , (value) => (mainGui["Edit_Launch"          ].Value := value))
-  wrapObj_addPropHook(settings, "quit_together", Integer, (value) => (mainGui["CheckBox_QuitTogether"].Value := value))
+  wrapObj_addPropHook(game    , "win_title", String, (value) => (mainGui["Edit_WinTitle"].Value := value))
+  wrapObj_addPropHook(game    , "win_class", String, (value) => (mainGui["Edit_WinClass"].Value := value))
+  wrapObj_addPropHook(game    , "proc_name", String, (value) => (mainGui["Edit_ProcName"].Value := value))
+  wrapObj_addPropHook(settings, "launch"   , String, (value) => (mainGui["Edit_Launch"  ].Value := value))
 
   ; Events to update globals with values from text fields
-  mainGui["Edit_WinTitle"        ].OnEvent("Change", (ctrl, *) => game.win_title         := ctrl.Value)
-  mainGui["Edit_WinClass"        ].OnEvent("Change", (ctrl, *) => game.win_class         := ctrl.Value)
-  mainGui["Edit_ProcName"        ].OnEvent("Change", (ctrl, *) => game.proc_name         := ctrl.Value)
-  mainGui["Edit_Launch"          ].OnEvent("Change", (ctrl, *) => settings.launch        := ctrl.Value)
-  mainGui["CheckBox_QuitTogether"].OnEvent("Click",  (ctrl, *) => settings.quit_together := ctrl.Value)
+  mainGui["Edit_WinTitle"].OnEvent("Change", (ctrl, *) => game.win_title  := ctrl.Value)
+  mainGui["Edit_WinClass"].OnEvent("Change", (ctrl, *) => game.win_class  := ctrl.Value)
+  mainGui["Edit_ProcName"].OnEvent("Change", (ctrl, *) => game.proc_name  := ctrl.Value)
+  mainGui["Edit_Launch"  ].OnEvent("Change", (ctrl, *) => settings.launch := ctrl.Value)
 
   ; IMPORTANT: The events in the Gui Controls above modifies properties in globals.
   ;            REMEMBER that globals now react to this and modifies the Gui Controls.
@@ -395,6 +393,11 @@ DEBUG := false
     if RegExMatch(radio_ctrl.Name, "^Radio_TaskBar_")
       radio_ctrl.OnEvent("Click", (ctrl, *) => Settings_update("taskbar", ctrl.Name.RegExReplace("^Radio_[^_]+_")))
   }
+
+
+  ;; Checkboxes
+  wrapObj_addPropHook(settings, "quit_together", Integer, (value) => (mainGui["CheckBox_QuitTogether"].Value := value))
+  mainGui["CheckBox_QuitTogether"].OnEvent("Click",  (ctrl, *) => settings.quit_together := ctrl.Value)
 }
 
 
