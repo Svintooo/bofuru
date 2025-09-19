@@ -375,6 +375,7 @@ DEBUG := false
 
     settings.%prop% := value
 
+    ; Redo fullscreen if fullscreen settings have changed
     if checkFullscreenActive(game.hWnd, bgGui.hWnd, window_mode, fullscreen_mode)
       activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
 
