@@ -1015,6 +1015,9 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
                                  _winSize := config.resize,
                                  _taskbar := config.taskbar)
 
+  if DEBUG
+    logg.debug "fscr = {}".f(fscr.Inspect())
+
   if ! fscr.ok {
     ; Restore window mode and return
     logg.error "{}".f(fscr.reason)
@@ -1035,13 +1038,21 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
   sleep 1  ; Millisecond
   newWinState := collectWindowState(game_hWnd)
 
+  if DEBUG
+    logWindowState(newWinState, "Window State (resize)", logg)
+
   ; If window did not get the intended size, reposition window using its current size
   if newWinState.w != fscr.%winArea%.w || newWinState.h != fscr.%winArea%.h
   {
+    if DEBUG
+      logg.debug "Resize and reposition window (take 2)"
+
     fscr := lib_calcFullscreenArgs(newWinState,
                                    _monitor := config.monitor,
                                    _winSize := "keep",
                                    _taskbar := config.taskbar)
+    if DEBUG
+      logg.debug "fscr = {}".f(fscr.Inspect())
 
     if ! fscr.ok {
       ; Restore window mode and return
@@ -1055,6 +1066,9 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     func_updatefullscreenMode(fscr)
 
     WinMove(fscr.%winArea%.x, fscr.%winArea%.y, fscr.%winArea%.w, fscr.%winArea%.h, game_hWnd)
+
+    if DEBUG
+      logWindowState(newWinState, "Window State (resize 2)", logg)
   }
 
 
