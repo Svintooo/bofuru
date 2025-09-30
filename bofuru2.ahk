@@ -613,6 +613,10 @@ DEBUG := false
     ;; Make window fullscreen
     activateFullscreen(game_hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
 
+    ;; Hide mainGui and focus the game window
+    mainGui.Minimize()
+    WinActivate(game_hWnd)
+
     ;; End message
     conLog.info "Your game should now be in fullscreen"
   }
