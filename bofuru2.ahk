@@ -124,7 +124,7 @@ DEBUG := false
 
 
   ;; Console
-  mainGui.AddEdit("vConsole w1000 h300 +Multi +Wrap +ReadOnly +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
+  mainGui.AddEdit("vConsole w1000 h300 +Multi +Wrap +ReadOnly -TabStop +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
   mainGui["Console"].setFont(, "Consolas")  ; Monospace font
   mainGui["Console"].getPos(, , &consoleWidth, )
   mainGui.defaultOpts := "w{} Y+{} ".f(consoleWidth, mainGui.spacing)
@@ -190,7 +190,6 @@ DEBUG := false
 
   ;; Show the window
   mainGui.Show()
-  DllCall("User32.dll\HideCaret", "Ptr", mainGui["Console"].Hwnd)
 }
 
 
@@ -213,6 +212,17 @@ DEBUG := false
         "Ptr", 7,      ; SB_BOTTOM
         "Ptr", 0
       )
+
+      ; Move console text cursor to bottom
+      DllCall("User32.dll\SendMessage"
+        , "Ptr" , mainGui["Console"].hWnd
+        , "UInt", 0x0B1  ; EM_SETSEL
+        , "Ptr" , StrLen(mainGui["Console"].Value)
+        , "Ptr" , StrLen(mainGui["Console"].Value)
+      ),
+
+      ; Hide text cursor
+      DllCall("User32.dll\HideCaret", "Ptr", mainGui["Console"].Hwnd)
     ),
 
     ; Define available log methods
