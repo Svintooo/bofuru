@@ -292,12 +292,12 @@ IsPresent(SomeObj)
 Integer.DefineFunc("IsPresent", __Integer_IsPresent)
 __Integer_IsPresent(IntegerObj)
 {
-  return true
+  return IntegerObj != 0
 }
 Float.DefineFunc("IsPresent", __Float_IsPresent)
 __Float_IsPresent(FloatObj)
 {
-  return true
+  return FloatObj != 0.0
 }
 String.DefineFunc("IsPresent", __String_IsPresent)
 __String_IsPresent(StringObj)
