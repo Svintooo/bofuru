@@ -892,13 +892,14 @@ modifyWindowState(hWnd, newWindowState, logg)
   ;; Helper function
   ; Run code, catch exception, ignore errors
   runCatch(func, name?) {
-    try
+    try {
       func.Call()
-    catch as e
+    } catch as e {
       if IsSet(name)
         logg.warn "{} failed (this may not be a problem)".f(name)
       if DEBUG
         logException(e, logg)
+    }
   }
 
   ;; Check if window exist
