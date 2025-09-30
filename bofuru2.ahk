@@ -205,12 +205,11 @@ DEBUG := false
       mainGui["Console"].Value .= message,
 
       ; Scroll Console to bottom after weach write
-      DllCall(
-        "User32.dll\SendMessage",
-        "Ptr", mainGui["Console"].hWnd,
-        "UInt",0x115,  ; WM_VSCROLL
-        "Ptr", 7,      ; SB_BOTTOM
-        "Ptr", 0
+      DllCall("User32.dll\SendMessage"
+        , "Ptr"  , mainGui["Console"].hWnd
+        , "UInt" , 0x115  ; WM_VSCROLL
+        , "Ptr"  , 7      ; SB_BOTTOM
+        , "Ptr"  , 0
       )
 
       ; Move console text cursor to bottom
