@@ -151,8 +151,7 @@ DEBUG := false
   {
     mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{}".f(A_Index), String(A_Index))
   }
-  mainGui["Radio_Monitor_" "0"].Value := true  ; Radio button "Auto" is checked by default
-  groupOpt := unset
+  mainGui["Radio_Monitor_0"].Value := true  ; Radio button "Auto" is checked by default
 
 
   ;; Settings - Window Resize
