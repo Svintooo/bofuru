@@ -190,6 +190,10 @@ DEBUG := false
 
   ;; Show the window
   mainGui.Show()
+
+
+  ;; Decide what Gui Control has focus by default
+  mainGui["Button_WinSelect"].Focus()
 }
 
 
