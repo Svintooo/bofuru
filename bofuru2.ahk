@@ -818,7 +818,7 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
   if DEBUG
     logg.debug "Collecting current window state"
 
-  winState := collectWindowState(hWnd)
+  winState           := collectWindowState(hWnd)
   windowMode.x       := winState.x
   windowMode.y       := winState.y
   windowMode.w       := winState.w
