@@ -53,8 +53,7 @@ DEBUG := false
             proc_ID:    0,    ; Process ID (PID)
             proc_name: "",    ; Process Name
             win_title: "",    ; Window Title
-            win_class: "",    ; Window Class
-            win_text:  "", }  ; Window Text
+            win_class: "", }  ; Window Class
 
   ;; Window Mode
   ; Data needed to put game into window mode.
@@ -709,7 +708,6 @@ collectWindowInfo(hWnd, &gameWindow)
   gameWindow.hWnd      := hWnd
   gameWindow.win_title := WinGetTitle(       "ahk_id" hWnd )
   gameWindow.win_class := WinGetClass(       "ahk_id" hWnd )
-  gameWindow.win_text  := WinGetText(        "ahk_id" hWnd ).Trim("`r`n ")
   gameWindow.proc_ID   := WinGetPID(         "ahk_id" hWnd )
   gameWindow.proc_name := WinGetProcessName( "ahk_id" hWnd )
   ;gameWindow.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(gameWindow.winTitle, gameWindow.winClass, gameWindow.procName)
@@ -757,9 +755,6 @@ logWindowInfo(gameWindow, logg)
   logg.info   "- Process Name  = {}".f(gameWindow.proc_name.Inspect())
   logg.info   "- Title         = {}".f(gameWindow.win_title.Inspect())
   logg.info   "- Class         = {}".f(gameWindow.win_class.Inspect())
-  if DEBUG {
-    logg.info "- Text          = {}".f(gameWindow.win_text.Inspect())
-  }
   logg.info , _options := "MinimumEmptyLinesAfter 1"
 }
 
