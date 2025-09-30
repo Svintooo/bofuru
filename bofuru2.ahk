@@ -811,7 +811,7 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
   global DEBUG
 
   ;; Logg that fullscreen will now be activated
-  conLog.info "Activate Window Fullscreen"
+  logg.info "Activate Window Fullscreen"
 
   ;; Configure Window Mode
   if DEBUG
