@@ -188,7 +188,7 @@ DEBUG := false
   mainGui.AddButton(mainGui.defaultOpts "vButton_Quit", "Quit")
 
 
-  ;; Show the window
+  ;; Show the mainGui window
   mainGui.Show()
 
 
@@ -203,12 +203,13 @@ DEBUG := false
 {
   ; Console Logger
   conLog := lib_Logger(
+
     ; Define log writer function
     (message) => (
       ; Write message to Console
       mainGui["Console"].Value .= message,
 
-      ; Scroll Console to bottom after weach write
+      ; Scroll Console to bottom after each write
       DllCall("User32.dll\SendMessage"
         , "Ptr"  , mainGui["Console"].hWnd
         , "UInt" , 0x115  ; WM_VSCROLL
@@ -239,6 +240,7 @@ DEBUG := false
       "unknown", "UNKNOWN: ",
       "raw"    , ""
     )
+
   )
 }
 
