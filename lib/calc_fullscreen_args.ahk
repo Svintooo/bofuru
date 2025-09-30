@@ -183,10 +183,10 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
       win.x := Round(%cntr%.x + (Abs(%cntr%.w - win.w) / 2))
       win.y := scr.y
     } else {
-      win.w := scr.w
       win.h := Round((scr.w / win.w) * win.h)
-      win.x := scr.x
+      win.w := scr.w
       win.y := Round(%cntr%.y + (Abs(%cntr%.h - win.h) / 2))
+      win.x := scr.x
     }
   case "stretch":
     ; Stretch the window over the whole screen area
