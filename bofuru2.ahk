@@ -710,7 +710,6 @@ collectWindowInfo(hWnd, &gameWindow)
   gameWindow.win_class := WinGetClass(       "ahk_id" hWnd )
   gameWindow.proc_ID   := WinGetPID(         "ahk_id" hWnd )
   gameWindow.proc_name := WinGetProcessName( "ahk_id" hWnd )
-  ;gameWindow.ahk_wintitle := "{} ahk_class {} ahk_exe {}".f(gameWindow.winTitle, gameWindow.winClass, gameWindow.procName)
 }
 
 
