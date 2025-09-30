@@ -576,16 +576,19 @@ DEBUG := false
 
   ;; Find Window
   game_hWnd := 0
+  ahk_wintitle := []
 
-  if game.PropValues.HasAny((value) => (value.Present()))
+  if game.win_title
+    ahk_wintitle.Push(game.win_title)
+  if game.win_class
+    ahk_wintitle.Push("ahk_class " game.win_class)
+  if game.proc_name
+    ahk_wintitle.Push("ahk_exe " game.proc_name)
+  if game.hWnd
+    ahk_wintitle.Push("ahk_id " game.hWnd)
+
+  if ! ahk_wintitle.IsEmpty()
   {
-    ahk_wintitle := []
-    if game.win_title
-      ahk_wintitle.Add(game.win_title)
-    if game.win_title
-      ahk_wintitle.Add("ahk_class " game.win_class)
-    if game.win_title
-      ahk_wintitle.Add("ahk_exe " game.proc_name)
     ahk_wintitle := ahk_wintitle.Join(" ")
 
     conLog.info "Waiting for window: {}".f(ahk_wintitle.Inspect())
