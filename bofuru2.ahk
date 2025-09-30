@@ -161,7 +161,7 @@ DEBUG := false
     groupOpt := ((A_Index = 1) ? "Group" : "")
     WinResizeOpt_HumanReadable := WinResizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
                                               .StrReplace("-"," ")
-    mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinResize_{} {}".f(WinResizeOpt.StrReplace("-","_"),groupOpt), WinResizeOpt_HumanReadable)
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinResize_{} {}".f(WinResizeOpt,groupOpt), WinResizeOpt_HumanReadable)
   }
   mainGui["Radio_WinResize_" "fit"].Value := true  ; Radio button is checked by default
   groupOpt := WinResizeOpt_HumanReadable := unset

@@ -3,7 +3,7 @@
 ; winResize  original         Keep original window size (no enlargement).
 ;            fit              Enlarge window as much as possible while keeping its aspect ratio.
 ;            stretch          Stretch window to fit the whole screen area.
-;            pixel_perfect    Enlarge window by exact multiple.
+;            pixel-perfect    Enlarge window by exact multiple.
 ;
 ; taskbar    hide             Hide the MS Windows taskbar.
 ;            show             Show the MS Windows taskbar.
@@ -194,7 +194,7 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
     win.y := scr.y
     win.w := scr.w
     win.h := scr.h
-  case "pixel_perfect":
+  case "pixel-perfect":
     ; Only resize window so it fits exact pixels (no pixel distortions)
     mult := Min(scr.w // win.w, scr.h // win.h)
 
