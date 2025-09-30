@@ -774,12 +774,13 @@ logWindowState(hWnd_or_winState, message, logg)
   windowArea    := {x:winState.x, y:winState.y, w:winState.w, h:winState.h}
 
   logg.debug , _options := "MinimumEmptyLinesBefore 1"
-  logg.debug "{}".f(message)
-  logg.debug "- window     = {}".f(windowArea.Inspect())
-  logg.debug "- clientArea = {}".f(winState.clientArea.Inspect())
-  logg.debug "- menu       = {}".f(winMenuStr)
-  logg.debug "- style      = {}".f(winStyleStr)
-  logg.debug "- exStyle    = {}".f(winExStyleStr)
+  logg.debug   "{}".f(message)
+  logg.debug   "- window     = {}".f(windowArea.Inspect())
+  if winstate.HasOwnProp("clientArea")
+    logg.debug "- clientArea = {}".f(winState.clientArea.Inspect())
+  logg.debug   "- menu       = {}".f(winMenuStr)
+  logg.debug   "- style      = {}".f(winStyleStr)
+  logg.debug   "- exStyle    = {}".f(winExStyleStr)
   logg.debug , _options := "MinimumEmptyLinesAfter 1"
 }
 
