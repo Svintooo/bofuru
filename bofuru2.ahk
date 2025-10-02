@@ -363,7 +363,7 @@ DEBUG := false
 
   ;; GuiControls Enable/Disable
   Event_GuiControls_ToggleEnabled(*) {
-    global settings, game
+    global settings, game, mainGui
 
     mainGui["Button_Fullscreen"].Enabled := WinExist(game.hWnd)
     mainGui["Button_Run"       ].Enabled := settings.launch.IsPresent()
@@ -605,13 +605,16 @@ DEBUG := false
   {
     ahk_wintitle := ahk_wintitle.Join(" ")
 
-    conLog.info "Waiting for window: {}".f(ahk_wintitle.Inspect())
+    conLog.info "Waiting for window: {}".f(ahk_wintitle.Inspect()), "MinimumEmptyLinesBefore 1"
+
     game_hWnd := WinWait(ahk_wintitle)
   }
   else if game.proc_ID
   {
     game_hWnd := manualWindowSelection(mainGui, conLog)
   }
+
+  ahk_wintitle := unset
 
 
   ;; Make game window fullscreen
