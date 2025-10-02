@@ -239,8 +239,8 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
   }
 
 
-  ;; Check if window will cover the whole allowed screen area
-  if win.x = scr.x && win.y = scr.y && win.w = scr.w && win.h = scr.h {
+  ;; Check if window will cover the whole background overlay area
+  if win.x = bgr.x && win.y = bgr.y && win.w = bgr.w && win.h = bgr.h {
     ; Not needed: window will cover the whole area by itself
     needsBackground := false
   }
