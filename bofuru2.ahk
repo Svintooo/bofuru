@@ -1037,7 +1037,7 @@ manualWindowSelection(mainWindow, logg)
 ; - Changes window size and position to make it fullscreen.
 activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, logg)
 {
-  ;; Define fullscreenMode helper variables
+  ;; Define fullscreenMode helpers
 
   ; Update function
   func_updatefullscreenMode := (state) => (
