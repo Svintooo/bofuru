@@ -188,6 +188,25 @@ DEBUG := false
   mainGui.AddButton(mainGui.defaultOpts "vButton_Quit", "Quit")
 
 
+  ;; Gui enable/disable functions
+  mainGui.disabled := false
+  mainGui.disable  := mainGui_disable
+  mainGui.enable   := mainGui_enable
+
+  mainGui_disable(this) {
+    this.disabled := true
+    for guiCtrl in this
+      if guiCtrl.name != "Console" && guiCtrl.name != "Button_Quit"
+        guiCtrl.Opt("+Disabled")
+  }
+
+  mainGui_enable(this) {
+    this.disabled := false
+    for guiCtrl in this
+      guiCtrl.Opt("-Disabled")
+  }
+
+
   ;; Show the mainGui window
   mainGui.Show()
 
@@ -364,6 +383,9 @@ DEBUG := false
   ;; GuiControls Enable/Disable
   Event_GuiControls_ToggleEnabled(*) {
     global settings, game, mainGui
+
+    if mainGui.disabled
+      return
 
     mainGui["Button_Fullscreen"].Enabled := WinExist(game.hWnd)
     mainGui["Button_Run"       ].Enabled := settings.launch.IsPresent()
@@ -607,7 +629,11 @@ DEBUG := false
 
     conLog.info "Waiting for window: {}".f(ahk_wintitle.Inspect()), "MinimumEmptyLinesBefore 1"
 
+    mainGui.disable()
+
     game_hWnd := WinWait(ahk_wintitle)
+
+    mainGui.enable()
   }
   else if game.proc_ID
   {
