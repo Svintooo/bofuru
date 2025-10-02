@@ -86,10 +86,10 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                           ;;
 ;; States:                                                                   ;;
-;; 0) [NoGame] No Game Selected                                              ;;
-;; 1) [Window] Window Mode                                                   ;;
-;; 2) [Transi] Transition to Fullscreen                                      ;;
-;; 3) [Fulscr] Fullscreen Mode                                               ;;
+;; - [NoGame] No Game Selected                                               ;;
+;; - [Window] Window Mode                                                    ;;
+;; - [Transi] Transition to Fullscreen                                       ;;
+;; - [Fulscr] Fullscreen Mode                                                ;;
 ;;                                                                           ;;
 ;; Edges:                                                                    ;;
 ;; - NoGame->Window: setGameWindow()       # Select a game                   ;;
