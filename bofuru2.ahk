@@ -1045,6 +1045,13 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     fullscreenMode.needsAlwaysOnTop := state.needsAlwaysOnTop
   )
 
+  ; Error fallback function
+  func_fullscreen_abort := () => (
+    logg.error("{}".f(fscr.reason)),
+    modifyWindowState(game_hWnd, windowMode, logg),
+    bgWindow.Hide()
+  )
+
   ; Shortform access variables
   winArea  := "windowArea"      ; fscr.windowArea     = fscr.%winArea%
   bgArea   := "backgroundArea"  ; fscr.backgroundArea = fscr.%bgArea%
@@ -1064,11 +1071,8 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 
   if ! fscr.ok {
     ; Restore window mode and return
-    logg.error "{}".f(fscr.reason)
-    modifyWindowState(game_hWnd, windowMode, logg)
-    bgWindow.Hide()
+    func_fullscreen_abort()
     return false
-    ;TODO: This code block exists two times. make a helper function (or something)
   }
 
   func_updatefullscreenMode(fscr)
@@ -1100,11 +1104,8 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
 
     if ! fscr.ok {
       ; Restore window mode and return
-      logg.error "{}".f(fscr.reason)
-      modifyWindowState(game_hWnd, windowMode, logg)
-      bgWindow.Hide()
+      func_fullscreen_abort()
       return false
-      ;TODO: This code block exists two times. make a helper function (or something)
     }
 
     func_updatefullscreenMode(fscr)
