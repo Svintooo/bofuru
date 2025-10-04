@@ -557,8 +557,10 @@ DEBUG := false
   settings.resize  := args.HasOwnProp("resize" ) ? args.DeleteProp("resize" ).value : "fit",
   settings.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
   settings.launch  := args.HasOwnProp("launch" ) ? args.DeleteProp("launch" ).value : ""
-  ; If set to a string, then will be converted to bool later in the code
-  settings.quit_together := args.HasOwnProp("quit_together") ? args.DeleteProp("quit_together") : "auto"
+
+  ; settings.quit_together: If not configured explicitly, then will be autoconfigured later in the code
+  quit_together_autosetting := args.HasOwnProp("quit_together") ? false : true
+  settings.quit_together := args.HasOwnProp("quit_together") ? args.DeleteProp("quit_together") : false
 
   game.win_title := args.HasOwnProp("wintitle") ? args.DeleteProp("wintitle").value : ""
   game.win_class := args.HasOwnProp("winclass") ? args.DeleteProp("winclass").value : ""
@@ -665,9 +667,11 @@ DEBUG := false
   }
 
 
-  ;; Convert `settings.quit_together` to a bool
-  if settings.quit_together = "auto"
+  ;; Autoconfigure: settings.quit_together
+  if quit_together_autosetting {
     settings.quit_together := checkFullscreenActive(game.hWnd, fullscreen_mode)
+    quit_together_autosetting := unset
+  }
 
 
   ;; Cleanup
