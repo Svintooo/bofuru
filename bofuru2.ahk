@@ -120,75 +120,8 @@ DEBUG := false
                 , _winTitle := "BoFuRu")
   mainGui.SetFont("S11")  ; Font Size
   mainGui.OnEvent("Close", (*) => ExitApp())  ; Stop script on window close
-  mainGui.spacing := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
-
-
-  ;; Console
-  mainGui.AddEdit("vConsole w1000 h300 +Multi +Wrap +ReadOnly -TabStop +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
-  mainGui["Console"].setFont(, "Consolas")  ; Monospace font
-  mainGui["Console"].getPos(, , &consoleWidth, )
-  mainGui.defaultOpts := "w{} Y+{} ".f(consoleWidth, mainGui.spacing)
-  consoleWidth := unset
-
-
-  ;; Buttons
-  mainGui.AddButton(mainGui.defaultOpts "vButton_WinSelect",           "Select Window")
-  mainGui.AddButton(mainGui.defaultOpts "vButton_Fullscreen Disabled", "Toggle Fullscreen")
-  mainGui.AddButton(mainGui.defaultOpts "vButton_Exe",                 "Select Exe")
-  mainGui.AddButton(mainGui.defaultOpts "vButton_Run        Disabled", "Launch Exe")
-  mainGui.AddButton(mainGui.defaultOpts "vButton_CreateLnk  Disabled", "Create Shortcut")
-
-  mainGui.AddEdit(mainGui.defaultOpts "vEdit_WinTitle")
-  mainGui.AddEdit(mainGui.defaultOpts "vEdit_WinClass")
-  mainGui.AddEdit(mainGui.defaultOpts "vEdit_ProcName")
-  mainGui.AddEdit(mainGui.defaultOpts "vEdit_Launch")
-
-
-  ;; Settings - Monitors
-  mainGui.AddText("vText_Monitor", "Monitor")
-  mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_0 Group", "Auto")
-  loop MonitorGetCount()
-  {
-    mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{}".f(A_Index), String(A_Index))
-  }
-  mainGui["Radio_Monitor_0"].Value := true  ; Radio button "Auto" is checked by default
-
-
-  ;; Settings - Window Resize
-  mainGui.AddText("vText_WindowResize", "Window Reize")
-  for WinResizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
-  {
-    groupOpt := ((A_Index = 1) ? "Group" : "")
-    WinResizeOpt_HumanReadable := WinResizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-                                              .StrReplace("-"," ")
-    mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinResize_{} {}".f(WinResizeOpt,groupOpt), WinResizeOpt_HumanReadable)
-  }
-  mainGui["Radio_WinResize_" "fit"].Value := true  ; Radio button is checked by default
-  groupOpt := WinResizeOpt_HumanReadable := unset
-
-
-  ;; Settings - Taskbar
-  mainGui.AddText("vText_Taskbar", "Taskbar")
-  for TaskbarOpt in ["hide", "show", "show2", "show3"]
-  {
-    groupOpt := ((A_Index = 1) ? "Group" : "")
-    TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
-    mainGui.AddRadio(mainGui.defaultOpts "vRadio_TaskBar_{}".f(TaskbarOpt), TaskbarOpt_HumanReadable)
-  }
-  mainGui["Radio_TaskBar_" "hide"].Value := true  ; Radio button is checked by default
-  groupOpt := TaskbarOpt_HumanReadable := unset
-
-
-  ;; Checkboxes
-  mainGui.AddText("vText_QuitTogether", "Misc")
-  mainGui.AddCheckBox(mainGui.defaultOpts "vCheckBox_QuitTogether", "Quit together with game")
-
-
-  ;; Quit Button
-  mainGui.AddButton(mainGui.defaultOpts "vButton_Quit", "Quit")
-
-
-  ;; Gui enable/disable functions
+  mainGui.spacing  := 0  ; Vertical spacing between Gui Controls (inside a group of Gui Controls)
+  ; Add support for disabling the whole Gui
   mainGui.disabled := false
   mainGui.disable  := mainGui_disable
   mainGui.enable   := mainGui_enable
@@ -205,6 +138,79 @@ DEBUG := false
   }
 
 
+  ;; Console
+  mainGui.AddEdit("vConsole w1000 h300 +Multi +Wrap +ReadOnly -TabStop +WantCtrlA -WantReturn -WantTab -HScroll +VScroll +Ccccccc +Background0c0c0c")
+  mainGui["Console"].setFont(, "Consolas")  ; Monospace font
+  ; Set default options for all Gui Controls
+  mainGui["Console"].getPos(, , &consoleWidth, )
+  mainGui.defaultOpts := "w{} Y+{} ".f(consoleWidth, mainGui.spacing)
+  consoleWidth := unset
+
+
+  ;; Buttons
+  mainGui.AddButton(mainGui.defaultOpts "vButton_WinSelect",           "Select Window")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Fullscreen Disabled", "Toggle Fullscreen")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Exe",                 "Select Exe")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Run        Disabled", "Launch Exe")
+  mainGui.AddButton(mainGui.defaultOpts "vButton_CreateLnk  Disabled", "Create Shortcut")
+
+
+  ;; Text Edit Fields
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_WinTitle")
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_WinClass")
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_ProcName")
+  mainGui.AddEdit(mainGui.defaultOpts "vEdit_Launch")
+
+
+  ;; Radio Buttons: Computer Monitor
+  mainGui.AddText("vText_Monitor", "Monitor")
+  mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_0 Group", "Auto")
+  loop MonitorGetCount()
+  {
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{}".f(A_Index), String(A_Index))
+  }
+  mainGui["Radio_Monitor_0"].Value := true  ; Radio button "Auto" is checked by default
+
+
+  ;; Radio Buttons: Window Resize Method
+  mainGui.AddText("vText_WindowResize", "Window Reize")
+  for WinResizeOpt in ["fit", "pixel-perfect", "stretch", "original"]
+  {
+    groupOpt := ((A_Index = 1) ? "Group" : "")
+    WinResizeOpt_HumanReadable := WinResizeOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
+                                              .StrReplace("-"," ")
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinResize_{} {}".f(WinResizeOpt,groupOpt), WinResizeOpt_HumanReadable)
+  }
+  mainGui["Radio_WinResize_" "fit"].Value := true  ; Radio button is checked by default
+  groupOpt := WinResizeOpt_HumanReadable := unset
+
+
+  ;; Radio Buttons: Taskbar Show/Hide
+  mainGui.AddText("vText_Taskbar", "Taskbar")
+  for TaskbarOpt in ["hide", "show", "show2", "show3"]
+  {
+    groupOpt := ((A_Index = 1) ? "Group" : "")
+    TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
+    mainGui.AddRadio(mainGui.defaultOpts "vRadio_TaskBar_{}".f(TaskbarOpt), TaskbarOpt_HumanReadable)
+  }
+  mainGui["Radio_TaskBar_" "hide"].Value := true  ; Radio button is checked by default
+  groupOpt := TaskbarOpt_HumanReadable := unset
+
+
+  ;; Checkboxes
+  mainGui.AddText("vText_Misc", "Misc")
+  mainGui.AddCheckBox(mainGui.defaultOpts "vCheckBox_QuitTogether", "Quit together with game")
+
+
+  ;; Quit Button
+  mainGui.AddButton(mainGui.defaultOpts "vButton_Quit", "Quit")
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Window: Main Gui: Show
+{
   ;; Show the mainGui window
   mainGui.Show()
 
