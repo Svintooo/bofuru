@@ -192,14 +192,12 @@ DEBUG := false
   mainGui.disabled := false
   mainGui.disable  := mainGui_disable
   mainGui.enable   := mainGui_enable
-
   mainGui_disable(this) {
     this.disabled := true
     for guiCtrl in this
       if guiCtrl.name != "Console" && guiCtrl.name != "Button_Quit"
         guiCtrl.Opt("+Disabled")
   }
-
   mainGui_enable(this) {
     this.disabled := false
     for guiCtrl in this
