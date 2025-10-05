@@ -1105,6 +1105,7 @@ activateFullscreen(game_hWnd, &fullscreenMode, config, windowMode, bgWindow, log
     logg.error("{}".f(fscr.reason)),
     modifyWindowState(game_hWnd, windowMode, logg),
     bgWindow.Hide()
+    fullscreenMode.active := false
   )
 
   ; Shortform access variables
