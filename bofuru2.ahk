@@ -153,10 +153,11 @@ DEBUG := false
 
   ;; Radio Buttons: Taskbar Show/Hide
   mainGui.AddText("vText_Taskbar", "Taskbar")
-  for TaskbarOpt in ["hide", "show", "show2", "show3"]
+  for TaskbarOpt in ["hide", "show", "alt-center", "ghost-twin"]
   {
     groupOpt := ((A_Index = 1) ? "Group" : "")
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
+                                          .StrReplace("-"," ")
     mainGui.AddRadio(mainGui.defaultOpts "vRadio_TaskBar_{}".f(TaskbarOpt), TaskbarOpt_HumanReadable)
   }
   groupOpt := TaskbarOpt_HumanReadable := unset  ; Cleanup

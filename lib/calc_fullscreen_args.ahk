@@ -8,9 +8,9 @@
 ; taskbar    hide             Hide the MS Windows taskbar.
 ;            show             Show the MS Windows taskbar.
 ;                             Window is centered related to monitor area.
-;            show2            Show the MS Windows taskbar.
+;            alt-center       Show the MS Windows taskbar.
 ;                             Window is centered related to background overlay area.
-;            show3            Show the MS Windows taskbar.
+;            ghost-twin       Show the MS Windows taskbar.
 ;                             Taskbar is removed twice from the allowed window area.
 lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit", taskbar := "hide")
 {
@@ -100,13 +100,13 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
   case "hide":
     ; DO NOTHING
     ; Taskbar is hidden by default
-  case "show", "show2", "show3":
+  case "show", "alt-center", "ghost-twin":
     ; Let window position be centered relative to scr (allowed screen area)
-    if taskbar = "show2"
+    if taskbar = "alt-center"
       cntr := "scr"
 
     ; Check if taskbar area should be excluded from both sides of the screen area
-    opposite_taskbar_area := (taskbar = "show3")
+    opposite_taskbar_area := (taskbar = "ghost-twin")
 
     ; AlwaysOnTop not needed since taskbar will be shown
     needsAlwaysOnTop := false
