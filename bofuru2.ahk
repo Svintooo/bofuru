@@ -255,40 +255,45 @@ DEBUG := false
 ; Creates global vars to store/retrive settings for this script.
 ; NOTE: Some of the properties do not store data. They instead set/get data from `mainGui`.
 {
+  ; NOTE: These code snippets are the same:
+  ;       - `global_obj.new_prop := 0`
+  ;       - `global_obj.DefineProp("new_prop", { Value: 0 })`
+
+
   ;; User Settings
   ; Only modified by user, either through CLI args or throught the mainGui.
   settings := {}
-  settings.DefineProp "monitor",        ; Computer monitor to fullscreen on
-                    { Set: (this, newValue) => ( mainGui.monitor_value := newValue, retriggerFullscreen() )
-                    , Get: (this)           => ( mainGui.monitor_value ) }
-  settings.DefineProp "resize",         ; Window resize method
-                    { Set: (this, newValue) => ( mainGui.resize_value  := newValue, retriggerFullscreen() )
-                    , Get: (this)           => ( mainGui.resize_value ) }
-  settings.DefineProp "taskbar",        ; How to show/hide the MS Windows Taskbar during fullscreen
-                    { Set: (this, newValue) => ( mainGui.taskbar_value := newValue, retriggerFullscreen() )
-                    , Get: (this)           => ( mainGui.taskbar_value ) }
-  settings.DefineProp "launch",         ; (OPTIONAL) Start game using this launch string
-                    { Set: (this, newValue) => ( mainGui["Edit_ProcName"].Value := newValue )
-                    , Get: (this)           => ( mainGui["Edit_ProcName"].Value ) }
-  settings.DefineProp "quit_together",  ; If this script should quit when the game is closed
-                    { Set: (this, newValue) => ( mainGui["CheckBox_QuitTogether"].Value := newValue )
-                    , Get: (this)           => ( mainGui["CheckBox_QuitTogether"].Value ) }
+  settings.DefineProp("monitor",        ; Computer monitor to fullscreen on
+                      { Set: (this, newValue) => ( mainGui.monitor_value := newValue, retriggerFullscreen() )
+                      , Get: (this)           => ( mainGui.monitor_value ) })
+  settings.DefineProp("resize",         ; Window resize method
+                      { Set: (this, newValue) => ( mainGui.resize_value  := newValue, retriggerFullscreen() )
+                      , Get: (this)           => ( mainGui.resize_value ) })
+  settings.DefineProp("taskbar",        ; How to show/hide the MS Windows Taskbar during fullscreen
+                      { Set: (this, newValue) => ( mainGui.taskbar_value := newValue, retriggerFullscreen() )
+                      , Get: (this)           => ( mainGui.taskbar_value ) })
+  settings.DefineProp("launch",         ; (OPTIONAL) Start game using this launch string
+                      { Set: (this, newValue) => ( mainGui["Edit_ProcName"].Value := newValue )
+                      , Get: (this)           => ( mainGui["Edit_ProcName"].Value ) })
+  settings.DefineProp("quit_together",  ; If this script should quit when the game is closed
+                      { Set: (this, newValue) => ( mainGui["CheckBox_QuitTogether"].Value := newValue )
+                      , Get: (this)           => ( mainGui["CheckBox_QuitTogether"].Value ) })
 
 
   ;; Game Window Info
   ; Data needed to find the game window.
   game := {}
-  game.DefineProp "hWnd"     , { Value: 0 }  ; Window ID (a.k.a. Handler Window)
-  game.DefineProp "proc_ID"  , { Value: 0 }  ; Process ID (PID)
-  game.DefineProp "proc_name",               ; Process Name
-                { Set: (this, newValue) => mainGui["Edit_ProcName"].Value := newValue
-                , Get: (this)           => mainGui["Edit_ProcName"].Value }
-  game.DefineProp "win_title",               ; Window Title
-                { Set: (this, newValue) => mainGui["Edit_WinTitle"].Value := newValue
-                , Get: (this)           => mainGui["Edit_WinTitle"].Value }
-  game.DefineProp "win_class",               ; Window Class
-                { Set: (this, newValue) => mainGui["Edit_WinClass"].Value := newValue
-                , Get: (this)           => mainGui["Edit_WinClass"].Value }
+  game.DefineProp("hWnd"     , { Value: 0 })  ; Window ID (a.k.a. Handler Window)
+  game.DefineProp("proc_ID"  , { Value: 0 })  ; Process ID (PID)
+  game.DefineProp("proc_name",                ; Process Name
+                  { Set: (this, newValue) => mainGui["Edit_ProcName"].Value := newValue
+                  , Get: (this)           => mainGui["Edit_ProcName"].Value })
+  game.DefineProp("win_title",                ; Window Title
+                  { Set: (this, newValue) => mainGui["Edit_WinTitle"].Value := newValue
+                  , Get: (this)           => mainGui["Edit_WinTitle"].Value })
+  game.DefineProp("win_class",                ; Window Class
+                  { Set: (this, newValue) => mainGui["Edit_WinClass"].Value := newValue
+                  , Get: (this)           => mainGui["Edit_WinClass"].Value })
 
 
   ;; Window Mode
