@@ -582,7 +582,7 @@ DEBUG := false
   settings.launch  := args.HasOwnProp("launch" ) ? args.DeleteProp("launch" ).value : ""
   ; settings.quit_together: If not configured explicitly, then will be autoconfigured later in the code
   quit_together_autoconfigure := args.HasOwnProp("quit_together") ? false : true
-  settings.quit_together := args.HasOwnProp("quit_together") ? args.DeleteProp("quit_together") : false
+  settings.quit_together := args.HasOwnProp("quit_together") ? args.DeleteProp("quit_together").value : false
 
   ; game
   game.win_title := args.HasOwnProp("wintitle") ? args.DeleteProp("wintitle").value : ""
