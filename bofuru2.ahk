@@ -391,6 +391,8 @@ DEBUG := false
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup - Main Gui: Toggle Enable/Disable of Gui Controls
 {
+  SetTimer(Event_GuiControls_ToggleEnabled)
+
   Event_GuiControls_ToggleEnabled(*) {
     global settings, game, mainGui
 
@@ -407,8 +409,6 @@ DEBUG := false
     mainGui["Edit_ProcName"].Enabled := not WinExist(game.hWnd)
     ;mainGui["Edit_Launch"  ].Enabled :=
   }
-
-  SetTimer(Event_GuiControls_ToggleEnabled)
 }
 
 
@@ -529,6 +529,9 @@ DEBUG := false
   if DEBUG
     conLog.debug "React to event when the game is closed"
 
+  MAX_PRIORITY := 2147483647
+  SetTimer(Event_GameExit, , _prio := MAX_PRIORITY)
+
   Event_GameExit() {
     global settings, game, window_mode, fullscreen_mode
 
@@ -541,9 +544,6 @@ DEBUG := false
         deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
     }
   }
-
-  MAX_PRIORITY := 2147483647
-  SetTimer(Event_GameExit, , _prio := MAX_PRIORITY)
 }
 
 
