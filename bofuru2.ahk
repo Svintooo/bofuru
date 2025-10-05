@@ -31,82 +31,18 @@ DEBUG := false
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Define All Global Variables
-{
-  ;; Objects that are properly defined later in the script
-  mainGui := {}  ; Main window (control panel)
-  bgGui   := {}  ; Background Overlay window (visible around the game during fullscreen)
-  conLog  := {}  ; Console Logger (prints text to a console in mainGui)
-
-  ;; Settings
-  ; Modified by user, either through CLI args or throught the mainGui.
-  settings := { monitor:           0,    ; Computer monitor
-                resize:           "",    ; Window resize method
-                taskbar:          "",    ; Show MS Windows Taskbar
-                launch:           "",    ; (optional) Start game using this launch string
-                quit_together: false, }  ; If game and script should quit together
-
-  ;; Game info
-  ; Data that can be used to find the game window.
-  game := { hWnd:       0,    ; Window ID (a.k.a. Handler Window)
-            proc_ID:    0,    ; Process ID (PID)
-            proc_name: "",    ; Process Name
-            win_title: "",    ; Window Title
-            win_class: "", }  ; Window Class
-
-  ;; Window Mode
-  ; Data needed to put game into window mode.
-  window_mode := { x:0, y:0, w:0, h:0,     ; Window area
-                   menu:    0x00000000,    ; Window menu
-                   style:   0x00000000,    ; Window style (border)
-                   exStyle: 0x00000000, }  ; Window extended style
-
-  ;; Fullscreen Mode
-  ; Data needed to put game into fullscreen mode.
-  fullscreen_mode := { x:0, y:0, w:0, h:0,         ; Window area without borders (while still in window mode)
-                       needsBackground:  false,    ; If background overlay is needed
-                       needsAlwaysOnTop: false,    ; If AlwaysOnTop is needed on game and background
-                       active:           false, }  ; If fullscreen mode is currently active
-
-  ;; Seal all global objects (prevent additional properties)
-  ObjSealFunc(*) {
-    throw Error("New properties not allowed")
-  }
-  settings       .Base := { __Set: ObjSealFunc }
-  game           .Base := { __Set: ObjSealFunc }
-  window_mode    .Base := { __Set: ObjSealFunc }
-  fullscreen_mode.Base := { __Set: ObjSealFunc }
-}
-
-
+;;    █████████  ████           █████               ████
+;;   ███░░░░░███░░███          ░░███               ░░███
+;;  ███     ░░░  ░███   ██████  ░███████   ██████   ░███   █████
+;; ░███          ░███  ███░░███ ░███░░███ ░░░░░███  ░███  ███░░
+;; ░███    █████ ░███ ░███ ░███ ░███ ░███  ███████  ░███ ░░█████
+;; ░░███  ░░███  ░███ ░███ ░███ ░███ ░███ ███░░███  ░███  ░░░░███
+;;  ░░█████████  █████░░██████  ████████ ░░████████ █████ ██████
+;;   ░░░░░░░░░  ░░░░░  ░░░░░░  ░░░░░░░░   ░░░░░░░░ ░░░░░ ░░░░░░
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Explain - the internal State Machine                                      ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                                                           ;;
-;; States:                                                                   ;;
-;; - [NoGame] No Game Selected                                               ;;
-;; - [Window] Window Mode                                                    ;;
-;; - [Transi] Transition to Fullscreen                                       ;;
-;; - [Fulscr] Fullscreen Mode                                                ;;
-;;                                                                           ;;
-;; Edges:                                                                    ;;
-;; - NoGame->Window: setGameWindow()       # Select a game                   ;;
-;; - Window->Transi: prepareFullscreen()   # Go fullscreen (step 1 of 2)     ;;
-;; - Transi->Fulscr: activateFullscreen()  # Go fullsceeen (step 2 of 2)     ;;
-;; - Fulscr->Window: deactivateFullscreen()# Go window mode                  ;;
-;;                                                                           ;;
-;; Loop Edges:                                                               ;;
-;; - Window->Window: setGameWindow()       # Selecting another game          ;;
-;; - Fulscr->Fulscr: activateFullscreen()  # Settings changed dur fullscreen ;;
-;;                                                                           ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Window: Main Gui
+;; Globals - Main Gui
+; Creates the global var `mainGui` (the Gui window of this script).
 {
   ; NOTE: Each GuiControl can be given a NAME.
   ;       NAME is set with option: "vNAME"
@@ -144,7 +80,7 @@ DEBUG := false
   ; Set default options for all Gui Controls
   mainGui["Console"].getPos(, , &consoleWidth, )
   mainGui.defaultOpts := "w{} Y+{} ".f(consoleWidth, mainGui.spacing)
-  consoleWidth := unset
+  consoleWidth := unset  ; Cleanup
 
 
   ;; Buttons
@@ -169,7 +105,22 @@ DEBUG := false
   {
     mainGui.AddRadio(mainGui.defaultOpts "vRadio_Monitor_{}".f(A_Index), String(A_Index))
   }
-  mainGui["Radio_Monitor_0"].Value := true  ; Radio button "Auto" is checked by default
+  mainGui["Radio_Monitor_0"].Value := true  ; This Radio button is checked by default
+  ; Set/Get methods
+  mainGui.DefineProp("monitor_value", { Set: mainGui_Monitor_Set_Func, Get: mainGui_Monitor_Get_Func })
+  mainGui_Monitor_Set_Func(this, value) {
+    for guiCtrl in this
+      if RegExMatch(guiCtrl.name, "^Radio_Monitor_([0-9]+)", &match)
+        guiCtrl.Value := (Integer(match[1]) == Integer(value))
+    return
+  }
+  mainGui_Monitor_Get_Func(this) {
+    for guiCtrl in this
+      if RegExMatch(guiCtrl.name, "^Radio_Monitor_([0-9]+)", &match)
+        if guiCtrl.Value
+          return Integer(match[1])
+    return 0  ; Fallback return value (this should never happen)
+  }
 
 
   ;; Radio Buttons: Window Resize Method
@@ -181,8 +132,23 @@ DEBUG := false
                                               .StrReplace("-"," ")
     mainGui.AddRadio(mainGui.defaultOpts "vRadio_WinResize_{} {}".f(WinResizeOpt,groupOpt), WinResizeOpt_HumanReadable)
   }
-  mainGui["Radio_WinResize_" "fit"].Value := true  ; Radio button is checked by default
-  groupOpt := WinResizeOpt_HumanReadable := unset
+  groupOpt := WinResizeOpt_HumanReadable := unset  ; Cleanup
+  mainGui["Radio_WinResize_fit"].Value := true     ; This Radio button is checked by default
+  ; Set/Get methods
+  mainGui.DefineProp("resize_value", { Set: mainGui_Resize_Set_Func, Get: mainGui_Resize_Get_Func })
+  mainGui_Resize_Set_Func(this, value) {
+    for guiCtrl in this
+      if RegExMatch(guiCtrl.name, "^Radio_WinResize_([-a-z]+)", &match)
+        guiCtrl.Value := (match[1] == value)
+    return
+  }
+  mainGui_Resize_Get_Func(this) {
+    for guiCtrl in this
+      if RegExMatch(guiCtrl.name, "^Radio_WinResize_([-a-z]+)", &match)
+        if guiCtrl.Value
+          return match[1]
+    return "fit"  ; Fallback return value (this should never happen)
+  }
 
 
   ;; Radio Buttons: Taskbar Show/Hide
@@ -193,8 +159,23 @@ DEBUG := false
     TaskbarOpt_HumanReadable := TaskbarOpt.RegExReplace("\w+","$t{0}")  ; Capitalize (title case)
     mainGui.AddRadio(mainGui.defaultOpts "vRadio_TaskBar_{}".f(TaskbarOpt), TaskbarOpt_HumanReadable)
   }
-  mainGui["Radio_TaskBar_" "hide"].Value := true  ; Radio button is checked by default
-  groupOpt := TaskbarOpt_HumanReadable := unset
+  groupOpt := TaskbarOpt_HumanReadable := unset  ; Cleanup
+  mainGui["Radio_TaskBar_hide"].Value := true    ; This Radio button is checked by default
+  ; Set/Get methods
+  mainGui.DefineProp("taskbar_value", { Set: mainGui_Taskbar_Set_Func, Get: mainGui_Taskbar_Get_Func })
+  mainGui_Taskbar_Set_Func(this, value) {
+    for guiCtrl in this
+      if RegExMatch(guiCtrl.name, "^Radio_TaskBar_([-a-z]+)", &match)
+        guiCtrl.Value := (match[1] == value)
+    return
+  }
+  mainGui_Taskbar_Get_Func(this) {
+    for guiCtrl in this
+      if RegExMatch(guiCtrl.name, "^Radio_TaskBar_([-a-z]+)", &match)
+        if guiCtrl.Value
+          return match[1]
+    return "hide"  ; Fallback return value (this should never happen)
+  }
 
 
   ;; Checkboxes
@@ -209,20 +190,8 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Window: Main Gui: Show
-{
-  ;; Show the mainGui window
-  mainGui.Show()
-
-
-  ;; Decide what Gui Control has focus by default
-  mainGui["Button_WinSelect"].Focus()
-}
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Window: Main Gui: Logging
+;; Globals - Console Logging
+; Creates global var `conLog` (console logging framework)
 {
   ; Console Logger
   conLog := lib_Logger(
@@ -270,180 +239,7 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Window: Main Gui: Actions
-{
-  ;; Global objects - Ability to run hooks on prop modification
-  ; Prepares all global objects so they can run custom functions when
-  ; its properties are modified.
-
-  ; Function that modifies an object so it can receive a hook function
-  wrapObj(obj) {
-    newObj := {}
-
-    for propName, propValue in obj.OwnProps() {
-      setFunc := (this, name, value) => (this.Base.%name% := value)
-      getFunc := (this, name)        => (this.Base.%name%)
-      setFunc := setFunc.Bind(,propName)
-      getFunc := getFunc.Bind(,propName)
-      newObj.DefineProp(propName, { Set:setFunc, Get:getFunc })
-    }
-
-    newObj.Base := obj
-
-    return newObj
-  }
-
-  ; Function that adds a hook function to a property
-  wrapObj_addPropHook(obj, propName, type, func) {
-    setFunc := (this, name, value, typ, fun) => (this.Base.%name% := value, (value is typ) ? fun(value) : true)
-    setFunc := setFunc.Bind(, propName, , type, func)
-    obj.DefineProp(propName, { Set: setFunc })  ; This replaces the setFunc in wrapObj()
-  }
-
-  ; Modify global objects
-  settings        := wrapObj(settings)
-  game            := wrapObj(game)
-  window_mode     := wrapObj(window_mode)
-  fullscreen_mode := wrapObj(fullscreen_mode)
-
-
-  ;; Text fields
-  ; Hooks to update text fields with values from globals
-  wrapObj_addPropHook(game    , "win_title", String, (value) => (mainGui["Edit_WinTitle"].Value := value))
-  wrapObj_addPropHook(game    , "win_class", String, (value) => (mainGui["Edit_WinClass"].Value := value))
-  wrapObj_addPropHook(game    , "proc_name", String, (value) => (mainGui["Edit_ProcName"].Value := value))
-  wrapObj_addPropHook(settings, "launch"   , String, (value) => (mainGui["Edit_Launch"  ].Value := value))
-
-  ; Events to update globals with values from text fields
-  mainGui["Edit_WinTitle"].OnEvent("Change", (ctrl, *) => game.win_title  := ctrl.Value)
-  mainGui["Edit_WinClass"].OnEvent("Change", (ctrl, *) => game.win_class  := ctrl.Value)
-  mainGui["Edit_ProcName"].OnEvent("Change", (ctrl, *) => game.proc_name  := ctrl.Value)
-  mainGui["Edit_Launch"  ].OnEvent("Change", (ctrl, *) => settings.launch := ctrl.Value)
-
-  ; IMPORTANT: The events in the Gui Controls above modifies properties in globals.
-  ;            REMEMBER that globals now react to this and modifies the Gui Controls.
-  ;            This will (fortunately) not create an infinite loop since the events
-  ;            are only triggered when the Gui is interacted with, not when code is
-  ;            modifying the Gui Control values.
-  ;            I did not find a good solution to prevent this so I left it as is.
-
-
-  ;; Buttons Actions
-  Button_WinSelect_Func(*) {
-    global game, mainGui, conLog
-    game_hWnd := manualWindowSelection(mainGui, conLog)
-    if game_hWnd
-      setGameWindow(game_hWnd, &game, conLog)
-  }
-  Button_Fullscreen_Func(*) {
-    global settings, game, window_mode, fullscreen_mode, bgGui, conLog
-    if checkFullscreenActive(game.hWnd, fullscreen_mode) {
-      deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
-    } else {
-      prepareFullscreen(game.hWnd, &window_mode, &fullscreen_mode, conLog)
-      activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
-    }
-  }
-  Button_Exe_Func(*) {
-    global settings
-    file_must_exist := 0x00000001
-    selectedFile := FileSelect(file_must_exist, , "Select Game - " A_ScriptName, "Application (*.exe; *.lnk)")
-    if ! selectedFile
-      return
-    if InStr(selectedFile, " ")
-      selectedFile := '"' selectedFile '"'
-    settings.launch := selectedFile
-  }
-  Button_Run_Func(*) {
-    global settings
-    if settings.launch
-      launchExe(settings.launch)
-  }
-  Button_CreateLnk_Func(*) {
-    global settings
-    prompt_to_create_new_file := 0x00000008
-    newShortcutFile := FileSelect("S" prompt_to_create_new_file, , "Create Shortcut - " A_ScriptName)
-    if ! newShortcutFile
-      return
-    if ! RegExMatch(newShortcutFile, "\.lnk$")
-      newShortcutFile := newShortcutFile ".lnk"
-    if SubStr(settings.launch, 1, 1) = '"' {
-      target := '"' settings.launch.SubStr(2).Split('"')[1] '"'
-      args   := settings.launch.SubStr(target.Length()+1)
-    } else {
-      target := settings.launch.Split(" ")[1]
-      args   := settings.launch.SubStr(target.Length()+1)
-    }
-    FileCreateShortcut(target, newShortcutFile, , args)
-  }
-  mainGui["Button_WinSelect" ].OnEvent("Click", Button_WinSelect_Func)
-  mainGui["Button_Fullscreen"].OnEvent("Click", Button_Fullscreen_Func)
-  mainGui["Button_Exe"       ].OnEvent("Click", Button_Exe_Func)
-  mainGui["Button_Run"       ].OnEvent("Click", Button_Run_Func)
-  mainGui["Button_CreateLnk" ].OnEvent("Click", Button_CreateLnk_Func)
-  mainGui["Button_Quit"      ].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
-
-
-  ;; GuiControls Enable/Disable
-  Event_GuiControls_ToggleEnabled(*) {
-    global settings, game, mainGui
-
-    if mainGui.disabled
-      return
-
-    mainGui["Button_Fullscreen"].Enabled := WinExist(game.hWnd)
-    mainGui["Button_Run"       ].Enabled := settings.launch.IsPresent()
-    mainGui["Button_CreateLnk" ].Enabled := mainGui["Button_Fullscreen"].Enabled
-                                         && mainGui["Button_Run"       ].Enabled
-
-    mainGui["Edit_WinTitle"].Enabled := not WinExist(game.hWnd)
-    mainGui["Edit_WinClass"].Enabled := not WinExist(game.hWnd)
-    mainGui["Edit_ProcName"].Enabled := not WinExist(game.hWnd)
-    ;mainGui["Edit_Launch"  ].Enabled :=
-  }
-
-  SetTimer(Event_GuiControls_ToggleEnabled)
-
-
-  ;; Fullsceen settings updater function
-  ; Used to update props in global `settings` that affects fullscreen mode.
-  Settings_update(prop, value) {
-    global bgGui, conLog
-    global settings, game, window_mode, fullscreen_mode
-
-    settings.%prop% := value
-
-    ; Redo fullscreen if fullscreen settings have changed
-    if checkFullscreenActive(game.hWnd, fullscreen_mode)
-      activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
-
-    if DEBUG
-      conLog.debug "Settings: {}".f(settings.Inspect())
-  }
-
-
-  ;; Radio buttons Actions
-  for radio_ctrl in mainGui {
-    if RegExMatch(radio_ctrl.Name, "^Radio_Monitor_")
-      radio_ctrl.OnEvent("Click", (ctrl, *) => Settings_update("monitor", ctrl.Name.RegExReplace("^Radio_[^_]+_")))
-
-    if RegExMatch(radio_ctrl.Name, "^Radio_WinResize_")
-      radio_ctrl.OnEvent("Click", (ctrl, *) => Settings_update("resize", ctrl.Name.RegExReplace("^Radio_[^_]+_")))
-
-    if RegExMatch(radio_ctrl.Name, "^Radio_TaskBar_")
-      radio_ctrl.OnEvent("Click", (ctrl, *) => Settings_update("taskbar", ctrl.Name.RegExReplace("^Radio_[^_]+_")))
-  }
-
-
-  ;; Checkboxes
-  wrapObj_addPropHook(settings, "quit_together", Integer, (value) => (mainGui["CheckBox_QuitTogether"].Value := value))
-  mainGui["CheckBox_QuitTogether"].OnEvent("Click",  (ctrl, *) => settings.quit_together := ctrl.Value)
-}
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Log Welcome Message
+;; Log - Welcome Message
 {
   conLog.raw "##################################", "NoNewLine"
   conLog.raw "#       ===== BoFuRu =====       #"
@@ -454,7 +250,80 @@ DEBUG := false
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup - Window: Background Overlay
+;; Globals - Data Objects
+; Creates global vars to store/retrive settings for this script.
+; NOTE: Some of the properties do not store data. They instead set/get data from `mainGui`.
+{
+  ;; User Settings
+  ; Only modified by user, either through CLI args or throught the mainGui.
+  settings := {}
+  settings.DefineProp "monitor",        ; Computer monitor to fullscreen on
+                    { Set: (this, newValue) => ( mainGui.monitor_value := newValue, retriggerFullscreen() )
+                    , Get: (this)           => ( mainGui.monitor_value ) }
+  settings.DefineProp "resize",         ; Window resize method
+                    { Set: (this, newValue) => ( mainGui.resize_value  := newValue, retriggerFullscreen() )
+                    , Get: (this)           => ( mainGui.resize_value ) }
+  settings.DefineProp "taskbar",        ; How to show/hide the MS Windows Taskbar during fullscreen
+                    { Set: (this, newValue) => ( mainGui.taskbar_value := newValue, retriggerFullscreen() )
+                    , Get: (this)           => ( mainGui.taskbar_value ) }
+  settings.DefineProp "launch",         ; (OPTIONAL) Start game using this launch string
+                    { Set: (this, newValue) => ( mainGui["Edit_ProcName"].Value := newValue )
+                    , Get: (this)           => ( mainGui["Edit_ProcName"].Value ) }
+  settings.DefineProp "quit_together",  ; If this script should quit when the game is closed
+                    { Set: (this, newValue) => ( mainGui["CheckBox_QuitTogether"].Value := newValue )
+                    , Get: (this)           => ( mainGui["CheckBox_QuitTogether"].Value ) }
+
+
+  ;; Game Window Info
+  ; Data needed to find the game window.
+  game := {}
+  game.DefineProp "hWnd"     , { Value: 0 }  ; Window ID (a.k.a. Handler Window)
+  game.DefineProp "proc_ID"  , { Value: 0 }  ; Process ID (PID)
+  game.DefineProp "proc_name",               ; Process Name
+                { Set: (this, newValue) => mainGui["Edit_ProcName"].Value := newValue
+                , Get: (this)           => mainGui["Edit_ProcName"].Value }
+  game.DefineProp "win_title",               ; Window Title
+                { Set: (this, newValue) => mainGui["Edit_WinTitle"].Value := newValue
+                , Get: (this)           => mainGui["Edit_WinTitle"].Value }
+  game.DefineProp "win_class",               ; Window Class
+                { Set: (this, newValue) => mainGui["Edit_WinClass"].Value := newValue
+                , Get: (this)           => mainGui["Edit_WinClass"].Value }
+
+
+  ;; Window Mode
+  ; Data needed to put the game into window mode.
+  window_mode := { x:0, y:0, w:0, h:0,     ; Window area
+                   menu:    0x00000000,    ; Window menu
+                   style:   0x00000000,    ; Window style (border)
+                   exStyle: 0x00000000, }  ; Window extended style
+
+
+  ;; Fullscreen Mode
+  ; Data needed to put the game into fullscreen mode.
+  fullscreen_mode := { x:0, y:0, w:0, h:0,         ; Window area without borders (while still in window mode)
+                       needsBackground:  false,    ; If background overlay is needed
+                       needsAlwaysOnTop: false,    ; If AlwaysOnTop is needed on game and background
+                       active:           false, }  ; If fullscreen mode is currently active
+
+
+  ;; Seal all global data objects
+  ; This is a hack that prevents new properties to be created by the following
+  ; kind of code: `global_var.new_prop := value
+  ; This should prevent using the wrong property names by mistake.
+  ObjSealFunc(*) {
+    throw Error("New properties not allowed")
+  }
+  settings       .Base := { __Set: ObjSealFunc }
+  game           .Base := { __Set: ObjSealFunc }
+  window_mode    .Base := { __Set: ObjSealFunc }
+  fullscreen_mode.Base := { __Set: ObjSealFunc }
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Globals - Background Overlay
+; Creates global var `bgGui` (background overlay window)
 {
   ;; Generate transparent pixel
   ; Needed to make the overlay allow both mouse clicks and buttons
@@ -491,6 +360,136 @@ DEBUG := false
 
   ;; Clean up
   pixel := unset
+}
+
+
+
+;;   █████████            █████
+;;  ███░░░░░███          ░░███
+;; ░███    ░░░   ██████  ███████   █████ ████ ████████
+;; ░░█████████  ███░░███░░░███░   ░░███ ░███ ░░███░░███
+;;  ░░░░░░░░███░███████   ░███     ░███ ░███  ░███ ░███
+;;  ███    ░███░███░░░    ░███ ███ ░███ ░███  ░███ ░███
+;; ░░█████████ ░░██████   ░░█████  ░░████████ ░███████
+;;  ░░░░░░░░░   ░░░░░░     ░░░░░    ░░░░░░░░  ░███░░░
+;;                                            ░███
+;;                                            █████
+;;                                           ░░░░░
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Main Gui: Show
+{
+  ;; Show the mainGui window
+  mainGui.Show()
+
+  ;; Set which Gui Control has focus by default
+  mainGui["Button_WinSelect"].Focus()
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Main Gui: Toggle Enable/Disable of Gui Controls
+{
+  Event_GuiControls_ToggleEnabled(*) {
+    global settings, game, mainGui
+
+    if mainGui.disabled
+      return
+
+    mainGui["Button_Fullscreen"].Enabled := WinExist(game.hWnd)
+    mainGui["Button_Run"       ].Enabled := settings.launch.IsPresent()
+    mainGui["Button_CreateLnk" ].Enabled := mainGui["Button_Fullscreen"].Enabled
+                                         && mainGui["Button_Run"       ].Enabled
+
+    mainGui["Edit_WinTitle"].Enabled := not WinExist(game.hWnd)
+    mainGui["Edit_WinClass"].Enabled := not WinExist(game.hWnd)
+    mainGui["Edit_ProcName"].Enabled := not WinExist(game.hWnd)
+    ;mainGui["Edit_Launch"  ].Enabled :=
+  }
+
+  SetTimer(Event_GuiControls_ToggleEnabled)
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Main Gui: Button Actions
+{
+  mainGui["Button_WinSelect" ].OnEvent("Click", Button_WinSelect_Func)
+  mainGui["Button_Fullscreen"].OnEvent("Click", Button_Fullscreen_Func)
+  mainGui["Button_Exe"       ].OnEvent("Click", Button_Exe_Func)
+  mainGui["Button_Run"       ].OnEvent("Click", Button_Run_Func)
+  mainGui["Button_CreateLnk" ].OnEvent("Click", Button_CreateLnk_Func)
+  mainGui["Button_Quit"      ].OnEvent("Click", (*) => WinClose(mainGui.hWnd))
+
+  Button_WinSelect_Func(*) {
+    global game, mainGui, conLog
+    game_hWnd := manualWindowSelection(mainGui, conLog)
+    if game_hWnd
+      setGameWindow(game_hWnd, &game, conLog)
+  }
+
+  Button_Fullscreen_Func(*) {
+    global settings, game, window_mode, fullscreen_mode, bgGui, conLog
+    if checkFullscreenActive(game.hWnd, fullscreen_mode) {
+      deactivateFullscreen(game.hWnd, bgGui, &window_mode, &fullscreen_mode, conLog)
+    } else {
+      prepareFullscreen(game.hWnd, &window_mode, &fullscreen_mode, conLog)
+      activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
+    }
+  }
+
+  Button_Exe_Func(*) {
+    global settings
+    file_must_exist := 0x00000001
+    selectedFile := FileSelect(file_must_exist, , "Select Game - " A_ScriptName, "Application (*.exe; *.lnk)")
+    if ! selectedFile
+      return
+    if InStr(selectedFile, " ")
+      selectedFile := '"' selectedFile '"'
+    settings.launch := selectedFile
+  }
+
+  Button_Run_Func(*) {
+    global settings
+    if settings.launch
+      launchExe(settings.launch)
+  }
+
+  Button_CreateLnk_Func(*) {
+    global settings
+    prompt_to_create_new_file := 0x00000008
+    newShortcutFile := FileSelect("S" prompt_to_create_new_file, , "Create Shortcut - " A_ScriptName)
+    if ! newShortcutFile
+      return
+    if ! RegExMatch(newShortcutFile, "\.lnk$")
+      newShortcutFile := newShortcutFile ".lnk"
+    if SubStr(settings.launch, 1, 1) = '"' {
+      target := '"' settings.launch.SubStr(2).Split('"')[1] '"'
+      args   := settings.launch.SubStr(target.Length()+1)
+    } else {
+      target := settings.launch.Split(" ")[1]
+      args   := settings.launch.SubStr(target.Length()+1)
+    }
+    FileCreateShortcut(target, newShortcutFile, , args)
+  }
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup - Main Gui: Setting Actions
+{
+  ;; Radio button Actions
+  for radio_ctrl in mainGui {
+    if RegExMatch(radio_ctrl.Name, "^(Radio_Monitor_|Radio_WinResize_|Radio_TaskBar_)")
+      radio_ctrl.OnEvent("Click", (*) => ( retriggerFullscreen() ))
+  }
+
+
+  ;; Checkboxes Actions
+  ;NOTE: The checkboxes do not need actions.
 }
 
 
@@ -548,6 +547,15 @@ DEBUG := false
 }
 
 
+
+;;   █████████   █████                         █████
+;;  ███░░░░░███ ░░███                         ░░███
+;; ░███    ░░░  ███████    ██████   ████████  ███████
+;; ░░█████████ ░░░███░    ░░░░░███ ░░███░░███░░░███░
+;;  ░░░░░░░░███  ░███      ███████  ░███ ░░░   ░███
+;;  ███    ░███  ░███ ███ ███░░███  ░███       ░███ ███
+;; ░░█████████   ░░█████ ░░████████ █████      ░░█████
+;;  ░░░░░░░░░     ░░░░░   ░░░░░░░░ ░░░░░        ░░░░░
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start - Global Config and Argument Parsing
@@ -686,6 +694,51 @@ DEBUG := false
 }
 
 
+
+;;  ██████████                       ████             ███
+;; ░░███░░░░░█                      ░░███            ░░░
+;;  ░███  █ ░  █████ █████ ████████  ░███   ██████   ████  ████████
+;;  ░██████   ░░███ ░░███ ░░███░░███ ░███  ░░░░░███ ░░███ ░░███░░███
+;;  ░███░░█    ░░░█████░   ░███ ░███ ░███   ███████  ░███  ░███ ░███
+;;  ░███ ░   █  ███░░░███  ░███ ░███ ░███  ███░░███  ░███  ░███ ░███
+;;  ██████████ █████ █████ ░███████  █████░░████████ █████ ████ █████
+;; ░░░░░░░░░░ ░░░░░ ░░░░░  ░███░░░  ░░░░░  ░░░░░░░░ ░░░░░ ░░░░ ░░░░░
+;;                         ░███
+;;                         █████
+;;                        ░░░░░
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Explain - the internal State Machine                                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                           ;;
+;; States:                                                                   ;;
+;; - [NoGame] No Game Selected                                               ;;
+;; - [Window] Window Mode                                                    ;;
+;; - [Transi] Transition to Fullscreen                                       ;;
+;; - [Fulscr] Fullscreen Mode                                                ;;
+;;                                                                           ;;
+;; Edges:                                                                    ;;
+;; - NoGame->Window: setGameWindow()       # Select a game                   ;;
+;; - Window->Transi: prepareFullscreen()   # Go fullscreen (step 1 of 2)     ;;
+;; - Transi->Fulscr: activateFullscreen()  # Go fullsceeen (step 2 of 2)     ;;
+;; - Fulscr->Window: deactivateFullscreen()# Go window mode                  ;;
+;;                                                                           ;;
+;; Loop Edges:                                                               ;;
+;; - Window->Window: setGameWindow()       # Selecting another game          ;;
+;; - Fulscr->Fulscr: activateFullscreen()  # Settings changed dur fullscreen ;;
+;;                                                                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;  ███████████                                 █████     ███
+;; ░░███░░░░░░█                                ░░███     ░░░
+;;  ░███   █ ░  █████ ████ ████████    ██████  ███████   ████   ██████  ████████    █████
+;;  ░███████   ░░███ ░███ ░░███░░███  ███░░███░░░███░   ░░███  ███░░███░░███░░███  ███░░
+;;  ░███░░░█    ░███ ░███  ░███ ░███ ░███ ░░░   ░███     ░███ ░███ ░███ ░███ ░███ ░░█████
+;;  ░███  ░     ░███ ░███  ░███ ░███ ░███  ███  ░███ ███ ░███ ░███ ░███ ░███ ░███  ░░░░███
+;;  █████       ░░████████ ████ █████░░██████   ░░█████  █████░░██████  ████ █████ ██████
+;; ░░░░░         ░░░░░░░░ ░░░░ ░░░░░  ░░░░░░     ░░░░░  ░░░░░  ░░░░░░  ░░░░ ░░░░░ ░░░░░░
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Functions
@@ -1038,6 +1091,18 @@ manualWindowSelection(mainWindow, logg)
     logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesBefore 1 MinimumEmptyLinesAfter 1"
     return result.hWnd
   }
+}
+
+
+;; Retrigger FULLSCREEN
+; Run this if user has changed any fullscreen settings.
+retriggerFullscreen()
+{
+  global bgGui, conLog
+  global settings, game, window_mode, fullscreen_mode
+
+  if checkFullscreenActive(game.hWnd, fullscreen_mode)
+    activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
 }
 
 
