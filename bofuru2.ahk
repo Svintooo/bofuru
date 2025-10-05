@@ -554,41 +554,42 @@ DEBUG := false
 {
   ;; Fetch command line arguments
   args := parseArgs(A_Args)
-  args_tmp := args.Clone()
 
 
-  ;; Set settings parameters
-  DEBUG            := args.HasOwnProp("debug"  ) ? args.DeleteProp("debug"  ).value : DEBUG,
-  settings.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false,
-  settings.resize  := args.HasOwnProp("resize" ) ? args.DeleteProp("resize" ).value : "fit",
+  ;; DEBUG
+  DEBUG := args.HasOwnProp("debug") ? args.debug : DEBUG
+
+  if DEBUG
+    conLog.debug "Parsed args: {}".f(args.Inspect())
+
+  if args.HasOwnProp("debug")
+    args.DeleteProp("debug")
+
+
+  ;; Configure this script
+  ; settings
+  settings.monitor := args.HasOwnProp("monitor") ? args.DeleteProp("monitor").value : false
+  settings.resize  := args.HasOwnProp("resize" ) ? args.DeleteProp("resize" ).value : "fit"
   settings.taskbar := args.HasOwnProp("taskbar") ? args.DeleteProp("taskbar").value : "hide"
   settings.launch  := args.HasOwnProp("launch" ) ? args.DeleteProp("launch" ).value : ""
-
   ; settings.quit_together: If not configured explicitly, then will be autoconfigured later in the code
   quit_together_autoconfigure := args.HasOwnProp("quit_together") ? false : true
   settings.quit_together := args.HasOwnProp("quit_together") ? args.DeleteProp("quit_together") : false
 
+  ; game
   game.win_title := args.HasOwnProp("wintitle") ? args.DeleteProp("wintitle").value : ""
   game.win_class := args.HasOwnProp("winclass") ? args.DeleteProp("winclass").value : ""
   game.proc_name := args.HasOwnProp("winexe"  ) ? args.DeleteProp("winexe"  ).value : ""
 
 
-  ;; Print args
-  if DEBUG
-    conLog.debug "Parsed args: {}".f(args_tmp.Inspect())
-
-
   ;; Handle unknown args
   if !args.IsEmpty()
-  {
     for , argObj in args.OwnProps()
       conLog.warn "Unknown arg: {}".f(argObj.argStr)
-  }
 
 
   ;; Cleanup
   args     := unset
-  args_tmp := unset
 }
 
 
