@@ -821,6 +821,22 @@ collectWindowInfo(hWnd, &gameWindow)
 }
 
 
+;; Print window info
+logWindowInfo(gameWindow, logg)
+{
+  logg.info , _options := "MinimumEmptyLinesBefore 1"
+  logg.info   "Window info"
+  if DEBUG {
+    logg.info "- PID           = {}".f(gameWindow.proc_ID)
+    logg.info "- hWnd          = {}".f(gameWindow.hWnd)
+  }
+  logg.info   "- Process Name  = {}".f(gameWindow.proc_name.Inspect())
+  logg.info   "- Title         = {}".f(gameWindow.win_title.Inspect())
+  logg.info   "- Class         = {}".f(gameWindow.win_class.Inspect())
+  logg.info , _options := "MinimumEmptyLinesAfter 1"
+}
+
+
 ;; Collect Window state
 collectWindowState(hWnd)
 {
@@ -847,22 +863,6 @@ collectWindowState(hWnd)
   }
 
   return winState
-}
-
-
-;; Print window info
-logWindowInfo(gameWindow, logg)
-{
-  logg.info , _options := "MinimumEmptyLinesBefore 1"
-  logg.info   "Window info"
-  if DEBUG {
-    logg.info "- PID           = {}".f(gameWindow.proc_ID)
-    logg.info "- hWnd          = {}".f(gameWindow.hWnd)
-  }
-  logg.info   "- Process Name  = {}".f(gameWindow.proc_name.Inspect())
-  logg.info   "- Title         = {}".f(gameWindow.win_title.Inspect())
-  logg.info   "- Class         = {}".f(gameWindow.win_class.Inspect())
-  logg.info , _options := "MinimumEmptyLinesAfter 1"
 }
 
 
@@ -902,10 +902,106 @@ logException(e, logg)
 }
 
 
-;; Check if game is in Fullscreen Mode
-checkFullscreenActive(game_hWnd, fullscreenMode)
+;; Manual window selection
+; Let user click on the window that shall be made fullscreen.
+manualWindowSelection(mainWindow, logg)
 {
-  return game_hWnd && WinExist(game_hWnd) && fullscreenMode.active
+  logg.info , _options := "MinimumEmptyLinesBefore 1"
+  logg.info "Manual Window selection ACTIVATED"
+  logg.info "- Click on game window"
+  logg.info "- Press Esc to cancel"
+  logg.info , _options := "MinimumEmptyLinesAfter 1"
+
+  result := lib_userWindowSelect()
+  while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
+  {
+    logg.error "This window is unsupported: Try again"
+    result := lib_userWindowSelect()
+  }
+
+  if ! result.ok {
+    if result.reason = "user cancel"
+      logg.info "Manual Window selection CANCELLED", _options := "MinimumEmptyLinesBefore 1 MinimumEmptyLinesAfter 1"
+    else
+      logg.error "{}".f(result.reason)
+
+    WinActivate(mainWindow.hWnd)  ; Focus the Gui
+
+    return false
+  } else {
+    logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesBefore 1 MinimumEmptyLinesAfter 1"
+    return result.hWnd
+  }
+}
+
+
+;; Stores which window to use for fullscreen
+; - Check if window is allowed to be made fullscreen
+; - Collect and store window query info in var gameWindow
+setGameWindow(hWnd, &gameWindow, logg)
+{
+  ; Check if window is allowed to be made fullscreen
+  if !lib_canWindowBeFullscreened(hWnd, WinGetClass(hWnd)) {
+
+    logg.error "Unsupported window selected"
+    result := false
+
+  } else {
+
+    result := true
+
+    ; Collect window query info
+    collectWindowInfo(hWnd, &gameWindow)
+
+    ; Print window query info
+    logWindowInfo(gameWindow, logg)
+
+  }
+
+  ; Return
+  return result
+}
+
+
+;; Modify window state (this includes the border)
+; Done using best effort: Any failure is ignored
+modifyWindowState(hWnd, newWindowState, logg)
+{
+  ;; Helper function
+  ; Run code, catch exception, ignore errors
+  runCatch(func, name?) {
+    try {
+      func.Call()
+    } catch as e {
+      if IsSet(name)
+        logg.warn "{} failed (this may not be a problem)".f(name)
+      if DEBUG
+        logException(e, logg)
+    }
+  }
+
+  ;; Check if window exist
+  if !WinExist(hWnd)
+    return
+
+  ;; Set window menu bar
+  runCatch ()=>DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", newWindowState.menu)
+         , "Modify window Menu bar"
+
+  ;; Set window style
+  runCatch ()=>WinSetStyle(newWindowState.style, "ahk_id" hWnd)
+         , "Modify window border (style)"
+
+  ;; Set window extended style
+  runCatch ()=>WinSetExStyle(newWindowState.exStyle, "ahk_id" hWnd)
+         , "Modify window extended style"
+
+  ;; Set window size/position
+  runCatch ()=>WinMove(newWindowState.x, newWindowState.y, newWindowState.w, newWindowState.h, "ahk_id" hWnd)
+         , "Modify window size/position"
+
+  ;; Return
+  return
 }
 
 
@@ -988,121 +1084,6 @@ prepareFullscreen(hWnd, &windowMode, &fullscreenMode, logg)
     logg.warn "You may experience distorted graphics and mouse clicks that slightly miss their mark."
     logg.warn , _options := "MinimumEmptyLinesAfter 1"
   }
-}
-
-
-;; Modify window state (this includes the border)
-; Done using best effort: Any failure is ignored
-modifyWindowState(hWnd, newWindowState, logg)
-{
-  ;; Helper function
-  ; Run code, catch exception, ignore errors
-  runCatch(func, name?) {
-    try {
-      func.Call()
-    } catch as e {
-      if IsSet(name)
-        logg.warn "{} failed (this may not be a problem)".f(name)
-      if DEBUG
-        logException(e, logg)
-    }
-  }
-
-  ;; Check if window exist
-  if !WinExist(hWnd)
-    return
-
-  ;; Set window menu bar
-  runCatch ()=>DllCall("User32.dll\SetMenu", "Ptr", hWnd, "Ptr", newWindowState.menu)
-         , "Modify window Menu bar"
-
-  ;; Set window style
-  runCatch ()=>WinSetStyle(newWindowState.style, "ahk_id" hWnd)
-         , "Modify window border (style)"
-
-  ;; Set window extended style
-  runCatch ()=>WinSetExStyle(newWindowState.exStyle, "ahk_id" hWnd)
-         , "Modify window extended style"
-
-  ;; Set window size/position
-  runCatch ()=>WinMove(newWindowState.x, newWindowState.y, newWindowState.w, newWindowState.h, "ahk_id" hWnd)
-         , "Modify window size/position"
-
-  ;; Return
-  return
-}
-
-
-;; Stores which window to use for fullscreen
-; - Check if window is allowed to be made fullscreen
-; - Collect and store window query info in var gameWindow
-setGameWindow(hWnd, &gameWindow, logg)
-{
-  ; Check if window is allowed to be made fullscreen
-  if !lib_canWindowBeFullscreened(hWnd, WinGetClass(hWnd)) {
-
-    logg.error "Unsupported window selected"
-    result := false
-
-  } else {
-
-    result := true
-
-    ; Collect window query info
-    collectWindowInfo(hWnd, &gameWindow)
-
-    ; Print window query info
-    logWindowInfo(gameWindow, logg)
-
-  }
-
-  ; Return
-  return result
-}
-
-
-;; Manual window selection
-; Let user click on the window that shall be made fullscreen.
-manualWindowSelection(mainWindow, logg)
-{
-  logg.info , _options := "MinimumEmptyLinesBefore 1"
-  logg.info "Manual Window selection ACTIVATED"
-  logg.info "- Click on game window"
-  logg.info "- Press Esc to cancel"
-  logg.info , _options := "MinimumEmptyLinesAfter 1"
-
-  result := lib_userWindowSelect()
-  while result.ok && !lib_canWindowBeFullscreened(result.hWnd, result.className)
-  {
-    logg.error "This window is unsupported: Try again"
-    result := lib_userWindowSelect()
-  }
-
-  if ! result.ok {
-    if result.reason = "user cancel"
-      logg.info "Manual Window selection CANCELLED", _options := "MinimumEmptyLinesBefore 1 MinimumEmptyLinesAfter 1"
-    else
-      logg.error "{}".f(result.reason)
-
-    WinActivate(mainWindow.hWnd)  ; Focus the Gui
-
-    return false
-  } else {
-    logg.info "Manual Window selection SUCCEEDED", _options := "MinimumEmptyLinesBefore 1 MinimumEmptyLinesAfter 1"
-    return result.hWnd
-  }
-}
-
-
-;; Retrigger FULLSCREEN
-; Run this if user has changed any fullscreen settings.
-retriggerFullscreen()
-{
-  global bgGui, conLog
-  global settings, game, window_mode, fullscreen_mode
-
-  if checkFullscreenActive(game.hWnd, fullscreen_mode)
-    activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
 }
 
 
@@ -1284,6 +1265,25 @@ deactivateFullscreen(game_hWnd, bgWindow, &windowMode, &fullscreenMode, logg)
 
   ;; Return
   return true
+}
+
+
+;; Retrigger FULLSCREEN
+; Run this if user has changed any fullscreen settings.
+retriggerFullscreen()
+{
+  global bgGui, conLog
+  global settings, game, window_mode, fullscreen_mode
+
+  if checkFullscreenActive(game.hWnd, fullscreen_mode)
+    activateFullscreen(game.hWnd, &fullscreen_mode, settings, window_mode, bgGui, conLog)
+}
+
+
+;; Check if game is in Fullscreen Mode
+checkFullscreenActive(game_hWnd, fullscreenMode)
+{
+  return game_hWnd && WinExist(game_hWnd) && fullscreenMode.active
 }
 
 
