@@ -261,7 +261,7 @@ DEBUG := false
 
 
   ;; User Settings
-  ; Only modified by user, either through CLI args or throught the mainGui.
+  ; Only modified by user, either through CLI args or through the mainGui.
   settings := {}
   settings.DefineProp("monitor",        ; Computer monitor to fullscreen on
                       { Set: (this, newValue) => ( mainGui.monitor_value := newValue, retriggerFullscreen() )
@@ -354,7 +354,7 @@ DEBUG := false
   bgGui := Gui("+ToolWindow -Caption -Border +AlwaysOnTop")
   bgGui.BackColor := "black"
 
-  ; Create internal window control (will always cover the whole overlay)
+  ; Create a Gui Control Object that can handle mouse clicks
   WS_CLIPSIBLINGS := 0x04000000  ; This will let pictures be both clickable,
                                  ; and have other elements placed on top of them.
   bgGui.AddPicture("vClickArea {}".f(WS_CLIPSIBLINGS), pixel)
