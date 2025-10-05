@@ -112,12 +112,16 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
     needsAlwaysOnTop := false
 
     ; Subtract the taskbar area from the allowed screen area
+    tray_match_count := 0
+
     for trayHwnd in WinGetList("ahk_class ^(Shell_TrayWnd|Shell_SecondaryTrayWnd)$") {
       WinGetPos(&trayX, &trayY, &trayW, &trayH, "ahk_id" trayHwnd)
       tray := { x:trayX, y:trayY, w:trayW, h:trayH }
       trayX := trayY := trayW := trayH := unset
 
-      if (mon.x <= tray.x && tray.x <= mon.x+mon.w && mon.y <= tray.y && tray.y <= mon.y+mon.h) {
+      if (mon.x <= tray.x && tray.x <= mon.x+mon.w-1 && mon.y <= tray.y && tray.y <= mon.y+mon.h-1) {
+        tray_match_count += 1
+
         if tray.w = mon.w {
           ; Taskbar at the top or bottom
           if tray.y > mon.y {
@@ -159,6 +163,14 @@ lib_calcFullscreenArgs(window, selectedMonitorNumber := false, winResize := "fit
         }
       }
     }
+
+    if tray_match_count > 1 {
+      ok     := false
+      reason := "BUG: The code thinks it has found more than one taskbar"
+              . " on the same monitor (this is most probably false)."
+    }
+
+    tray_match_count := unset
   default:
     ; ERROR
     ok     := false
