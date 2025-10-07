@@ -1,2 +1,2 @@
 # bofuru
-Windowed Borderless Fullscreen for any windows game.
+Windowed Borderless Fullscreen for any Windows game.
